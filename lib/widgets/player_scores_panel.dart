@@ -11,10 +11,11 @@ import 'sports_filter_picker.dart';
 
 /// Scores while watching.
 ///
-/// Loads the day's fixtures the viewer already follows, keeps what is live or
-/// about to start, and shows them as one row of cards. Left/Right walks the
-/// games, Up/Down changes sport, OK hands the game back to the player so it can
-/// tune the matched channel.
+/// Loads the day's fixtures the viewer already follows, keeps them in one row
+/// of cards — live, then starting soon, then finals — and scopes the row to
+/// what is live now by default. Left/Right walks the games, Up/Down changes the
+/// scope (Live, All, then each sport), OK hands the game back to the player so
+/// it can tune the matched channel.
 class PlayerScoresPanel extends StatefulWidget {
   const PlayerScoresPanel(
       {super.key, this.focusNode, required this.onClose, required this.onPlay});
@@ -29,11 +30,26 @@ class PlayerScoresPanel extends StatefulWidget {
   State<PlayerScoresPanel> createState() => _PlayerScoresPanelState();
 }
 
+/// One choice in the Up/Down cycle: the live-only row, everything, or a sport.
+class _Scope {
+  const _Scope(this.label, this.sport, {required this.liveOnly});
+
+  final String label;
+  final String? sport;
+  final bool liveOnly;
+
+  bool accepts(SportsGame game) =>
+      (!liveOnly || game.isLive) && (sport == null || _sportOf(game) == sport);
+
+  static String _sportOf(SportsGame game) => game.league.espnPath.split('/').first;
+}
+
 class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
+  static const _cardExtent = 218.0;
   final _cards = <FocusNode>[];
   final _scroll = ScrollController();
   List<SportsGame> _games = const [];
-  String? _sport;
+  int _scope = 1;
   int _index = 0;
   bool _loading = true;
   String? _error;
@@ -67,13 +83,26 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
       final games =
           await SportsService.instance.gamesForDay(leagues, DateTime.now());
       if (!mounted) return;
-      final tonight = games.where((g) => g.state != GameState.post).toList()
-        ..sort((a, b) => a.isLive == b.isLive
-            ? a.start.compareTo(b.start)
-            : (a.isLive ? -1 : 1));
+      // Finals stay: they are the end of the running order, not noise.
+      final ordered = games.toList()
+        ..sort((a, b) {
+          int bucket(SportsGame g) => g.isLive
+              ? 0
+              : g.state == GameState.post
+                  ? 2
+                  : 1;
+          final byBucket = bucket(a).compareTo(bucket(b));
+          if (byBucket != 0) return byBucket;
+          return bucket(a) == 2
+              ? b.start.compareTo(a.start)
+              : a.start.compareTo(b.start);
+        });
       setState(() {
-        _games = tonight;
+        _games = ordered;
         _loading = false;
+        // Land on Live when there is something live to watch.
+        _scope = ordered.any((g) => g.isLive) ? 0 : 1;
+        _index = 0;
       });
     } catch (_) {
       if (mounted) {
@@ -85,33 +114,62 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     }
   }
 
-  List<String> get _sports {
+  List<_Scope> get _scopes {
     final seen = <String>{};
     for (final game in _games) {
-      seen.add(game.league.espnPath.split('/').first);
+      seen.add(_Scope._sportOf(game));
     }
-    return seen.toList();
+    final sports = seen.toList()
+      ..sort((a, b) => sportLabel(a).compareTo(sportLabel(b)));
+    return [
+      const _Scope('LIVE', null, liveOnly: true),
+      const _Scope('All', null, liveOnly: false),
+      for (final sport in sports)
+        _Scope(shortSportLabel(sport), sport, liveOnly: false),
+    ];
   }
 
-  List<SportsGame> get _visible => _sport == null
-      ? _games
-      : _games
-          .where((g) => g.league.espnPath.split('/').first == _sport)
-          .toList();
+  _Scope get _current {
+    final scopes = _scopes;
+    return scopes[_scope.clamp(0, scopes.length - 1)];
+  }
+
+  List<SportsGame> get _visible {
+    final scope = _current;
+    return _games.where(scope.accepts).toList();
+  }
 
   void _focusCard(int index, List<SportsGame> games) {
     if (games.isEmpty) return;
     final next = index.clamp(0, games.length - 1);
     setState(() => _index = next);
-    if (_cards.length <= next) {
-      _cards.add(FocusNode(debugLabel: 'scores-card-$next'));
+    while (_cards.length <= next) {
+      _cards.add(FocusNode(debugLabel: 'scores-card-${_cards.length}'));
     }
     _cards[next].requestFocus();
     if (_scroll.hasClients) {
-      final target = (next * 212.0) - 40;
+      final target = (next * _cardExtent) - 40;
       _scroll.animateTo(target.clamp(0, _scroll.position.maxScrollExtent),
           duration: const Duration(milliseconds: 140), curve: Curves.easeOut);
     }
+  }
+
+  void _changeScope(int delta) {
+    final count = _scopes.length;
+    var next = _scope;
+    for (var step = 0; step < count; step++) {
+      next = (next + delta) % count;
+      if (next < 0) next += count;
+      final scope = _scopes[next];
+      if (_games.any(scope.accepts)) break;
+    }
+    setState(() {
+      _scope = next;
+      _index = 0;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusCard(0, _visible);
+    });
   }
 
   KeyEventResult _keys(FocusNode node, KeyEvent event) {
@@ -130,19 +188,8 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     }
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowUp) {
-      final sports = _sports;
-      if (sports.length < 2) return KeyEventResult.ignored;
-      final current = _sport == null ? -1 : sports.indexOf(_sport!);
-      final next = key == LogicalKeyboardKey.arrowDown
-          ? (current + 2) % (sports.length + 1) - 1
-          : (current < 0 ? sports.length - 1 : current - 1);
-      setState(() {
-        _sport = next < 0 ? null : sports[next];
-        _index = 0;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _focusCard(0, _visible);
-      });
+      if (_scopes.length < 2) return KeyEventResult.ignored;
+      _changeScope(key == LogicalKeyboardKey.arrowDown ? 1 : -1);
       return KeyEventResult.handled;
     }
     if ([LogicalKeyboardKey.select, LogicalKeyboardKey.enter].contains(key)) {
@@ -160,13 +207,120 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     if (game.isLive) {
       return game.statusText.isEmpty ? 'LIVE' : game.statusText;
     }
+    if (game.state == GameState.post) {
+      return game.statusText.isEmpty ? 'Final' : game.statusText;
+    }
     return TimeFormat.hm.format(game.start.toLocal());
+  }
+
+  Widget _teamRow(SportsGame game, SportsTeam side) {
+    final label =
+        side.abbreviation.isEmpty ? side.shortName : side.abbreviation;
+    final rank = side.rankLabel;
+    // Before kick-off a 0-0 is noise: the records are the useful line.
+    final trailing = game.state == GameState.pre
+        ? (side.record ?? '')
+        : (side.score ?? '');
+    return Row(children: [
+      Expanded(
+          child: Text(rank.isEmpty ? label : '$rank $label',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: interfaceColor(context, Colors.white)))),
+      const SizedBox(width: 4),
+      Text(trailing,
+          style: TextStyle(
+              fontSize: game.state == GameState.pre ? 10.5 : 12.5,
+              fontWeight: game.state == GameState.pre
+                  ? FontWeight.w400
+                  : FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
+              color: interfaceColor(
+                  context, game.state == GameState.pre ? Colors.white54 : Colors.white70))),
+    ]);
+  }
+
+  Widget _card(SportsGame game, int index) {
+    final muted = interfaceColor(context, Colors.white54);
+    final focused = index < _cards.length && _cards[index].hasFocus;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        focusNode: _cards[index],
+        borderRadius: BorderRadius.circular(4),
+        onTap: () => widget.onPlay(game),
+        onFocusChange: (hasFocus) {
+          if (hasFocus) setState(() => _index = index);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+          decoration: BoxDecoration(
+            color: interfaceColor(context, Colors.white).withValues(alpha: .06),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+                color: focused
+                    ? Theme.of(context).colorScheme.primary
+                    : interfaceColor(context, Colors.white10)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(children: [
+                Expanded(
+                    child: Text(game.league.shortName.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 9, letterSpacing: .6, color: muted))),
+                Text(_status(game),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        color: game.isLive
+                            ? interfaceColor(context, Colors.redAccent)
+                            : muted)),
+              ]),
+              const SizedBox(height: 4),
+              for (final side in [game.first, game.second]) _teamRow(game, side),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _scopeChip(_Scope scope, int index, Color muted) {
+    final selected = index == _scope;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: selected
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: .22)
+                : Colors.transparent),
+        child: Text(scope.label,
+            style: TextStyle(
+                fontSize: 10.5, color: selected ? Colors.white : muted)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final muted = interfaceColor(context, Colors.white54);
     final games = _visible;
+    final scopes = _scopes;
+    final emptyMessage = _current.liveOnly
+        ? 'Nothing live right now · Down for all today’s games.'
+        : 'No games on now or next.';
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -195,26 +349,8 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
                       fontWeight: FontWeight.w700,
                       color: muted)),
               const SizedBox(width: 12),
-              for (final sport in [null, ..._sports])
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: _sport == sport
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: .22)
-                            : Colors.transparent),
-                    child: Text(sport == null ? 'All' : sportLabel(sport),
-                        style: TextStyle(
-                            fontSize: 10.5,
-                            color: _sport == sport ? Colors.white : muted)),
-                  ),
-                ),
+              for (var i = 0; i < scopes.length; i++)
+                _scopeChip(scopes[i], i, muted),
               const Spacer(),
               Text(_loading ? 'Loading…' : '${games.length}',
                   style: TextStyle(fontSize: 10.5, color: muted)),
@@ -227,94 +363,23 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
             if (games.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Text(
-                    _error ?? (_loading ? '' : 'No games on now or next.'),
+                child: Text(_error ?? (_loading ? '' : emptyMessage),
                     style: TextStyle(fontSize: 11.5, color: muted)),
               )
             else
               SizedBox(
-                height: 74,
+                height: 76,
                 child: ListView.builder(
                   controller: _scroll,
                   scrollDirection: Axis.horizontal,
-                  itemExtent: 212,
+                  itemExtent: _cardExtent,
                   itemCount: games.length,
                   itemBuilder: (context, index) {
-                    final game = games[index];
                     while (_cards.length <= index) {
-                      _cards.add(FocusNode(debugLabel: 'scores-card-$index'));
+                      _cards.add(
+                          FocusNode(debugLabel: 'scores-card-$index'));
                     }
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: InkWell(
-                        focusNode: _cards[index],
-                        borderRadius: BorderRadius.circular(4),
-                        onTap: () => widget.onPlay(game),
-                        onFocusChange: (focused) {
-                          if (focused) setState(() => _index = index);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 9, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: interfaceColor(context, Colors.white)
-                                .withValues(alpha: .06),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                                color: _index == index && _cards[index].hasFocus
-                                    ? Theme.of(context).colorScheme.primary
-                                    : interfaceColor(context, Colors.white10)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(children: [
-                                Expanded(
-                                    child: Text(
-                                        game.league.shortName.toUpperCase(),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            fontSize: 9,
-                                            letterSpacing: .6,
-                                            color: muted))),
-                                Text(_status(game),
-                                    style: TextStyle(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: game.isLive
-                                            ? interfaceColor(
-                                                context, Colors.redAccent)
-                                            : muted)),
-                              ]),
-                              const SizedBox(height: 4),
-                              for (final side in [game.first, game.second])
-                                Row(children: [
-                                  Expanded(
-                                      child: Text(
-                                          side.abbreviation.isEmpty
-                                              ? side.shortName
-                                              : side.abbreviation,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: interfaceColor(
-                                                  context, Colors.white)))),
-                                  Text(side.score ?? '',
-                                      style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: interfaceColor(
-                                              context, Colors.white70))),
-                                ]),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
+                    return _card(games[index], index);
                   },
                 ),
               ),

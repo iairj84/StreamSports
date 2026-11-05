@@ -43,7 +43,11 @@ class SportsFixtureRow extends StatelessWidget {
                   animate: false)),
           const SizedBox(width: 6),
           Expanded(
-              child: Text(side.name.isEmpty ? side.shortName : side.name,
+              child: Text(
+                  side.rankLabel.isEmpty
+                      ? (side.name.isEmpty ? side.shortName : side.name)
+                      : '${side.rankLabel} '
+                          '${side.name.isEmpty ? side.shortName : side.name}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

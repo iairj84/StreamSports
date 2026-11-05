@@ -1780,6 +1780,11 @@ SportsTeam _parseTeam(Map<String, dynamic> c) {
     logo = (logos.first as Map)['href']?.toString();
   }
   final name = (t['displayName'] ?? t['name'] ?? '').toString();
+  // College scoreboards carry the poll position here; 99 means unranked.
+  final curated = (c['curatedRank'] as Map?)?['current'];
+  final rank = curated is num && curated > 0 && curated < 99
+      ? curated.toInt()
+      : null;
   return SportsTeam(
     id: (t['id'] ?? name).toString(),
     name: name,
@@ -1790,5 +1795,6 @@ SportsTeam _parseTeam(Map<String, dynamic> c) {
     color: t['color']?.toString(),
     record: record,
     score: score,
+    rank: rank,
   );
 }

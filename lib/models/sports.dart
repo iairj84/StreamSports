@@ -1958,6 +1958,7 @@ class SportsTeam {
     this.color,
     this.record,
     this.score,
+    this.rank,
   });
 
   final String id;
@@ -1979,6 +1980,13 @@ class SportsTeam {
   /// "1-3-1" (W-L-OTL / W-D-L).
   final String? record;
   final String? score;
+
+  /// Provider poll position (AP/coaches top 25) when the scoreboard supplies
+  /// one. College sports only; never invented for leagues without a poll.
+  final int? rank;
+
+  /// "#8" for a ranked side, empty otherwise.
+  String get rankLabel => rank == null ? '' : '#$rank';
 }
 
 class SportsGame {

@@ -4606,7 +4606,10 @@ class _GameCardState extends State<_GameCard> {
               color: t.color),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(t.shortName,
+            child: Text(
+                t.rankLabel.isEmpty
+                    ? t.shortName
+                    : '${t.rankLabel} ${t.shortName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(

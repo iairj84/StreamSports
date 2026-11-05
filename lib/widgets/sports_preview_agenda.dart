@@ -4,6 +4,7 @@ import '../models/channel.dart';
 import '../models/sports.dart';
 import '../utils/interface_colors.dart';
 import '../utils/time_format.dart';
+import 'sports_filter_picker.dart' show sportIcon, sportLabel;
 
 /// One game in the preview column's running order.
 class SportsAgendaEntry {
@@ -82,6 +83,13 @@ class SportsPreviewAgenda extends StatelessWidget {
                           color: entry.live
                               ? interfaceColor(context, Colors.redAccent)
                               : muted))),
+              Tooltip(
+                  message: sportLabel(entry.game.league.espnPath.split('/').first),
+                  child: Icon(
+                      sportIcon(entry.game.league.espnPath.split('/').first),
+                      size: 13,
+                      color: muted)),
+              const SizedBox(width: 5),
               Expanded(
                   child: Text(_matchup(entry.game),
                       maxLines: 1,

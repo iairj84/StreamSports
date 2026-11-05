@@ -2066,6 +2066,10 @@ class SportsChannelMatcher {
     // Query the local guide once, with deduplicated discriminating words.
     // Unlike whole SQL phrases, these also find punctuation/reversed names.
     final raw = <String>{};
+    // Matchup codes stay separate from the deduplicated words below: "uta" is
+    // contained in "utah", so the containment pass would drop the very term a
+    // compact guide title ("7pm UTA @ MTL") actually uses.
+    final compactCodes = <String>{};
     for (final g in games) {
       final context = contexts[g]!;
       for (final phrase in [
@@ -2080,6 +2084,12 @@ class SportsChannelMatcher {
           ..sort((a, b) => b.length.compareTo(a.length));
         if (words.isNotEmpty) raw.add(words.first);
       }
+      // Compact fixture titles name both sides by code alone
+      // ("7pm UTA @ MTL"); retrieval must reach them before the scorer can.
+      for (final code in [g.home.abbreviation, g.away.abbreviation]) {
+        final term = code.trim().toLowerCase();
+        if (term.length >= 3) compactCodes.add(term);
+      }
       // SQLite LIKE does not fold accents. Keep the original surname too.
       for (final name in [g.home.name, g.home.shortName]) {
         final last = name.toLowerCase().split(RegExp(r'[\s-]+')).last;
@@ -2091,6 +2101,7 @@ class SportsChannelMatcher {
     for (final t in byLength) {
       if (!terms.any(t.contains)) terms.add(t);
     }
+    terms.addAll(compactCodes);
     // Both exact and coverage scoring require stop > the game's reference.
     // Query by overlap from that boundary: a programme that started hours ago
     // is still included if it runs across the reference. Keep the full upper
@@ -2336,6 +2347,11 @@ class SportsChannelMatcher {
           ...candidates(
               context.nameGroups.isEmpty ? [] : context.nameGroups.first,
               guide: true),
+          // Compact titles name both sides by code only ("7pm UTA @ MTL").
+          if (game.league.kind == SportsKind.team)
+            ...candidates(
+                _nameGroups(game, shortCodes: true).expand((g) => g).toList(),
+                guide: true),
           if (context.fightCard != null)
             ...candidates(context.event, guide: true),
           if (game.league.kind == SportsKind.tennis)
@@ -2697,10 +2713,23 @@ class SportsChannelMatcher {
         }
         final sameFightCard = context.fightCard != null &&
             context.fightCard == _numberedFightCard(title);
+        // The programme's own feed can supply the league: a channel grouped
+        // under "Hockey" listing "7pm UTA @ MTL" identifies the NHL fixture
+        // as surely as a title that spells the league out.
+        final feedContext = [
+          for (final i
+              in _byEpgId[normalizeEpgId(p.channelId)] ?? const <int>[])
+            '${sportsNormalize(_channels[i].group)} ${_names[i]}'
+        ].join(' ');
+        final codeGroups = _nameGroups(g, shortCodes: true);
         if ((!sameFightCard &&
                 (g.league.kind == SportsKind.tennis
                     ? !tennisProgrammeIsExact(g, p)
-                    : groups.isEmpty || !_opponentsFit(g, groups, identity))) ||
+                    : groups.isEmpty ||
+                        !(_opponentsFit(g, groups, identity,
+                                qualification: feedContext) ||
+                            _opponentsFit(g, codeGroups, identity,
+                                qualification: feedContext)))) ||
             context.conflicts(g, identity) ||
             (g.state != GameState.post && recorded(p))) {
           continue;
@@ -2871,6 +2900,13 @@ class SportsChannelMatcher {
       // current cache does not cover this fixture's reference time.
       found.removeWhere((_, match) {
         if (match.reason == MatchReason.pick) return false;
+        // The programme's own feed grouping qualifies a compact code matchup
+        // here too, or the pass would delete the match it just proved.
+        final feedIndex = _byId[match.channel.id];
+        final feedContext = feedIndex == null
+            ? ''
+            : '${sportsNormalize(_channels[feedIndex].group)} '
+                '${_names[feedIndex]}';
         bool contradicts(EpgProgram p) {
           final title = (g.league.kind == SportsKind.team ||
                   g.league.kind == SportsKind.tennis ||
@@ -2880,7 +2916,11 @@ class SportsChannelMatcher {
           return context.conflicts(g, title) ||
               f1ProgrammeConflicts(g, title) ||
               (g.state != GameState.post && recorded(p)) ||
-              (_otherFixture(title) && !_opponentsFit(g, groups, title));
+              (_otherFixture(title) &&
+                  !_opponentsFit(g, groups, title,
+                      qualification: feedContext) &&
+                  !_opponentsFit(g, _nameGroups(g, shortCodes: true), title,
+                      qualification: feedContext));
         }
 
         final programme = _epg.getCurrentProgram(match.channel.epgId);
@@ -3308,11 +3348,15 @@ class SportsChannelMatcher {
           !terms.league.any(name.contains)) {
         continue;
       }
+      // A feed's own grouping is league evidence for its compact titles:
+      // "H01" under Hockey airing "7pm UTA @ MTL" is an NHL fixture.
+      final feedQualification = '${sportsNormalize(c.group)} $name';
       final exactNow = p.current != null &&
           (sport == 'tennis'
               ? tennisProgrammeIsExact(game, p.current!)
               : nameGroups.isNotEmpty &&
-                  _opponentsFit(game, nameGroups, p.text));
+                  _opponentsFit(game, nameGroups, p.text,
+                      qualification: feedQualification));
       final programmeDate = p.current == null
           ? null
           : _dateInName(_fixtureText(p.current!.title));
@@ -3333,7 +3377,8 @@ class SportsChannelMatcher {
               f1ProgrammeConflicts(game, p.text) ||
               _nonLiveCoverage(p.current!) ||
               (_otherFixture(p.text) &&
-                  !_opponentsFit(game, nameGroups, p.text)));
+                  !_opponentsFit(game, nameGroups, p.text,
+                      qualification: '${sportsNormalize(c.group)} $name')));
       final inactive = _idleWords.hasMatch(name);
       final dated = _dateInName(name);
       final staleName = dated != null && !_dateFitsEvent(dated, game);
@@ -3703,9 +3748,11 @@ int _soccerAgeGroup(SportsGame game) => _soccerAges[
 /// Channel labels may name both sides by code alone ("B01: 7pm ATL @ WAS"),
 /// so [allowUnqualifiedCodes] accepts a code matchup that has the connector but
 /// no competition word. Guide text leaves it off: a programme title that only
-/// mentions two codes stays ambiguous until the fixture provides the league.
+/// mentions two codes stays ambiguous until the fixture provides the league —
+/// [qualification] is that league evidence when it comes from the feed itself
+/// (a channel grouped under "Hockey" airing "7pm UTA @ MTL").
 bool _opponentsFit(SportsGame game, List<List<String>> groups, String text,
-    {bool allowUnqualifiedCodes = false}) {
+    {bool allowUnqualifiedCodes = false, String qualification = ''}) {
   if (groups.isEmpty || !groups.every((g) => g.any(text.contains))) {
     return false;
   }
@@ -3732,9 +3779,18 @@ bool _opponentsFit(SportsGame game, List<List<String>> groups, String text,
         game.league.name,
         game.league.shortName,
         ...game.league.seriesPhrases
-      ].map(sportsNormalize);
-      final qualified =
-          competition.any((p) => p.trim().length >= 3 && text.contains(p));
+      ].map(sportsNormalize).toList();
+      bool namesLeague(String source) => competition
+          .any((p) => p.trim().length >= 3 && source.contains(p));
+      // A feed grouped under the sport itself ("Hockey") is league evidence
+      // for that sport's codes: college and pro codes are distinct enough.
+      final sportKey =
+          sportsNormalize(game.league.espnPath.split('/').first);
+      final qualified = namesLeague(text) ||
+          (qualification.isNotEmpty &&
+              (namesLeague(qualification) ||
+                  (sportKey.trim().length >= 4 &&
+                      qualification.contains(sportKey))));
       if ((!allowUnqualifiedCodes && !qualified) ||
           !_teamSynopsisConnector.hasMatch(text)) {
         return false;
