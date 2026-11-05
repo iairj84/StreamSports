@@ -199,13 +199,12 @@ class _SportsScreenState extends State<SportsScreen>
   final _scheduleBrowse = SportsScheduleBrowseState();
   final _scheduleFocus = FocusNode(debugLabel: 'sports-schedule-entry');
   bool get _standings => _sportsView == 'standings';
-  bool get _replays => _sportsView == 'replays' || _sportsView == 'highlights';
+  bool get _replays => _sportsView == 'replays';
   final _standingsBrowse = SportsStandingsBrowseState();
   final _standingsFocus = FocusNode(debugLabel: 'sports-standings-entry');
   final _standingsSearchFocus =
       FocusNode(debugLabel: 'sports-standings-search');
 
-  bool get _highlights => _sportsView == 'highlights';
   bool _onlineExtras = true;
   bool _backgrounded = false;
   Timer? _listingTimer;
@@ -503,9 +502,7 @@ class _SportsScreenState extends State<SportsScreen>
   int _rowFocusAttempts = 0;
   int _navigationRevision = 0;
   final _replayPanelKey = GlobalKey<SportsReplaysPanelState>();
-  final _highlightPanelKey = GlobalKey<SportsReplaysPanelState>();
-  SportsReplaysPanelState? get _guidePanel =>
-      (_highlights ? _highlightPanelKey : _replayPanelKey).currentState;
+  SportsReplaysPanelState? get _guidePanel => _replayPanelKey.currentState;
   bool get _tvNavigation => context.read<AppPreferences>().isTelevision;
 
   void _focusToolbar() {
@@ -1443,21 +1440,6 @@ class _SportsScreenState extends State<SportsScreen>
         _timeFilter.accepts(g, now));
   }
 
-  Future<void> _chooseTimeFilter() async {
-    final choice = await showSportsChoices(context,
-        title: 'Show events',
-        selected: _timeFilter,
-        choices: [
-          for (final mode in SportsTimeFilter.values)
-            SportsChoice(mode, mode.label, mode.description,
-                key: ValueKey('time-filter-${mode.name}'),
-                icon: mode == SportsTimeFilter.live
-                    ? Icons.sensors
-                    : Icons.schedule)
-        ]);
-    if (choice != null && mounted) _setTimeFilter(choice);
-  }
-
   void _setTimeFilter(SportsTimeFilter choice) {
     if (_timeFilter == choice) return;
     setState(() {
@@ -1486,20 +1468,6 @@ class _SportsScreenState extends State<SportsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusZone(0, _sections);
     });
-  }
-
-  Future<void> _chooseChannelFilter() async {
-    final selected = await showSportsChoices(context,
-        title: 'Channel matches',
-        selected: _channelFilter,
-        choices: [
-          for (final mode in SportsChannelFilter.values)
-            SportsChoice(mode, mode.label, mode.description,
-                key: ValueKey('channel-filter-${mode.name}'),
-                icon: Icons.live_tv_outlined)
-        ]);
-    if (!mounted || selected == null) return;
-    await _setChannelFilter(selected);
   }
 
   Future<void> _setChannelFilter(SportsChannelFilter selected) async {
@@ -2491,6 +2459,58 @@ class _SportsScreenState extends State<SportsScreen>
 
   // ---------------------------------------------------------------- build
 
+  static final _redZoneName = RegExp(r'\bred\s*zone\b', caseSensitive: false);
+
+  /// The chosen RedZone channel, otherwise the first channel named RedZone.
+  Channel? _redZoneChannel() {
+    final channels = context.read<PlaylistManager>().visibleLiveChannels;
+    final chosen = _picks.redZoneChannelId;
+    if (chosen != null) {
+      for (final channel in channels) {
+        if (channel.id == chosen) return channel;
+      }
+    }
+    for (final channel in channels) {
+      if (_redZoneName.hasMatch(channel.name)) return channel;
+    }
+    return null;
+  }
+
+  bool get _hasNfl => _games.any((g) =>
+      g.league.espnPath.toLowerCase().contains('nfl') ||
+      g.league.name.toLowerCase().contains('nfl'));
+
+  Future<void> _chooseRedZone() async {
+    final channels = context
+        .read<PlaylistManager>()
+        .visibleLiveChannels
+        .where((c) => _redZoneName.hasMatch(c.name))
+        .take(12)
+        .toList();
+    if (channels.isEmpty) return;
+    final chosen = await showSportsDialog<String>(
+        context: context,
+        builder: (context) => SportsCompactDialog(
+              title: 'NFL RedZone channel',
+              actions: [
+                TextButton(
+                    onPressed: () => popRouteIfCurrent(context),
+                    child: const Text('Cancel'))
+              ],
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (final channel in channels)
+                  ListTile(
+                      dense: true,
+                      title: Text(channel.name),
+                      selected: channel.id == _picks.redZoneChannelId,
+                      onTap: () => Navigator.of(context).pop(channel.id)),
+              ]),
+            ));
+    if (chosen == null || !mounted) return;
+    await _picks.setRedZone(chosen);
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final sections = _events ? _sections : const <_Section>[];
@@ -2502,6 +2522,7 @@ class _SportsScreenState extends State<SportsScreen>
     final preview = _livePreview(playback);
     final current = _playingNow(playback);
     final playing = current != null && Channel.isLiveId(current.rawId);
+    final redZone = _hasNfl ? _redZoneChannel() : null;
     // An unrelated current channel must not inherit the focused game's score.
     Widget buildPreview(Widget activity) => widget.onChooseChannel != null
         ? activity
@@ -2518,7 +2539,6 @@ class _SportsScreenState extends State<SportsScreen>
                 activity: activity,
                 replays: _replays,
                 standings: _standings || _schedule,
-                highlights: _highlights,
                 game: hero,
                 matches: hero == null
                     ? null
@@ -2562,7 +2582,7 @@ class _SportsScreenState extends State<SportsScreen>
               _setGuideView('events');
               _chipNode('view-events').requestFocus();
             } else if (_replays) {
-              final panel = _highlights ? _highlightPanelKey : _replayPanelKey;
+              final panel = _replayPanelKey;
               if (panel.currentState?.backToOverview() ?? false) return;
               _setGuideView('events');
             } else if (!_groupedBySport) {
@@ -2693,11 +2713,8 @@ class _SportsScreenState extends State<SportsScreen>
                                         valueListenable: _viewActive,
                                         builder: (context, active, _) =>
                                             SportsReplaysPanel(
-                                          key: _highlights
-                                              ? _highlightPanelKey
-                                              : _replayPanelKey,
+                                          key: _replayPanelKey,
                                           onFocusToolbar: _focusToolbar,
-                                          highlights: _highlights,
                                           active: active,
                                           playingId: current?.id,
                                           onPlay: _playReplay,
@@ -2724,11 +2741,24 @@ class _SportsScreenState extends State<SportsScreen>
                                         showPreview: widget.onChooseChannel == null,
                                         header: _buildHeader(_buildPrimaryFilters(),
                                             actions: Row(mainAxisSize: MainAxisSize.min, children: [
+                                              if (redZone != null) ...[
+                                                RedZonePill(
+                                                    focusNode:
+                                                        _chipNode('redzone'),
+                                                    onFocus: () {
+                                                      _zone = _filterZone;
+                                                      _lockBrowse();
+                                                    },
+                                                    onTap: () => unawaited(
+                                                        _play(redZone)),
+                                                    onHold: () => unawaited(
+                                                        _chooseRedZone())),
+                                                const SizedBox(width: 6),
+                                              ],
                                               _buildFavouritesFilter(),
                                               const SizedBox(width: 6),
                                               SportsToolbarActions(children: [
-                                                if (_compactEventTools)
-                                                  _buildEventFilterButton(),
+                                                _buildEventFilterButton(),
                                                 _buildDayPicker(),
                                                 _buildSportsOptions(),
                                               ]),
@@ -2908,8 +2938,7 @@ class _SportsScreenState extends State<SportsScreen>
           for (final view in [
             'events',
             if (widget.onChooseChannel == null) ...['standings', 'schedule'],
-            'replays',
-            'highlights'
+            'replays'
           ])
             Padding(
                 padding: const EdgeInsets.only(right: 3),
@@ -2986,7 +3015,6 @@ class _SportsScreenState extends State<SportsScreen>
                                   'standings' => 'Standings',
                                   'schedule' => 'Schedule',
                                   'replays' => 'Replays',
-                                  'highlights' => 'Highlights',
                                   _ => 'Events'
                                 }),
                               )),
@@ -3092,25 +3120,21 @@ class _SportsScreenState extends State<SportsScreen>
   Widget _buildReplayInfo() => SizedBox(
       width: 30,
       child: IconButton(
-          tooltip: _highlights ? 'About highlights' : 'About replays',
+          tooltip: 'About replays',
           icon: const Icon(Icons.info_outline, size: 18),
           padding: EdgeInsets.zero,
           onPressed: () => showSportsDialog<void>(
               context: context,
               builder: (context) => SportsCompactDialog(
-                    title: _highlights
-                        ? 'Highlights on your channels'
-                        : 'Replays on your channels',
+                    title: 'Replays on your channels',
                     actions: [
                       TextButton(
                           onPressed: () => popRouteIfCurrent(context),
                           child: const Text('Got it'))
                     ],
-                    child: Text(
-                        _highlights
-                            ? 'Highlight shows airing now on your channels, identified by their current guide title or description. Includes match highlights and sport roundups; general news and full-match replays stay separate.\n\nTap to preview; tap again for fullscreen. Open programme details for the full description and alternate channels. Browse by sport or search from the ••• menu.\n\nThis uses the saved guide, with no extra provider requests. Roundups may cover several games, so no single match date or score is assumed.'
-                            : 'Sports programmes airing now, using replay labels, past event dates and classic seasons in the guide. Likely replays have a clear event listing but no live marker; they are marked separately.\n\nTap to preview; tap again for fullscreen. Open the details button for the full programme description and any other channels.\n\nNo scores are shown here. Use the ••• menu to hide likely replays or browse replay channels without current programme details; their availability is unverified. Highlights, info channels and inactive slots are excluded. Refresh checks the saved guide; normal guide updates continue as usual.',
-                        style: const TextStyle(fontSize: 12, height: 1.4)),
+                    child: const Text(
+                        'Sports programmes airing now, using replay labels, past event dates and classic seasons in the guide. Likely replays have a clear event listing but no live marker; they are marked separately.\n\nTap to preview; tap again for fullscreen. Open the details button for the full programme description and any other channels.\n\nNo scores are shown here. Use the ••• menu to hide likely replays or browse replay channels without current programme details; their availability is unverified. Highlights, info channels and inactive slots are excluded. Refresh checks the saved guide; normal guide updates continue as usual.',
+                        style: TextStyle(fontSize: 12, height: 1.4)),
                   ))));
 
   Widget _buildSportPicker() => Expanded(
@@ -3427,11 +3451,6 @@ class _SportsScreenState extends State<SportsScreen>
   bool get _splitEventActions =>
       _events && _narrow && MediaQuery.sizeOf(context).width < 360;
 
-  bool get _compactEventTools =>
-      !_tvNavigation ||
-      MediaQuery.sizeOf(context).width < 900 ||
-      MediaQuery.textScalerOf(context).scale(11.5) > 15;
-
   Widget _buildEventFilterButton() => SizedBox(
       width: _tvNavigation ? 28 : 32,
       child: IconButton(
@@ -3463,24 +3482,6 @@ class _SportsScreenState extends State<SportsScreen>
               child: const Icon(Icons.calendar_today_outlined, size: 18)),
           onPressed: _chooseDay));
 
-  Widget _buildLiveFilter() => SportsTimeControl(
-      key: const ValueKey('live-only'),
-      value: _timeFilter,
-      focusNode: _chipNode('live-only'),
-      onChoose: _chooseTimeFilter);
-
-  Widget _buildChannelFilter() => SportsFilterButton(
-      key: const ValueKey('with-channel'),
-      caption: 'Channels',
-      value: switch (_channelFilter) {
-        SportsChannelFilter.matched => 'Matched',
-        SportsChannelFilter.possible => 'Possible',
-        SportsChannelFilter.all => 'Any'
-      },
-      focusNode: _chipNode('with-channel'),
-      selected: _withChannel,
-      onFocus: () => _zone = _filterZone,
-      onTap: _chooseChannelFilter);
   Widget _buildPrimaryFilters() => SizedBox(
       height: sportsFilterHeight(context).clamp(
           _tvNavigation ? 0.0 : sportsTouchControlHeight(context),
@@ -3489,15 +3490,6 @@ class _SportsScreenState extends State<SportsScreen>
         _buildSportPicker(),
         const SizedBox(width: 4),
         _buildLeaguePicker(),
-        if (!_compactEventTools) ...[
-          const SizedBox(width: 4),
-          SizedBox(
-              width: 104,
-              height: sportsFilterHeight(context),
-              child: _buildLiveFilter()),
-          const SizedBox(width: 4),
-          SizedBox(width: 88, child: _buildChannelFilter()),
-        ],
       ]));
 
   Future<void> _activatePreview(SportsGame game) async {
@@ -4203,7 +4195,6 @@ class _Hero extends StatelessWidget {
       {super.key,
       this.replays = false,
       this.standings = false,
-      this.highlights = false,
       required this.game,
       required this.matches,
       required this.matching,
@@ -4216,7 +4207,6 @@ class _Hero extends StatelessWidget {
       this.onVideoTap,
       this.activity});
   final bool replays, standings;
-  final bool highlights;
   final SportsGame? game;
   final List<ChannelMatch>? matches;
   final bool matching, hideScores, playing, touch, narrow, sidebar, compact;
@@ -4308,7 +4298,7 @@ class _Hero extends StatelessWidget {
             guide?.title ??
             playingChannel?.name ??
             (replays
-                ? (highlights ? 'Choose a highlight show' : 'Choose a replay')
+                ? 'Choose a replay'
                 : standings
                     ? tr('Channel preview')
                     : tr('Choose a game'));
@@ -4593,10 +4583,10 @@ class _GameCardState extends State<_GameCard> {
             Text(t.score ?? '',
                 style: TextStyle(
                     fontSize: dense
-                        ? 14
+                        ? 16
                         : widget.compact
-                            ? (g.league.kind == SportsKind.tennis ? 15 : 16)
-                            : 18,
+                            ? (g.league.kind == SportsKind.tennis ? 16 : 18)
+                            : 20,
                     height: 1.2,
                     fontWeight: FontWeight.w800,
                     color: winning || live
@@ -4835,13 +4825,15 @@ class _GameCardState extends State<_GameCard> {
                                       color: channelColor)
                                   : Text(
                                       widget.match == null
-                                          ? 'No channel found · Choose'
-                                          : '${widget.match!.isConfident ? '' : 'Possible · '}${widget.match!.channel.name}',
+                                          ? 'No channel · Choose'
+                                          : widget.match!.isConfident
+                                              ? 'Watch · ${widget.match!.channel.name}'
+                                              : 'Possible · ${widget.match!.channel.name}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w500,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
                                           color:
                                               widget.match?.isConfident == true
                                                   ? scheme.onSurface

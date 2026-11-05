@@ -5,7 +5,6 @@ import 'package:nox_iptv/models/sports_favourites_filter.dart';
 import 'package:nox_iptv/widgets/sports_filter_picker.dart';
 import 'package:nox_iptv/widgets/sports_fixture_row.dart';
 import 'package:nox_iptv/utils/sports_channel_filter.dart';
-import 'package:nox_iptv/widgets/sports_event_controls.dart';
 import 'package:nox_iptv/widgets/sports_schedule_panel.dart';
 import 'package:nox_iptv/utils/sports_time_filter.dart';
 import 'package:nox_iptv/services/sports_standings_service.dart';
@@ -744,7 +743,7 @@ void main() {
       Finder tab(String id) => find.byKey(ValueKey('sports-view-$id'));
       FocusNode node(String id) =>
           tester.widget<TextButton>(tab(id)).focusNode!;
-      const ids = ['events', 'standings', 'schedule', 'replays', 'highlights'];
+      const ids = ['events', 'standings', 'schedule', 'replays'];
       void expectTabs(String selected, {String? outlined}) {
         for (final id in ids) {
           final button = tester.widget<TextButton>(tab(id));
@@ -808,13 +807,7 @@ void main() {
       expectTabs('events', outlined: 'events');
       FocusManager.instance.highlightStrategy =
           FocusHighlightStrategy.automatic;
-      for (final id in [
-        'highlights',
-        'schedule',
-        'standings',
-        'replays',
-        'events'
-      ]) {
+      for (final id in ['schedule', 'standings', 'replays', 'events']) {
         await tester.ensureVisible(tab(id));
         await tester.pumpAndSettle();
         await tester.tap(tab(id));
@@ -1135,7 +1128,6 @@ void main() {
             'A short list fits its last row without unnecessary scrolling.');
     await captureSports(tester, const Size(390, 844), 'standings-league-scope');
     await tapKey('nhl');
-    await tapKey('sports-view-highlights');
     await tapKey('sports-view-schedule');
     var schedule =
         tester.widget<SportsSchedulePanel>(find.byType(SportsSchedulePanel));
@@ -2578,11 +2570,8 @@ void main() {
               'view-standings',
               'view-schedule',
               'view-replays',
-              'view-highlights',
               'sport-picker',
               'league-picker',
-              'live-only',
-              'with-channel',
               'events-favourites-only',
               'day',
               'options'
@@ -2607,12 +2596,8 @@ void main() {
             final sportBounds =
                 tester.getRect(find.byKey(const ValueKey('sport-picker')));
             expect(sportBounds.left, closeTo(previewBounds.right + 12, .1));
-            expect(
-                tester
-                    .getSize(find.byKey(const ValueKey('with-channel')))
-                    .width,
-                greaterThanOrEqualTo(88));
-            for (final key in ['live-only', 'with-channel', 'sports-day']) {
+
+            for (final key in ['sports-day']) {
               final bounds = tester.getRect(find.byKey(ValueKey(key)));
               expect(bounds.center.dy, closeTo(sportBounds.center.dy, 1));
               expect(bounds.right, lessThanOrEqualTo(940));
@@ -2776,7 +2761,7 @@ void main() {
             await press(LogicalKeyboardKey.contextMenu);
             expect(focused(), 'replays-refresh');
             await press(LogicalKeyboardKey.arrowUp);
-            expect(focused(), 'sports-chip-view-highlights');
+            expect(focused(), 'sports-chip-view-replays');
             expect(tester.takeException(), isNull);
             await tester.pumpWidget(const SizedBox());
             SportsChannelMatcher.disposeShared();
@@ -4790,7 +4775,7 @@ void main() {
         epg.notifyListeners();
         final videoBefore =
             tester.getRect(find.byKey(const ValueKey('sports-channel-box')));
-        for (final tab in ['replays', 'highlights']) {
+        for (final tab in ['replays']) {
           await tester.ensureVisible(find.byKey(ValueKey('sports-view-$tab')));
           await tester.pumpAndSettle();
           await tester.tap(find.byKey(ValueKey('sports-view-$tab')));
@@ -5279,38 +5264,19 @@ void main() {
               final compactFilters =
                   find.byKey(const ValueKey('event-filters'));
               SportsTimeFilter currentTime() {
-                if (compactFilters.evaluate().isEmpty) {
-                  return tester
-                      .widget<SportsTimeControl>(
-                          find.byKey(const ValueKey('live-only')))
-                      .value;
-                }
                 final tip = tester.widget<IconButton>(compactFilters).tooltip!;
                 return SportsTimeFilter.values.singleWhere(
                     (mode) => tip.startsWith('Filters: ${mode.label} ·'));
               }
 
               SportsChannelFilter currentChannels() {
-                if (compactFilters.evaluate().isNotEmpty) {
-                  final tip =
-                      tester.widget<IconButton>(compactFilters).tooltip!;
-                  return SportsChannelFilter.values
-                      .singleWhere((mode) => tip.endsWith('· ${mode.label}'));
-                }
-                return switch (tester
-                    .widget<SportsFilterButton>(
-                        find.byKey(const ValueKey('with-channel')))
-                    .value) {
-                  'Matched' => SportsChannelFilter.matched,
-                  'Possible' => SportsChannelFilter.possible,
-                  _ => SportsChannelFilter.all,
-                };
+                final tip = tester.widget<IconButton>(compactFilters).tooltip!;
+                return SportsChannelFilter.values
+                    .singleWhere((mode) => tip.endsWith('· ${mode.label}'));
               }
 
               Future<void> openFilter(String key) async {
-                await tester.tap(compactFilters.evaluate().isNotEmpty
-                    ? compactFilters
-                    : find.byKey(ValueKey(key)));
+                await tester.tap(compactFilters);
                 await tester.pumpAndSettle();
               }
 
@@ -6469,8 +6435,7 @@ void main() {
                   'events',
                   'standings',
                   'schedule',
-                  'replays',
-                  'highlights'
+                  'replays'
                 ]) {
                   final tab = find.byKey(ValueKey('sports-view-$view'));
                   expect(tab.hitTestable(), findsOneWidget);
@@ -6502,11 +6467,7 @@ void main() {
               await tester.pumpAndSettle();
               await captureSports(tester, size, 'balanced-events');
               expect(find.byType(Dialog), findsNothing);
-              for (final key in [
-                'sport-picker',
-                'league-picker',
-                if (prefs.isTelevision) 'with-channel'
-              ]) {
+              for (final key in ['sport-picker', 'league-picker']) {
                 final finder = find.byKey(ValueKey(key));
                 final value = tester.widget<SportsFilterButton>(finder).value;
                 final text = find.descendant(
