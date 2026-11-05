@@ -17,6 +17,10 @@ import android.content.res.Configuration
 import android.content.Intent
 import android.os.Build
 import android.view.KeyEvent
+import android.net.Uri
+import android.provider.Settings
+import androidx.core.content.FileProvider
+import java.io.File
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -348,5 +352,47 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // In-app updates: the APK is already downloaded into the cache by
+        // AppUpdateService, so this only has to hand it to the system
+        // installer. Android refuses that intent until the user has granted
+        // "install unknown apps" to this app, which is why the permission
+        // state is reported back instead of failing silently.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nox.nox_iptv/updater").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "installApk" -> result.success(installApk(call.argument<String>("path")))
+                "openInstallSettings" -> {
+                    val opened = try {
+                        startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+                        true
+                    } catch (_: Exception) {
+                        false
+                    }
+                    result.success(opened)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+    }
+
+    /** Returns "started", "permission", "missing" or "failed". */
+    private fun installApk(path: String?): String {
+        if (path == null) return "failed"
+        val file = File(path)
+        if (!file.exists()) return "missing"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !packageManager.canRequestPackageInstalls()
+        ) return "permission"
+        return try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            "started"
+        } catch (_: Exception) {
+            "failed"
+        }
     }
 }

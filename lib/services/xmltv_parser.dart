@@ -6,6 +6,7 @@ import 'dart:isolate';
 import 'package:xml/xml_events.dart';
 
 import '../models/epg_program.dart';
+import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
 import '../utils/thai_epg.dart';
 import 'epg_database.dart';
@@ -22,6 +23,7 @@ typedef XmltvResult = ({
 Future<XmltvResult> parseXmltvInBackground(
   Stream<List<int>> input, {
   Set<String>? knownChannelIds,
+  Set<String>? knownChannelNames,
   String namespace = '',
   required String noTitle,
   DateTime? now,
@@ -37,6 +39,7 @@ Future<XmltvResult> parseXmltvInBackground(
         (
           port: messages.sendPort,
           knownChannelIds: knownChannelIds,
+          knownChannelNames: knownChannelNames,
           namespace: namespace,
           noTitle: noTitle,
           now: now ?? DateTime.now(),
@@ -102,6 +105,7 @@ class _XmltvInput {
 typedef _XmltvRequest = ({
   SendPort port,
   Set<String>? knownChannelIds,
+  Set<String>? knownChannelNames,
   String namespace,
   String noTitle,
   DateTime now,
@@ -131,6 +135,7 @@ void _xmltvWorker(_XmltvRequest request) async {
     final result = await _parseXmltvStream(
       _autoGunzip(input()),
       knownChannelIds: request.knownChannelIds,
+      knownChannelNames: request.knownChannelNames,
       namespace: request.namespace,
       noTitle: request.noTitle,
       now: request.now,
@@ -190,6 +195,7 @@ Future<
     })> _parseXmltvStream(
   Stream<List<int>> byteStream, {
   Set<String>? knownChannelIds,
+  Set<String>? knownChannelNames,
   String namespace = '',
   required DateTime now,
   required String noTitle,
@@ -211,6 +217,14 @@ Future<
   // way [channelNames] is (one entry per channel, not per programme),
   // so keeping it unfiltered costs nothing worth guarding against.
   final nowPlaying = <String, EpgProgram>{};
+  // Feed ids kept only because their <display-name> matches a channel the
+  // playlist owns. An extra guide normally publishes ids that differ from the
+  // playlist's own tvg-ids, and without this its rows were stored for nobody.
+  final namedIds = <String>{};
+  // Cached for feeds that publish no <channel> directory at all: the id text
+  // itself is then the only link to a playlist channel ("TSN1"), and a
+  // programme may also arrive before its own <channel> entry.
+  final idNamesChannel = <String, bool>{};
   final minStopMs =
       now.subtract(AppConstants.epgPastRetention).millisecondsSinceEpoch;
   final maxStartMs =
@@ -263,7 +277,11 @@ Future<
           stop: stop,
         );
       }
-      if (knownChannelIds != null && !knownChannelIds.contains(channelId)) {
+      if (knownChannelIds != null &&
+          !knownChannelIds.contains(channelId) &&
+          !namedIds.contains(channelId) &&
+          !(idNamesChannel[channelId] ??=
+              _idNamesPlaylistChannel(channelId, knownChannelNames))) {
         return;
       }
       final startMs = start.millisecondsSinceEpoch;
@@ -404,6 +422,12 @@ Future<
         final id = catalogChannelId;
         if (id != null && catalogDisplayName != null) {
           channelNames.putIfAbsent(id, () => catalogDisplayName!.trim());
+          if (knownChannelNames != null && knownChannelNames.isNotEmpty) {
+            final key = canonicalChannelKey(catalogDisplayName);
+            if (key.isNotEmpty && knownChannelNames.contains(key)) {
+              namedIds.add(id);
+            }
+          }
         }
       }
     }
@@ -412,6 +436,14 @@ Future<
   await flush();
 
   return (stored: stored, channelNames: channelNames, nowPlaying: nowPlaying);
+}
+
+/// True when a guide's own channel id text matches a playlist channel name —
+/// the only link available when the feed ships no <channel> directory.
+bool _idNamesPlaylistChannel(String id, Set<String>? knownChannelNames) {
+  if (knownChannelNames == null || knownChannelNames.isEmpty) return false;
+  final key = canonicalChannelKey(id);
+  return key.isNotEmpty && knownChannelNames.contains(key);
 }
 
 /// Parses XMLTV timestamps such as `20240101120000 +0000`.

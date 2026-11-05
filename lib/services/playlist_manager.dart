@@ -875,6 +875,15 @@ class PlaylistManager extends ChangeNotifier {
     }
 
     final paired = <String>{};
+    // Ids already serving some channel's listings. Two guides regularly
+    // publish the same display name ("ESPN"), and an id in use must never be
+    // handed to a second channel.
+    final claimed = <String>{
+      for (final session in _enabledSessionsSorted)
+        for (final channel
+            in visibleChannels(playlistId: session.profile.id, category: 'tv'))
+          if (epg.hasPrograms(channel.epgId)) channel.epgId,
+    };
     for (final session in _enabledSessionsSorted) {
       // Same two fixes as autoPairChannelLinks (visible channels only,
       // one bulk write per session instead of one per match) — see that
@@ -887,8 +896,20 @@ class PlaylistManager extends ChangeNotifier {
         final key = canonicalChannelKey(channel.name);
         if (key.isEmpty) continue;
         final candidates = byKey[key];
-        if (candidates == null || candidates.length != 1) continue;
-        newOverrides[channel.rawId] = candidates.first;
+        if (candidates == null || candidates.isEmpty) continue;
+        // Requiring exactly one candidate used to drop the pairing entirely
+        // once a second guide named the same channel, which left a newly
+        // added feed's listings attached to nobody. Take the first unused id;
+        // only stay out of it when every candidate is already in service.
+        String? pick;
+        for (final candidate in candidates) {
+          if (claimed.contains(candidate)) continue;
+          pick = candidate;
+          break;
+        }
+        if (pick == null) continue;
+        newOverrides[channel.rawId] = pick;
+        claimed.add(pick);
         paired.add(channel.id);
       }
       await session.setEpgIdOverridesBulk(newOverrides);
@@ -922,10 +943,12 @@ class PlaylistManager extends ChangeNotifier {
       final urls = profile.allEpgUrls;
       if (urls.isEmpty) continue;
       final knownChannelIds = knownChannelIdsFor(profile.id);
+      final knownChannelNames = knownChannelNamesFor(profile.id);
       for (final url in urls) {
         sources.add(EpgSource(
           url: url,
           knownChannelIds: knownChannelIds,
+          knownChannelNames: knownChannelNames,
           headers: profile.requestHeaders,
         ));
       }
@@ -1292,6 +1315,22 @@ class PlaylistManager extends ChangeNotifier {
         if (match != null) yield match.primaryId;
       }
     }).toSet();
+  }
+
+  /// Guide filter names for one playlist, as [canonicalChannelKey] values.
+  /// Several guides per playlist are normal, and a second feed rarely reuses
+  /// the M3U's own tvg-ids; keeping rows whose display name matches one of
+  /// these is what lets those listings be paired with the channel by name.
+  Set<String> knownChannelNamesFor(String playlistId) {
+    final session = _sessionFor(playlistId);
+    if (session == null) return const {};
+    return (session.hasCatalog ? session.liveChannels : session.channels)
+        .where((c) =>
+            !session.hiddenGroups.contains(c.group) &&
+            !session.hiddenChannels.contains(c.rawId))
+        .map((c) => canonicalChannelKey(c.name))
+        .where((key) => key.isNotEmpty)
+        .toSet();
   }
 
   /// Ensures every enabled Xtream playlist's live channel list is loaded —

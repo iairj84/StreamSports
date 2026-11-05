@@ -32,6 +32,7 @@ class _Guide extends EpgService {
   @override
   Future<void> refresh(String url,
       {required Set<String> knownChannelIds,
+      Set<String> knownChannelNames = const {},
       Map<String, String> headers = const {}}) async {
     requested.add(url);
     requestHeaders.add(headers);

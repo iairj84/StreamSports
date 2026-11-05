@@ -11,8 +11,16 @@ class AppConstants {
   // Libraries load on demand; enabling tabs never starts a bulk catalogue sync.
   static const bool onDemandEnabled = true;
 
-  /// This app uses its own distribution channel.
-  static const bool updatesEnabled = false;
+  /// In-app updates are wired to this project's own GitHub releases: the app
+  /// downloads the newest published APK and hands it to Android's installer.
+  static const bool updatesEnabled = true;
+
+  /// `owner/repo` whose releases carry the installable APK. Override at build
+  /// time with `--dart-define=UPDATE_REPO=owner/repo` for a different fork.
+  static const String updateRepository = String.fromEnvironment(
+    'UPDATE_REPO',
+    defaultValue: 'iairj84/StreamSports',
+  );
 
   /// The Sports tab's name. A brand: not translated.
   static const String sportsTabName = 'Sports';
@@ -257,6 +265,9 @@ class AppConstants {
   /// Release tag the launch update popup was told to skip
   /// (`widgets/update_prompt.dart`); a newer tag is offered again.
   static const String keySkippedUpdateVersion = 'vesper_skipped_update';
+
+  /// When the in-app updater last asked GitHub for a newer build.
+  static const String keyLastUpdateCheck = 'vesper_last_update_check';
 
   /// Next splash greeting to show (index into SplashGreeting.bank).
   static const String keySplashGreeting = 'vesper_splash_greeting';

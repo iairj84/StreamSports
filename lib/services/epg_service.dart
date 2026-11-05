@@ -23,9 +23,16 @@ class EpgSource {
   const EpgSource(
       {required this.url,
       required this.knownChannelIds,
+      this.knownChannelNames = const {},
       this.headers = const {}});
   final String url;
   final Set<String> knownChannelIds;
+
+  /// Canonical name keys of the channels this source's playlist owns. A second
+  /// guide normally publishes ids that differ from the playlist's own tvg-ids,
+  /// so a feed channel whose display name matches one of these is kept too —
+  /// its rows are what name-based pairing attaches to those channels.
+  final Set<String> knownChannelNames;
   final Map<String, String> headers;
 }
 
@@ -290,6 +297,18 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
     _refreshTimer = null;
   }
 
+  /// Last completed attempt for each playlist guide URL: how many programmes
+  /// it stored (null when it failed) and when it finished. TV guide settings
+  /// lists them so a configured guide that is not appearing is still visible.
+  final Map<String, ({int? stored, DateTime finishedAt})> _sourceStatuses = {};
+  Map<String, ({int? stored, DateTime finishedAt})> get sourceStatuses =>
+      Map.unmodifiable(_sourceStatuses);
+
+  /// Runs after every playlist guide refresh (never for a single portal
+  /// refresh). Returns how many channels were newly paired by name; a
+  /// non-zero result reloads the guide caches so their listings show up.
+  Future<int> Function()? onGuidesRefreshed;
+
   Future<List<EpgSource>> Function()? supplementarySources;
   List<PortalGuideSource> Function()? portalSources;
   Future<void> Function()? onSupplementaryGuidesUpdated;
@@ -334,9 +353,14 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   /// caller (adding a playlist).
   Future<void> refresh(String url,
       {required Set<String> knownChannelIds,
+      Set<String> knownChannelNames = const {},
       Map<String, String> headers = const {}}) async {
     await _serialRefresh([
-      EpgSource(url: url, knownChannelIds: knownChannelIds, headers: headers)
+      EpgSource(
+          url: url,
+          knownChannelIds: knownChannelIds,
+          knownChannelNames: knownChannelNames,
+          headers: headers)
     ]);
   }
 
@@ -352,7 +376,9 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
       final failures = <String>[];
       for (final source in sources) {
         final count = await _refreshOne(source.url,
-            knownChannelIds: source.knownChannelIds, headers: source.headers);
+            knownChannelIds: source.knownChannelIds,
+            knownChannelNames: source.knownChannelNames,
+            headers: source.headers);
         if (count != null) anySucceeded = true;
         if (error != null) failures.add(error!);
       }
@@ -390,11 +416,17 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
         refreshStatus = 'Filling guide gaps · ${i + 1}/${extras.length}';
         notifyListeners();
         final count = await _refreshOne(source.url,
-            knownChannelIds: source.knownChannelIds, headers: source.headers);
+            knownChannelIds: source.knownChannelIds,
+            knownChannelNames: source.knownChannelNames,
+            headers: source.headers);
         if (count != null) anySucceeded = true;
         if (error != null) failures.add(error!);
       }
       if (extras.isNotEmpty) await _reloadCaches();
+      if (portalId == null && onGuidesRefreshed != null) {
+        final paired = await onGuidesRefreshed!();
+        if (paired > 0) await _reloadCaches();
+      }
       if (portalId == null) await onSupplementaryGuidesUpdated?.call();
       error = failures.isEmpty ? null : failures.first;
       if (anySucceeded) {
@@ -420,6 +452,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   Future<void> clearAll() async {
     await _db.clearAll();
     await _storage.clearGuideEnrichmentRefreshes();
+    _sourceStatuses.clear();
     lastUpdated = null;
     _soon = {};
     _withData = {};
@@ -444,6 +477,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   /// of the playlist's own channels finishing their load.
   Future<int?> _refreshOne(String url,
       {required Set<String> knownChannelIds,
+      Set<String> knownChannelNames = const {},
       Map<String, String> headers = const {}}) async {
     if (url.isEmpty) return null;
     final customNamespace = customGuideNamespace(url);
@@ -491,6 +525,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
         streamedResponse.stream,
         noTitle: tr('No Title'),
         knownChannelIds: effectiveFilter,
+        knownChannelNames: knownChannelNames,
         namespace: url == thaiEpgSourceUrl
             ? thaiEpgPrefix
             : customNamespace.isNotEmpty
@@ -518,8 +553,11 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
         await _storage.setGuideEnrichmentRequestedIds(url, knownChannelIds);
         await _storage.setGuideEnrichmentRefresh(url);
       }
+      _sourceStatuses[url] =
+          (stored: result.stored, finishedAt: DateTime.now());
       return result.stored;
     } catch (e) {
+      _sourceStatuses[url] = (stored: null, finishedAt: DateTime.now());
       error = e.toString();
       debugPrint('EpgService error: ${e.runtimeType}');
       return null;

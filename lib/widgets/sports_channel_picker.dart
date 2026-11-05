@@ -1779,6 +1779,7 @@ class SportsChannelRow extends StatelessWidget {
       MatchReason.tournament => 'Tournament coverage',
       MatchReason.league => 'League coverage',
       MatchReason.sport => 'Related sport coverage',
+      MatchReason.category => 'Known league category feed',
       null => result.programmeSearchHit
           ? 'Programme search match'
           : 'Channel name match',
@@ -1944,6 +1945,7 @@ class SportsChannelRow extends StatelessWidget {
                   MatchReason.network ||
                   MatchReason.listing =>
                     'Listed coverage',
+                  MatchReason.category => 'Known category feed',
                   MatchReason.tournament ||
                   MatchReason.league ||
                   MatchReason.sport =>
@@ -2046,6 +2048,12 @@ class _ConfidenceBadge extends StatelessWidget {
           interfaceColor(context, const Color(0xFF90CAF9)),
           Icons.live_tv,
           'Broadcaster or schedule evidence; stream availability is not verified.'
+        ),
+      MatchReason.category => (
+          'High confidence',
+          interfaceColor(context, const Color(0xFFA0DEBD)),
+          Icons.verified_outlined,
+          'The channel category names this league or sport.'
         ),
       MatchReason.tournament || MatchReason.league || MatchReason.sport => (
           'Possible',

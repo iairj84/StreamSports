@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/services/epg_database.dart';
 import 'package:nox_iptv/services/xmltv_parser.dart';
+import 'package:nox_iptv/utils/channel_name_matching.dart';
 import 'package:nox_iptv/utils/thai_epg.dart';
 
 final _now = DateTime.utc(2026, 10, 31, 12);
@@ -52,6 +53,45 @@ void main() {
       expect(rows.last.title, 'Untitled');
     });
   }
+
+  test('keeps rows for a feed channel whose name matches a playlist channel',
+      () async {
+    // A second guide normally publishes its own channel ids, so nothing the
+    // playlist owns matches. The display name is the only link there is.
+    final rows = <EpgRow>[];
+    await parseXmltvInBackground(
+      Stream.value(utf8.encode(
+          '<tv><channel id="feed-1"><display-name>TSN 1 HD</display-name></channel>'
+          '<channel id="feed-2"><display-name>Other Feed</display-name></channel>'
+          '${_programme('<title>NBA: Raptors vs Celtics</title>', id: 'feed-1')}'
+          '${_programme('<title>Unrelated</title>', id: 'feed-2')}</tv>')),
+      knownChannelIds: {'tsn1'},
+      knownChannelNames: {canonicalChannelKey('TSN 1')},
+      noTitle: 'Untitled',
+      now: _now,
+      onRows: (batch) async => rows.addAll(batch),
+    );
+    expect(rows.map((row) => row.channelId), ['feed-1']);
+  });
+
+  test('keeps rows when a feed has no channel directory and its ids are names',
+      () async {
+    // Plenty of small guides skip <channel> entirely; the id itself is then
+    // the only thing that can tie a programme to a playlist channel.
+    final rows = <EpgRow>[];
+    await parseXmltvInBackground(
+      Stream.value(utf8.encode(
+          '<tv>${_programme('<title>NBA: Raptors vs Celtics</title>', id: 'TSN1')}'
+          '${_programme('<title>Unrelated</title>', id: 'feed-2')}</tv>')),
+      knownChannelIds: {'tsn1'},
+      knownChannelNames: {canonicalChannelKey('TSN 1')},
+      noTitle: 'Untitled',
+      now: _now,
+      onRows: (batch) async => rows.addAll(batch),
+    );
+    // Ids are stored normalized (lower-cased); the name match itself is not.
+    expect(rows.map((row) => row.channelId), ['tsn1']);
+  });
 
   test(
       'namespace, English preference, subtitle deduplication and timezone survive worker boundary',

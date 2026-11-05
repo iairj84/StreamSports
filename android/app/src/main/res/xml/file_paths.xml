@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- AppUpdateService stores the installer APK in the cache directory;
+         Android only accepts it through a content:// URI. -->
+    <cache-path name="updates" path="updates/" />
+</paths>

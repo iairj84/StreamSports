@@ -11,6 +11,7 @@ import '../../widgets/tv_menu_tile.dart';
 import '../../l10n/l10n.dart';
 
 import 'general_settings_screen.dart';
+import 'app_update_screen.dart';
 import 'playlist_manager_screen.dart';
 import 'theme_screen.dart';
 
@@ -124,6 +125,11 @@ class SettingsMenuScreen extends StatelessWidget {
                           'About iptv-app',
                           'Version, credits and open-source licences',
                           const AppInfoScreen()),
+                      link(
+                          Icons.system_update_alt,
+                          'App updates',
+                          'Download and install a newer build',
+                          const AppUpdateScreen()),
                       if (includeTools)
                         action(
                             Icons.power_settings_new,

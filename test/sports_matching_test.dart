@@ -549,8 +549,10 @@ void main() {
       _channel('guide', 'Court 1'),
       _channel('other', 'Bu vs Sinner - ATP Shanghai'),
     ]);
-    expect(result.map((m) => m.channel.rawId), ['guide', 'name']);
-    expect(result.first.programme?.title, 'Bu vs Ruud');
+    // The channel that names the event leads; the guide programme follows.
+    expect(result.map((m) => m.channel.rawId), ['name', 'guide']);
+    expect(result.first.reason, MatchReason.name);
+    expect(result[1].programme?.title, 'Bu vs Ruud');
   });
 
   test('correct-time guide evidence outranks name-only and later repeat slots',
@@ -569,10 +571,11 @@ void main() {
       _channel('ended', 'Court 3'),
       _channel('stale', 'END: Court 4'),
     ]);
-    expect(result.map((m) => m.channel.rawId), ['guide', 'name', 'later']);
-    for (var i = 1; i < result.length; i++) {
-      expect(result[i - 1].score, greaterThanOrEqualTo(result[i].score));
-    }
+    // Event evidence in the channel name now outranks the same fixture in a
+    // guide programme; a later repeat slot still trails both.
+    expect(result.map((m) => m.channel.rawId), ['name', 'guide', 'later']);
+    expect(result.first.reason, MatchReason.name);
+    expect(result[1].reason, MatchReason.guide);
   });
 
   test('live matching prefers the current slot over a programme that has ended',

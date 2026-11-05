@@ -152,6 +152,15 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
             'Guide listings cleared. Use Refresh guide to download them again.'))));
   }
 
+  String _guideStatusLabel(({int? stored, DateTime finishedAt})? status) {
+    if (status == null) return tr('Not downloaded yet');
+    if (status.stored == null) return tr('Last update failed');
+    return tr('{n} programmes · {p}', {
+      'n': '${status.stored}',
+      'p': TimeFormat.dateTime(status.finishedAt),
+    });
+  }
+
   Widget _sourceTile(String id, String name, String source, bool busy) =>
       Semantics(
           checked: _selected.contains(id),
@@ -213,6 +222,44 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
                     : tr('Refresh guide')),
                 onPressed: busy ? null : _updateNow),
           ])),
+    ]);
+    final guideSources = _sources();
+    final guideStatuses = epg.sourceStatuses;
+    final playlistGuides =
+        SettingsSection(title: tr('Playlist guides'), children: [
+      if (guideSources.isEmpty)
+        Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            child: Text(
+                tr('No guide URLs yet. Add one while adding or editing a playlist.'),
+                style: Theme.of(context).textTheme.bodySmall))
+      else
+        for (final source in guideSources)
+          Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+              child: Row(children: [
+                const Icon(Icons.playlist_play, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(Uri.tryParse(source.url)?.host ?? source.url,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(_guideStatusLabel(guideStatuses[source.url]),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
+                    ])),
+              ])),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Text(
+            tr('Every guide URL on a playlist is downloaded together. A guide that uses different channel IDs is attached to channels with the same name automatically.'),
+            style: Theme.of(context).textTheme.bodySmall),
+      ),
     ]);
     final gaps = SettingsSection(title: tr('Fill missing listings'), children: [
       Padding(
@@ -307,6 +354,7 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
                                                   CrossAxisAlignment.stretch,
                                               children: [
                                             updates,
+                                            playlistGuides,
                                             ...errors,
                                             maintenance
                                           ])),
@@ -314,7 +362,13 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
                                       Expanded(child: gaps),
                                     ])
                               ]
-                            : [updates, gaps, ...errors, maintenance],
+                            : [
+                                updates,
+                                playlistGuides,
+                                gaps,
+                                ...errors,
+                                maintenance
+                              ],
                       )),
             ));
   }

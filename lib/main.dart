@@ -28,6 +28,9 @@ import 'utils/route_observer.dart';
 import 'utils/splash_greeting.dart';
 import 'utils/tv_theme.dart';
 
+import 'screens/settings/app_update_screen.dart';
+import 'services/app_update_service.dart';
+import 'widgets/update_prompt.dart';
 import 'widgets/live_resume_hint.dart';
 import 'widgets/preview_pip_launcher.dart';
 import 'l10n/l10n.dart';
@@ -123,6 +126,8 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
   /// ancestors.
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
+  late final AppUpdateService _appUpdateService;
+
   String _splashStatus = tr('Starting...');
   String? _bootstrapError;
 
@@ -155,6 +160,14 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
           () => _playlistManager.supplementaryGuideSources(_epgService);
       _epgService.onSupplementaryGuidesUpdated =
           () => _playlistManager.finishSupplementaryGuides(_epgService);
+      // Extra guides are only useful once their listings reach a channel. Many
+      // publish different channel ids than the playlist's own tvg-ids, so a
+      // completed refresh pairs channels that still have no listings with an
+      // unambiguous name match instead of leaving those feeds unseen.
+      _epgService.onGuidesRefreshed = () async {
+        await _playlistManager.ensureLiveChannelsLoaded();
+        return (await _playlistManager.autoPairEpgIds(_epgService)).length;
+      };
       // Started during the splash, not after it: it only opens the EPG
       // database and preloads now/next for every channel (a few thousand
       // rows, SQLite on its own thread), so it doesn't compete with the
@@ -163,6 +176,7 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
       // below awaits the same future.
       unawaited(_epgService.init());
       _playbackService = PlaybackService(_storage, _playlistManager);
+      _appUpdateService = AppUpdateService(_storage);
 
       // Restore local settings first. The Live TV/Sports layout remains usable
       // while a missing cache is recovered; it never needs the movie/series
@@ -197,10 +211,42 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
             _storage.getRefreshInterval(), _epgSources);
         // Library metadata is fetched only when a title is opened.
       }());
+      // Never blocks the splash: a slow or offline check just means no prompt.
+      unawaited(_offerUpdateIfAvailable());
     } catch (e) {
       // Surfaces any unexpected startup failure as a retryable screen
       // instead of leaving the app stuck on the splash spinner forever.
       if (mounted) setState(() => _bootstrapError = e.toString());
+    }
+  }
+
+  /// Offers a newer published build at launch — at most once per
+  /// [AppUpdateService.checkInterval], and never for a build the viewer
+  /// already skipped. Waits for the Navigator so the prompt has a route.
+  Future<void> _offerUpdateIfAvailable() async {
+    if (!AppConstants.updatesEnabled) return;
+    final release = await _appUpdateService.checkIfDue();
+    if (release == null || !mounted) return;
+    BuildContext? host;
+    for (var attempt = 0; attempt < 20 && host == null; attempt++) {
+      host = _navigatorKey.currentContext;
+      if (host != null) break;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+    }
+    if (host == null || !host.mounted) return;
+    final choice =
+        await showUpdatePrompt(host, release, _appUpdateService.currentLabel);
+    if (!mounted) return;
+    switch (choice) {
+      case UpdatePromptChoice.update:
+        _navigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (_) => const AppUpdateScreen()));
+      case UpdatePromptChoice.skip:
+        await _appUpdateService.skipCurrent();
+      case UpdatePromptChoice.later:
+      case null:
+        break;
     }
   }
 
@@ -314,6 +360,8 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
         ChangeNotifierProvider<PlaylistManager>.value(value: _playlistManager),
         ChangeNotifierProvider<EpgService>.value(value: _epgService),
         ChangeNotifierProvider<PlaybackService>.value(value: _playbackService),
+        ChangeNotifierProvider<AppUpdateService>.value(
+            value: _appUpdateService),
       ],
       child: _buildReadyContent(context),
     );

@@ -862,9 +862,11 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
       // must not strand the completed form. Each URL keeps its own rows, so
       // one broken feed cannot empty another's listings.
       final knownChannelIds = playlist.knownChannelIdsFor(playlistId);
+      final knownChannelNames = playlist.knownChannelNamesFor(playlistId);
       for (final url in profile.allEpgUrls) {
         unawaited(epg.refresh(url,
             knownChannelIds: knownChannelIds,
+            knownChannelNames: knownChannelNames,
             headers: profile.requestHeaders));
       }
 

@@ -166,8 +166,10 @@ void main() {
       channel('sport', 'Fox Soccer Plus'),
       channel('broadLeague', "NCAA Women's Soccer"),
     ]);
-    expect(result.map((m) => m.channel.rawId), ['guide', 'correct']);
-    expect(result.first.reason, MatchReason.guide);
+    // The channel that names both schools leads; the guide programme follows.
+    expect(result.map((m) => m.channel.rawId), ['correct', 'guide']);
+    expect(result.first.reason, MatchReason.name);
+    expect(result[1].reason, MatchReason.guide);
   });
 
   test('three-letter college names and abbreviations retrieve guide candidates',

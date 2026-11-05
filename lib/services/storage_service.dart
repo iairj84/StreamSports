@@ -22,6 +22,27 @@ class StorageService {
   /// never hides existing favourites, history or resume positions.
   String _activeViewerId = AppConstants.mainViewerId;
 
+  /// Release tag the viewer asked the updater to stop offering.
+  String? getSkippedUpdateVersion() =>
+      _prefs.getString(AppConstants.keySkippedUpdateVersion);
+
+  Future<void> setSkippedUpdateVersion(String? tag) async {
+    if (tag == null || tag.isEmpty) {
+      await _prefs.remove(AppConstants.keySkippedUpdateVersion);
+      return;
+    }
+    await _prefs.setString(AppConstants.keySkippedUpdateVersion, tag);
+  }
+
+  /// When the in-app updater last checked GitHub for a newer build.
+  DateTime? getLastUpdateCheck() {
+    final millis = _prefs.getInt(AppConstants.keyLastUpdateCheck);
+    return millis == null ? null : DateTime.fromMillisecondsSinceEpoch(millis);
+  }
+
+  Future<void> setLastUpdateCheck(DateTime at) =>
+      _prefs.setInt(AppConstants.keyLastUpdateCheck, at.millisecondsSinceEpoch);
+
   String getMultiviewLayout() =>
       _prefs.getString('multiview_layout') ?? 'automatic';
   Future<void> setMultiviewLayout(String layout) async {

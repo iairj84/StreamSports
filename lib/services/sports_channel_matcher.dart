@@ -67,7 +67,12 @@ enum MatchReason {
   listing,
   tournament,
   league,
-  sport
+  sport,
+
+  /// The channel's own category is this league (or, where the league allows
+  /// sport-only suggestions, this sport) — a known feed, not a guess about a
+  /// single programme in the guide.
+  category
 }
 
 extension MatchReasonLabel on MatchReason {
@@ -80,6 +85,7 @@ extension MatchReasonLabel on MatchReason {
         MatchReason.listing => 'Event TV listing',
         MatchReason.league => tr('Possible league channel'),
         MatchReason.sport => tr('Possible sport channel'),
+        MatchReason.category => tr('Sport category feed'),
       };
   String get label => switch (this) {
         MatchReason.pick => tr('Your pick'),
@@ -90,6 +96,7 @@ extension MatchReasonLabel on MatchReason {
         MatchReason.tournament => tr('Tournament coverage'),
         MatchReason.league => tr('Possible league channel'),
         MatchReason.sport => tr('Possible sport channel'),
+        MatchReason.category => tr('Sport category feed'),
       };
 }
 
@@ -105,10 +112,26 @@ class ChannelMatch {
   final String? detail;
   final EpgProgram? programme;
 
+  /// Ordering weight for the *kind* of evidence, independent of [score].
+  /// An event named by the channel itself outranks a programme in the guide,
+  /// and a channel whose own category names the league is a known feed that
+  /// outranks guide text as well. [score] only orders matches within a rank.
+  int get evidenceRank => switch (reason) {
+        MatchReason.pick => 0,
+        MatchReason.name => 1,
+        MatchReason.category => 2,
+        MatchReason.guide => 3,
+        MatchReason.network || MatchReason.listing => 4,
+        // Possible coverage keeps its own score order: a dedicated tournament
+        // feed is still a better guess than a generic sport channel.
+        MatchReason.sport || MatchReason.league || MatchReason.tournament => 5,
+      };
+
   /// Event-specific evidence, as opposed to general coverage suggestions.
   bool get isConfident => switch (reason) {
         MatchReason.pick ||
         MatchReason.name ||
+        MatchReason.category ||
         MatchReason.guide ||
         MatchReason.network ||
         MatchReason.listing =>
@@ -2543,13 +2566,21 @@ class SportsChannelMatcher {
               persistent: hints.persistent,
               allowTeamCoverage: includePossible);
           if (coverage != null) {
+            // A league or sport channel whose own category names this fixture
+            // is a known feed, so it outranks guide text rather than sitting
+            // among the "possible" guesses. Specific tournament coverage and
+            // every other reason keep the evidence they were scored on.
+            final category = coverage.reason == MatchReason.league ||
+                    coverage.reason == MatchReason.sport
+                ? context.categoryScore(hints.group)
+                : null;
             final sameDay = hints.date != null &&
                 hints.date!.month == g.start.month &&
                 hints.date!.day == g.start.day;
             addCommon(
                 i,
-                coverage.reason,
-                coverage.score +
+                category == null ? coverage.reason : MatchReason.category,
+                math.max(coverage.score, category ?? 0) +
                     hints.bias +
                     (hints.date == null
                         ? 0
@@ -3085,6 +3116,8 @@ class SportsChannelMatcher {
     final sorted = matches.toList()
       ..sort((a, b) {
         if (a.isConfident != b.isConfident) return a.isConfident ? -1 : 1;
+        final rank = a.evidenceRank.compareTo(b.evidenceRank);
+        if (rank != 0) return rank;
         final score = b.score.compareTo(a.score);
         if (score != 0) return score;
         final name = a.channel.name.compareTo(b.channel.name);
@@ -3097,6 +3130,7 @@ class SportsChannelMatcher {
       var end = start + 1;
       while (end < sorted.length &&
           sorted[end].score == sorted[start].score &&
+          sorted[end].evidenceRank == sorted[start].evidenceRank &&
           sorted[end].isConfident == sorted[start].isConfident) {
         end++;
       }
@@ -4278,6 +4312,18 @@ class _MatchTerms {
       }
     }
     return false;
+  }
+
+  /// Score for a channel whose category itself names this fixture's league —
+  /// or, only where the league opts into sport-only suggestions, its sport.
+  /// Null when the category says nothing about this fixture.
+  int? categoryScore(String group) {
+    if (group.trim().isEmpty) return null;
+    if (league.any(group.contains)) return 340;
+    if (_game.league.allowSportOnlySuggestions && sport.any(group.contains)) {
+      return 300;
+    }
+    return null;
   }
 
   ({int score, MatchReason reason})? coverage(SportsGame game, String text,
