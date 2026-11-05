@@ -19,6 +19,7 @@ import '../utils/formula_one.dart';
 import '../widgets/sports_header_controls.dart';
 import '../widgets/sports_hub_layout.dart';
 import '../widgets/sports_hero_details.dart';
+import '../widgets/sports_preview_agenda.dart';
 import '../widgets/sports_toolbar_navigation.dart';
 import '../utils/sports_time_filter.dart';
 import '../utils/sports_scroll_anchor.dart';
@@ -2460,6 +2461,30 @@ class _SportsScreenState extends State<SportsScreen>
 
   // ---------------------------------------------------------------- build
 
+  /// Live games first, then the next kick-offs. Only what the Events list is
+  /// already showing, so the column can never disagree with the rows below it.
+  Widget? _buildAgenda() {
+    final entries = <SportsAgendaEntry>[];
+    final seen = <String>{};
+    for (final section in _sections) {
+      for (final game in section.games) {
+        if (!seen.add(_gameKey(game))) continue;
+        final match = _channelFilter
+            .preferred(_matches[_gameKey(game)] ?? const <ChannelMatch>[]);
+        entries.add(SportsAgendaEntry(game: game, channel: match?.channel));
+      }
+    }
+    final next = entries
+        .where((e) => e.live || e.game.state == GameState.pre)
+        .toList()
+      ..sort((a, b) => a.live == b.live
+          ? a.game.start.compareTo(b.game.start)
+          : (a.live ? -1 : 1));
+    if (next.length < 2) return null;
+    return SportsPreviewAgenda(
+        now: _now, entries: next.take(5).toList(growable: false));
+  }
+
   static final _redZoneName = RegExp(r'\bred\s*zone\b', caseSensitive: false);
 
   /// The chosen RedZone channel, otherwise the first channel named RedZone.
@@ -2538,6 +2563,7 @@ class _SportsScreenState extends State<SportsScreen>
               return _Hero(
                 key: _heroKey,
                 activity: activity,
+                agenda: _events ? _buildAgenda() : null,
                 replays: _replays,
                 standings: _standings || _schedule,
                 game: hero,
@@ -4206,13 +4232,17 @@ class _Hero extends StatelessWidget {
       this.sidebar = false,
       this.compact = false,
       this.onVideoTap,
-      this.activity});
+      this.activity,
+      this.agenda});
   final bool replays, standings;
   final SportsGame? game;
   final List<ChannelMatch>? matches;
   final bool matching, hideScores, playing, touch, narrow, sidebar, compact;
   final VoidCallback? onVideoTap;
   final Widget? activity;
+
+  /// Live and upcoming games in start order, for the preview column.
+  final Widget? agenda;
 
   @override
   Widget build(BuildContext context) =>
@@ -4396,6 +4426,11 @@ class _Hero extends StatelessWidget {
                               padding: const EdgeInsets.only(top: 10),
                               child: SportsHeroDetails(
                                   game: g, hideScores: hideScores)),
+                        if (agenda != null)
+                          Padding(
+                              key: const ValueKey('sports-preview-agenda-slot'),
+                              padding: const EdgeInsets.only(top: 12),
+                              child: agenda!),
                       ]),
                 )),
                 if (activity != null)
