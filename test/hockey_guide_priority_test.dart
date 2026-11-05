@@ -65,7 +65,9 @@ void main() {
   Future<List<ChannelMatch>> match(
       SportsGame game, List<Channel> channels) async {
     await matcher.prepare(channels);
-    return (await matcher.matchDay([game], picks))[
+    // The app asks for possible feeds too, which is where a league network used
+    // to be promoted above the channel actually airing the game.
+    return (await matcher.matchDay([game], picks, includePossible: true))[
         SportsChannelPicks.eventKey(game)]!;
   }
 
@@ -110,6 +112,42 @@ void main() {
     expect(result.first.reason, MatchReason.guide);
     expect(result.first.isConfident, isTrue);
     expect(result.map((m) => m.channel.rawId), isNot(contains('h02')));
+  });
+
+  // A league network channel carries the league's name in its own name, so
+  // generic league evidence (name + group) used to outrank the guide match for
+  // the actual game and every NHL card defaulted to "NHL Network".
+  for (final group in ['NHL', 'Hockey', 'Sports']) {
+    test('a league network loses to the game channel in group $group',
+        () async {
+      guide.programmes = [
+        programme('h01', '7pm UTA @ MTL'),
+        programme('h02', '7pm BOS @ TOR'),
+        programme('nhl', 'NHL Hockey'),
+      ];
+      final result = await match(game(), [
+        _channel('h01', 'H01', group: group),
+        _channel('h02', 'H02', group: group),
+        _channel('nhl', 'NHL Network', group: group),
+      ]);
+      expect(result.first.channel.rawId, 'h01');
+      expect(result.first.reason, MatchReason.guide);
+      final network = result.where((m) => m.channel.rawId == 'nhl').firstOrNull;
+      if (network != null) {
+        expect(result.indexOf(network), greaterThan(0));
+      }
+    });
+  }
+
+  test('a league network is never confident coverage for a game', () async {
+    final result = await match(game(), [
+      _channel('h01', 'H01', group: 'Hockey'),
+      _channel('nhl', 'NHL Network', group: 'Hockey'),
+    ]);
+    final network = result.where((m) => m.channel.rawId == 'nhl').firstOrNull;
+    expect(network, isNotNull);
+    expect(network!.reason, MatchReason.league);
+    expect(network.isConfident, isFalse);
   });
 
   test('a title naming another matchup never matches', () async {

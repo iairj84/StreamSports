@@ -2586,8 +2586,12 @@ class SportsChannelMatcher {
             // is a known feed, so it outranks guide text rather than sitting
             // among the "possible" guesses. Specific tournament coverage and
             // every other reason keep the evidence they were scored on.
-            final category = coverage.reason == MatchReason.league ||
-                    coverage.reason == MatchReason.sport
+            // A channel that is the league's own network ("NHL Network") names
+            // the league, never a fixture, so its category cannot promote it to
+            // confident coverage for every game in the league.
+            final category = (coverage.reason == MatchReason.league ||
+                        coverage.reason == MatchReason.sport) &&
+                    !context.isLeagueBrand(_names[i])
                 ? context.categoryScore(hints.group)
                 : null;
             final sameDay = hints.date != null &&
@@ -4384,6 +4388,31 @@ class _MatchTerms {
     return null;
   }
 
+  /// Words that make a channel its league's own network instead of a feed for
+  /// a single game: "NHL Network", "NBA TV", "NHL Center Ice".
+  static const _brandWords = [
+    'network',
+    ' tv ',
+    'television',
+    ' channel ',
+    'radio',
+    'center ice',
+    'centre ice',
+  ];
+
+  /// True when [text] names only this league (or sport) plus a broadcast brand.
+  /// Such a channel carries the league's studio programming: it can never say
+  /// which fixture is on, so it must not be confident evidence for a game.
+  bool isLeagueBrand(String text) {
+    final padded = ' ${text.trim()} ';
+    if (padded.trim().isEmpty) return false;
+    if (event.any(padded.contains)) return false;
+    if (!league.any(padded.contains) && !sport.any(padded.contains)) {
+      return false;
+    }
+    return _brandWords.any(padded.contains);
+  }
+
   ({int score, MatchReason reason})? coverage(SportsGame game, String text,
       {String group = '',
       required bool guide,
@@ -4435,6 +4464,11 @@ class _MatchTerms {
     }
     if (guide || persistent) {
       if (byLeague) {
+        // The league's own network is a last-resort suggestion, never a match
+        // for the specific game it happens to be airing studio coverage of.
+        if (isLeagueBrand(text)) {
+          return (score: guide ? 90 : 60, reason: MatchReason.league);
+        }
         return (score: guide ? 210 : 150, reason: MatchReason.league);
       }
       if (bySport && game.league.allowSportOnlySuggestions) {
