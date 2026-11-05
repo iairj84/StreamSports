@@ -21,6 +21,10 @@ import '../utils/tv_theme.dart';
 import '../widgets/player_chrome.dart';
 import '../widgets/player_stream_info.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/player_scores_panel.dart';
+import '../models/sports.dart';
+import '../services/sports_channel_matcher.dart';
+import '../services/storage_service.dart';
 import '../widgets/subtitle_overlay.dart';
 import '../widgets/player_side_panel.dart';
 import 'multiview_screen.dart';
@@ -154,9 +158,61 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (event is KeyUpEvent) {
       final tap = _infoDown && !_infoHeld;
       _cancelInfoHold();
-      if (tap) _toggleInfoCard();
+      if (tap) _toggleScores();
     }
     return KeyEventResult.handled;
+  }
+
+  bool _scoresOpen = false;
+
+  /// Centre opens the scores instead of the channel card: while watching,
+  /// "what else is on" is the question worth answering, and the channel card
+  /// is still a long press away.
+  void _toggleScores() {
+    if (!Channel.isLiveId((_playback.currentChannel ?? widget.channel).rawId)) {
+      _toggleInfoCard();
+      return;
+    }
+    _hideTimer?.cancel();
+    setState(() => _scoresOpen = !_scoresOpen);
+    _rootFocus.requestFocus();
+  }
+
+  /// Tune the matched channel for a game picked in the scores panel. Matching
+  /// is the Sports hub's own matcher, prepared once for this channel list.
+  Future<void> _playScoreGame(SportsGame game) async {
+    setState(() => _scoresOpen = false);
+    _rootFocus.requestFocus();
+    final messenger = ScaffoldMessenger.of(context);
+    final storage = context.read<StorageService>();
+    final playlist = context.read<PlaylistManager>();
+    final matcher = SportsChannelMatcher.shared(context.read<EpgService>());
+    messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 2),
+        content: Text(tr('Finding {game}…', {'game': game.title}))));
+    try {
+      await matcher.prepare(playlist.visibleLiveChannels);
+      final matches =
+          await matcher.matchDay([game], SportsChannelPicks.load(storage));
+      final channel = matches.values
+          .expand((rows) => rows)
+          .where((row) => row.isConfident)
+          .map((row) => row.channel)
+          .firstOrNull;
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      if (channel == null) {
+        messenger.showSnackBar(
+            SnackBar(content: Text(tr('No channel found for this game'))));
+        return;
+      }
+      await _playback.play(channel);
+    } catch (_) {
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Could not switch to that game.')));
+    }
   }
 
   void _openPanel({bool search = false}) {
@@ -900,6 +956,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               },
                               onDismiss: playback.dismissAutoAdvance,
                             ),
+
+                          if (_scoresOpen)
+                            Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: (_bottomVisible
+                                        ? _controlsHeight + 8
+                                        : 24) +
+                                    MediaQuery.paddingOf(context).bottom,
+                                child: PlayerScoresPanel(
+                                    onClose: _toggleScores,
+                                    onPlay: (game) =>
+                                        unawaited(_playScoreGame(game)))),
 
                           // Always Positioned (see the Stack comment above).
                           // Use portrait width for readable channel and programme names.

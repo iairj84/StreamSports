@@ -376,16 +376,49 @@ class _GroupListState extends State<_GroupList>
                         return ListTile(
                           key: ValueKey(group.title),
                           title: Text(group.title),
-                          trailing: RepaintBoundary(
-                            key: ValueKey(group.isHidden),
-                            child: Icon(
-                              group.isHidden
-                                  ? Icons.circle_outlined
-                                  : Icons.check_circle,
-                              color: group.isHidden
-                                  ? interfaceColor(context, Colors.white54)
-                                  : Theme.of(context).colorScheme.primary,
-                            ),
+                          // Order is saved immediately, like visibility. Buttons
+                          // stay visible so a remote can reach them with Left
+                          // from the row instead of hunting a menu.
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                key: ValueKey('group-up-${group.title}'),
+                                tooltip: tr('Move up'),
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(Icons.arrow_upward, size: 18),
+                                onPressed: index == 0
+                                    ? null
+                                    : () => widget.onSave(() => widget.playlist
+                                        .moveGroup(widget.playlistId,
+                                            widget.type, group.title, -1,
+                                            shown: titles.toList())),
+                              ),
+                              IconButton(
+                                key: ValueKey('group-down-${group.title}'),
+                                tooltip: tr('Move down'),
+                                visualDensity: VisualDensity.compact,
+                                icon:
+                                    const Icon(Icons.arrow_downward, size: 18),
+                                onPressed: index == groups.length - 1
+                                    ? null
+                                    : () => widget.onSave(() => widget.playlist
+                                        .moveGroup(widget.playlistId,
+                                            widget.type, group.title, 1,
+                                            shown: titles.toList())),
+                              ),
+                              RepaintBoundary(
+                                key: ValueKey(group.isHidden),
+                                child: Icon(
+                                  group.isHidden
+                                      ? Icons.circle_outlined
+                                      : Icons.check_circle,
+                                  color: group.isHidden
+                                      ? interfaceColor(context, Colors.white54)
+                                      : Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
                           ),
                           onTap: () => widget
                               .onSave(() => widget.playlist.setGroupHidden(
