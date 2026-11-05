@@ -1403,7 +1403,6 @@ void main() {
         false);
     await tapKey('schedule-favourites-only');
     await tapKey('sports-favourites-teams');
-    await tapKey('sports-view-highlights');
     await tapKey('sports-view-events');
     expect(
         tester
