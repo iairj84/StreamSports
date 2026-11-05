@@ -22,6 +22,10 @@ import '../l10n/l10n.dart';
 class PlaybackService extends ChangeNotifier {
   PlaybackService(this._storage, this._playlistManager) {
     pictureInPicture.addListener(notifyListeners);
+    // Leaving the app with Home only opens a PiP window when the viewer asked
+    // for it — see PictureInPictureService.autoEnterOnLeave.
+    pictureInPicture.setAutoEnterOnLeave(
+        _storage.getPictureInPictureOnHome());
   }
 
   final pictureInPicture = PictureInPictureService();

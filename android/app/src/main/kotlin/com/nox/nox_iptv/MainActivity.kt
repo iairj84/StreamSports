@@ -76,6 +76,7 @@ class MainActivity : FlutterActivity() {
 
     private var pipChannel: MethodChannel? = null
     private var pipEnabled = false
+    private var pipAutoEnter = false
     private var pipRatio = 16.0 / 9.0
     private var activityStopped = false
     private var wasPipSinceResume = false
@@ -174,7 +175,9 @@ class MainActivity : FlutterActivity() {
             builder.setSourceRectHint(Rect(left, top, left + width, top + height))
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            builder.setAutoEnterEnabled(pipEnabled)
+            // Home opens PiP only when Settings > General opted in; the
+            // mini-player button enters explicitly, which does not use this.
+            builder.setAutoEnterEnabled(pipEnabled && pipAutoEnter)
             builder.setSeamlessResizeEnabled(true)
         }
         return builder.build()
@@ -206,7 +209,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) enterPip()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && pipAutoEnter) enterPip()
     }
 
     override fun onPictureInPictureModeChanged(
@@ -296,6 +299,7 @@ class MainActivity : FlutterActivity() {
                     "isSupported" -> result.success(supportsPip())
                     "update" -> {
                         pipEnabled = call.argument<Boolean>("enabled") == true
+                        pipAutoEnter = call.argument<Boolean>("autoEnter") == true
                         val ratio = call.argument<Double>("aspectRatio") ?: (16.0 / 9.0)
                         pipRatio = if (ratio.isFinite() && ratio > 0) ratio else 16.0 / 9.0
                         mediaSessionEnabled = call.argument<Boolean>("mediaSession") == true

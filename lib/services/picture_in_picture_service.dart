@@ -21,6 +21,20 @@ class PictureInPictureService extends ChangeNotifier {
 
   bool supported = false;
   bool active = false;
+
+  /// Android: Home enters PiP while something plays. Driven by Settings >
+  /// General and off unless the viewer turns it on — an explicit [enter]
+  /// (the in-app mini-player button) is unaffected either way.
+  bool autoEnterOnLeave = false;
+
+  void setAutoEnterOnLeave(bool value) {
+    if (_disposed || autoEnterOnLeave == value) return;
+    autoEnterOnLeave = value;
+    // The video itself has not changed, so force the next _sync to resend
+    // the native parameters with the new flag.
+    _lastEnabled = null;
+    _sync();
+  }
   bool _fullscreen = false;
   bool _fullscreenSession = false;
   bool _allowBackgroundAudio = false;
@@ -144,6 +158,7 @@ class PictureInPictureService extends ChangeNotifier {
         'aspectRatio': ratio,
         'mediaSession': session,
         'playing': playing,
+        'autoEnter': autoEnterOnLeave,
         'title': _title,
       });
     } on PlatformException {

@@ -230,7 +230,8 @@ class StorageService {
 
   int getRefreshInterval() {
     final stored = _prefs.getInt(AppConstants.keyRefreshInterval);
-    // A pre-database install stored 15-120 min — not an option any more.
+    // A pre-database install could hold any 15-120 min value; anything that
+    // is not one of the current options falls back to the default.
     return AppConstants.refreshIntervalOptions.contains(stored)
         ? stored!
         : AppConstants.defaultRefreshIntervalMinutes;
@@ -238,6 +239,20 @@ class StorageService {
 
   Future<void> setRefreshInterval(int minutes) =>
       _prefs.setInt(AppConstants.keyRefreshInterval, minutes);
+
+  /// Settings > General: refresh every enabled playlist from its provider at
+  /// launch, then refresh the guide once it finishes.
+  bool getUpdatePlaylistsAtStartup() =>
+      _prefs.getBool(AppConstants.keyUpdatePlaylistsAtStartup) ?? false;
+  Future<void> setUpdatePlaylistsAtStartup(bool value) =>
+      _prefs.setBool(AppConstants.keyUpdatePlaylistsAtStartup, value);
+
+  /// Settings > General: Home enters picture-in-picture while something
+  /// plays. Off unless asked for; the in-app mini-player button still works.
+  bool getPictureInPictureOnHome() =>
+      _prefs.getBool(AppConstants.keyPictureInPictureOnHome) ?? false;
+  Future<void> setPictureInPictureOnHome(bool value) =>
+      _prefs.setBool(AppConstants.keyPictureInPictureOnHome, value);
 
   /// Saved per-series embedded subtitle preferences; legacy values are preserved.
   String? getSeriesSubtitlesJson() =>

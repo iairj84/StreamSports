@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/app_preferences.dart';
+import '../../services/picture_in_picture_service.dart';
 import '../../services/playback_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/tv_theme.dart';
@@ -33,6 +34,9 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   late bool _resumeInGuide =
       !_resumeAtStartup && _storage.getResumeLastChannelInGuide();
   late bool _showResumePill = _storage.getShowResumePill();
+  late bool _updatePlaylistsAtStartup =
+      _storage.getUpdatePlaylistsAtStartup();
+  late bool _pipOnHome = _storage.getPictureInPictureOnHome();
 
   /// Cancel is focused by default so a stray Select can't wipe anything.
   Future<bool> _confirm(String title, String message) async {
@@ -211,6 +215,32 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       title: tr('Playback at startup'),
                       subtitle: tr(_startupLabel),
                       onTap: _pickStartup),
+                  TvSwitchListTile(
+                    title: Text(tr('Update playlists at startup')),
+                    subtitle: Text(tr(
+                        'Re-fetches your channels from every provider on launch, then refreshes the guide. Off: playlists update on their usual schedule instead.')),
+                    value: _updatePlaylistsAtStartup,
+                    onChanged: (v) {
+                      setState(() => _updatePlaylistsAtStartup = v);
+                      _storage.setUpdatePlaylistsAtStartup(v);
+                    },
+                  ),
+                  if (PictureInPictureService.isAndroid)
+                    TvSwitchListTile(
+                      title:
+                          Text(tr('Picture-in-picture when you press Home')),
+                      subtitle: Text(tr(
+                          'Keeps a playing channel in a small system window after you leave the app. Off: playback stops when you leave.')),
+                      value: _pipOnHome,
+                      onChanged: (v) {
+                        setState(() => _pipOnHome = v);
+                        _storage.setPictureInPictureOnHome(v);
+                        context
+                            .read<PlaybackService>()
+                            .pictureInPicture
+                            .setAutoEnterOnLeave(v);
+                      },
+                    ),
                   const Divider(height: 24),
                   SettingsSection(title: tr('Multiview'), children: [
                     TvSwitchListTile(

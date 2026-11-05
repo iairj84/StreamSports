@@ -178,7 +178,10 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
   /// build, since `_save` needs the *original* profile's `sortOrder`/
   /// `createdAt` even after the user's edits change every other field.
   PlaylistProfile? _editingProfile;
-  String _categoryLayout = 'organised';
+  /// New playlists default to the provider's own categories: the tidied
+  /// folders are lossy for anyone whose provider already organises sensibly,
+  /// so it is a deliberate choice rather than the starting state.
+  String _categoryLayout = 'provider';
   String _userAgent = '';
   bool _includeLive = true, _includeMovies = true, _includeSeries = true;
 
@@ -197,7 +200,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     }
     _editingProfile = existing;
     _userAgent = existing?.userAgent ?? '';
-    _categoryLayout = existing?.categoryLayout ?? 'organised';
+    _categoryLayout = existing?.categoryLayout ?? 'provider';
     _includeLive = existing?.includeLive ?? true;
     _includeMovies = existing?.includeMovies ?? true;
     _includeSeries = existing?.includeSeries ?? true;

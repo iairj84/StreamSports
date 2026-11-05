@@ -111,6 +111,14 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
     }
   }
 
+  /// Half-hour/hourly windows read badly as "Every 0 hours", so short
+  /// windows are spelled out in minutes.
+  String _intervalLabel(int minutes) => minutes < 60
+      ? tr('Every {p} minutes', {'p': minutes})
+      : minutes == 60
+          ? tr('Every hour')
+          : tr('Every {p} hours', {'p': minutes ~/ 60});
+
   Future<void> _updateNow() async {
     final sources = _sources();
     if (sources.isEmpty &&
@@ -194,8 +202,7 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
                   InputDecoration(labelText: tr('Refresh automatically')),
               items: AppConstants.refreshIntervalOptions
                   .map((m) => DropdownMenuItem(
-                      value: m,
-                      child: Text(tr('Every {p} hours', {'p': m ~/ 60}))))
+                      value: m, child: Text(_intervalLabel(m))))
                   .toList(),
               onChanged: busy
                   ? null

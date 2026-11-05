@@ -56,6 +56,12 @@ class AppConstants {
   static const String keyM3uUrl = 'nox_m3u_url';
   static const String keyEpgUrl = 'nox_epg_url';
   static const String keyRefreshInterval = 'nox_refresh_interval_minutes';
+
+  /// Settings > General: re-fetch every enabled playlist from its provider
+  /// once per launch, then refresh the guide. Device-wide and off by
+  /// default — a launch update costs provider connections.
+  static const String keyUpdatePlaylistsAtStartup =
+      'vesper_update_playlists_at_startup';
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
   // Stremio-style subtitle add-ons (AddonService), JSON list.
   static const String keyAddons = 'vesper_addons';
@@ -212,6 +218,11 @@ class AppConstants {
       'vesper_resume_last_channel_in_guide';
   static const String keyShowResumePill = 'vesper_show_resume_pill';
 
+  /// Android: entering picture-in-picture when Home leaves the app while
+  /// something plays. Off by default — PiP used to open on every Home press
+  /// with no way to decline it.
+  static const String keyPictureInPictureOnHome = 'vesper_pip_on_home';
+
   /// Hides the Movies and TV Shows tabs (and their search results) — for
   /// people who get movies/shows elsewhere (debrid etc.).
   static const String keyHideMoviesShows = 'vesper_hide_movies_shows';
@@ -347,9 +358,20 @@ class AppConstants {
   static const Duration epgFutureWindow = Duration(hours: 36);
 
   /// EPG auto-refresh. Was 15-120 min — each refresh is ~45 s of heavy
-  /// work on a Formuler (measured), so every 30 min cost a quarter of the
-  /// box's time. A stored legacy value falls back to the default (see
+  /// work on a Formuler (measured). Faster windows are opt-in again, but a
+  /// refresh now only runs once the stored guide is actually older than the
+  /// interval, so a 30-minute choice on a box that is off most of the day
+  /// costs one refresh at launch rather than a refresh every half hour.
+  /// A stored legacy value falls back to the default (see
   /// `StorageService.getRefreshInterval`).
   static const int defaultRefreshIntervalMinutes = 720;
-  static const List<int> refreshIntervalOptions = [360, 720, 1440];
+  static const List<int> refreshIntervalOptions = [
+    30,
+    60,
+    120,
+    180,
+    360,
+    720,
+    1440
+  ];
 }

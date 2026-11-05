@@ -209,6 +209,12 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
         ]);
         _epgService.startAutoRefresh(
             _storage.getRefreshInterval(), _epgSources);
+        // Settings > General: an opt-in launch refresh of every playlist (and
+        // the guide that goes with it). Never awaited here — a slow provider
+        // must not hold up an otherwise usable app.
+        if (_storage.getUpdatePlaylistsAtStartup()) {
+          unawaited(_updatePlaylistsAtStartup());
+        }
         // Library metadata is fetched only when a title is opened.
       }());
       // Never blocks the splash: a slow or offline check just means no prompt.
@@ -288,6 +294,21 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
   /// Sources for the normal programme-guide refresh.
   List<EpgSource> _epgSources() => _playlistManager.epgSources();
 
+  /// Settings > General's "Update playlists at startup": re-fetch each enabled
+  /// playlist from its provider, then refresh the guide. A playlist update is
+  /// exactly when new channels and their listings appear together, so the
+  /// guide follows immediately instead of waiting for the next interval tick.
+  /// Failures leave the cached channels and guide on screen untouched.
+  Future<void> _updatePlaylistsAtStartup() async {
+    try {
+      for (final profile in _playlistManager.profiles.where((p) => p.enabled)) {
+        await _playlistManager.loadPlaylist(profile.id);
+      }
+      await _epgService.refreshAll();
+    } catch (e) {
+      debugPrint('Startup playlist update failed: ${e.runtimeType}');
+    }
+  }
   @override
   Widget build(BuildContext context) {
     if (_bootstrapError != null) {

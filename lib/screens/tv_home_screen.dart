@@ -684,44 +684,41 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       select();
     }
     if (group == null) return;
-    if (group == _favoritesGroupSentinel ||
-        group == _historyGroupSentinel ||
-        group == _allGroupSentinel) {
-      // Reset focus when opening Favourites so the previous group's row state cannot consume
-      // a stray Select release.
-      _resetLiveListFocus();
-      _collapseAfterTouchPick();
-      return;
-    }
-
-    _resetLiveListFocus();
-    _collapseAfterTouchPick();
-    return;
+    _focusPickedCategory();
   }
 
-  /// Reset the channel list's scroll and focus when changing groups. Touch enters the content
-  /// column; remote navigation stays on the group until Right is pressed.
-  void _collapseAfterTouchPick() {
-    if (_compact || context.read<AppPreferences>().isTelevision) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (!(_timelineGuideKey.currentState?.focusEntry() ?? false) &&
-          !_col2Scope.hasFocus) {
-        _col2Scope.requestFocus();
-      }
-      if (_focusDepth != 2) setState(() => _focusDepth = 2);
-    });
-  }
-
-  void _resetLiveListFocus() {
+  /// Put the cursor on the first channel of the category just picked.
+  ///
+  /// Runs post-frame, because the new category's channel rows do not exist
+  /// yet when the Select/tap arrives; requesting focus before the rebuild
+  /// either silently failed or landed on the previous category's first row,
+  /// which read as the cursor jumping to the row above the one chosen. The
+  /// focus depth moves with it so the collapsed-column geometry agrees with
+  /// where the cursor actually is on a remote.
+  void _focusPickedCategory() {
     if (_liveListController.hasClients) _liveListController.jumpTo(0);
     final playlist = context.read<PlaylistManager>();
-    final channels = _currentLiveChannels(playlist);
-    if (channels.isEmpty) return;
-    final playback = context.read<PlaybackService>();
-    final firstIsPlaying = playback.currentChannel?.id == channels.first.id;
-    (firstIsPlaying ? _currentChannelFocusNode : _firstLiveChannelFocusNode)
-        .requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // The Timeline guide owns its own focus; entering it is the whole move.
+      if (_timelineGuideKey.currentState?.focusEntry() ?? false) {
+        _onColumnFocus(2);
+        return;
+      }
+      final channels = _currentLiveChannels(playlist);
+      if (channels.isEmpty) {
+        // Nothing to land on (an empty category): keep the cursor in the
+        // groups column instead of stranding it in an empty list.
+        _onColumnFocus(1);
+        _firstGroupRowFocusNode.requestFocus();
+        return;
+      }
+      final playing = context.read<PlaybackService>().currentChannel;
+      final firstIsPlaying = playing?.id == channels.first.id;
+      (firstIsPlaying ? _currentChannelFocusNode : _firstLiveChannelFocusNode)
+          .requestFocus();
+      _onColumnFocus(2);
+    });
   }
 
   void _onColumnFocus(int depth) {
