@@ -700,10 +700,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
                       if (Channel.isLiveId(channel.rawId)) _openPanel();
                     },
-                    // Consume unhandled Right presses instead of searching focusable widgets
-                    // on the covered catalogue route, which may contain a very large focus
-                    // graph.
-                    const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
+                    // Right goes back to the live channel that was playing
+                    // before this one (a toggle). On movies/episodes and when
+                    // nothing else has played it still consumes the press
+                    // instead of searching focusable widgets on the covered
+                    // catalogue route, which may hold a very large focus graph.
+                    const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+                        _playback.playPrevious(),
                     // No repeats: the OK held to open this player must not
                     // pop the card on arrival.
                   },

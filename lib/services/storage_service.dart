@@ -417,6 +417,13 @@ class StorageService {
   Future<void> setSportsChannelFilter(String value) =>
       _prefs.setString(_vk('sports_channel_filter'), value);
 
+  /// "When" filter on the Sports tab (`SportsTimeFilter.name`); null until the
+  /// viewer picks one, so the screen keeps its own default.
+  String? getSportsTimeFilter() =>
+      _prefs.getString(_vk(AppConstants.keySportsTimeFilter));
+  Future<void> setSportsTimeFilter(String value) =>
+      _prefs.setString(_vk(AppConstants.keySportsTimeFilter), value);
+
   bool getSportsWithChannel() =>
       _prefs.getBool(_vk(AppConstants.keySportsWithChannel)) ?? false;
   Future<void> setSportsWithChannel(bool value) =>

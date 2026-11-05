@@ -32,10 +32,24 @@ class LiveCategoryIcon extends StatelessWidget {
     return text.isEmpty ? label : text;
   }
 
+  /// A category that names a soccer competition, however it spells the game.
+  static final _soccerCue = RegExp(
+      r'\b(soccer|association football|uefa|fifa|premier league|epl|la ?liga|'
+      r'serie a|bundesliga|ligue 1|champions league|europa league|mls|efl|'
+      r'fa cup|spfl|football league|sky sports football)\b');
+
+  /// Plain "football" is the US game in most lineups that carry these packs
+  /// ("Football", "Football PPV"), so it maps to the football, not the soccer
+  /// ball. The soccer cue above wins first for European competition names.
+  static final _americanFootballCue = RegExp(
+      r'\b(american football|college football|nfl|ncaa|ncaaf|football)\b');
+
   static String? _symbol(String label) {
     final leading = _leadingSymbol(label);
     if (leading != null) return leading;
     final s = label.toLowerCase();
+    if (_soccerCue.hasMatch(s)) return '⚽';
+    if (_americanFootballCue.hasMatch(s)) return '🏈';
     for (final (keyword, symbol) in const [
       ('australia', '🇦🇺'),
       ('new zealand', '🇳🇿'),
@@ -52,10 +66,6 @@ class LiveCategoryIcon extends StatelessWidget {
       ('motorsport', '🏁'),
       ('rally', '🏁'),
       ('mxgp', '🏍️'),
-      ('american football', '🏈'),
-      ('college football', '🏈'),
-      ('nfl', '🏈'),
-      ('football', '⚽'),
       ('soccer', '⚽'),
       ('uefa', '⚽'),
       ('premier', '⚽'),

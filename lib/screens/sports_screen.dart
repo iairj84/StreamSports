@@ -736,6 +736,9 @@ class _SportsScreenState extends State<SportsScreen>
     _channelFilter = SportsChannelFilter.values.firstWhere(
         (v) => v.name == _storage.getSportsChannelFilter(),
         orElse: () => SportsChannelFilter.possible);
+    _timeFilter = SportsTimeFilter.values.firstWhere(
+        (v) => v.name == _storage.getSportsTimeFilter(),
+        orElse: () => SportsTimeFilter.liveAndSoon);
     _restoreRecentMatches();
     // Keep near-start coverage visible while preserving confidence labels.
     unawaited(_load());
@@ -1461,6 +1464,7 @@ class _SportsScreenState extends State<SportsScreen>
       _timeFilter = choice;
       _heroGame = null;
     });
+    unawaited(_storage.setSportsTimeFilter(choice.name));
     if (choice != SportsTimeFilter.all && _dayOffset != 0) _setDay(0);
   }
 

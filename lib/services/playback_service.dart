@@ -112,6 +112,11 @@ class PlaybackService extends ChangeNotifier {
 
   Channel? currentChannel;
 
+  /// The live channel [play] replaced — the player's D-pad Right steps back to
+  /// it. Swapped rather than consumed, so Right toggles between the last two
+  /// live channels.
+  Channel? previousChannel;
+
   /// The live list the user last picked a channel from (TvHomeScreen's
   /// Live list / Timeline guide, Favourites included) — what the player's
   /// CH+/CH- step through. Plain field, no notify; PlayerScreen falls back
@@ -326,6 +331,21 @@ class PlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// D-pad Right during playback: go back to the live channel that was playing
+  /// before this one. A no-op for movies/episodes, when nothing else has
+  /// played yet, or when that channel's playlist is disabled.
+  void playPrevious() {
+    final previous = previousChannel;
+    if (previous == null ||
+        previous.id == currentChannel?.id ||
+        !Channel.isLiveId(previous.rawId) ||
+        !_playlistManager.isPlaylistEnabled(previous.playlistId)) {
+      return;
+    }
+    previousChannel = currentChannel;
+    unawaited(play(previous));
+  }
+
   /// Starts playing [channel]. No-ops if it's already the current channel
   /// (so re-opening the fullscreen view for the channel the mini-player is
   /// already showing doesn't restart it).
@@ -361,6 +381,15 @@ class PlaybackService extends ChangeNotifier {
       return;
     }
     if (currentChannel?.id == channel.id && controller != null) return;
+
+    // Remember what this replaces before teardown clears it, so D-pad Right can
+    // step back (see [playPrevious]). Only live channels are worth keeping.
+    final replacing = currentChannel;
+    if (replacing != null &&
+        replacing.id != channel.id &&
+        Channel.isLiveId(replacing.rawId)) {
+      previousChannel = replacing;
+    }
 
     final request = ++_request;
     _reloadingCurrentChannel = false;

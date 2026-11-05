@@ -226,6 +226,9 @@ class AppConstants {
   static const String keySportsLeagues = 'vesper_sports_leagues';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsWithChannel = 'vesper_sports_with_channel';
+
+  /// The Sports tab's "When" filter (`SportsTimeFilter.name`).
+  static const String keySportsTimeFilter = 'vesper_sports_time_filter';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
   static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
