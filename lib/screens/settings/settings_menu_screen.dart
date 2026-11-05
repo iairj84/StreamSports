@@ -108,7 +108,7 @@ class SettingsMenuScreen extends StatelessWidget {
                       link(
                           Icons.display_settings_outlined,
                           'Themes',
-                          'OLED black, dark grey or light',
+                          'Six palettes · true black to light',
                           const ThemeScreen()),
                     ]),
                     if (includeTools && !prefs.hideMultiview)

@@ -29,23 +29,21 @@ class ThemeScreen extends StatelessWidget {
                   final selected = prefs.palette.id == palette.id;
                   return TvMenuTile(
                     title: palette.label,
-                    subtitle: switch (palette.id) {
-                      'oled' => 'True black surfaces · soft blue accents',
-                      'light' => 'Soft white surfaces · deep blue accents',
-                      _ =>
+                    subtitle: palette.description ??
                         'Our original look · slate surfaces and cool blue accents',
-                    },
                     leading: Container(
                         width: 46,
                         height: 34,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                             color: scheme.surface,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: scheme.outline)),
                         child: Row(children: [
                           Container(width: 7, color: scheme.primary),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
+                          Container(width: 3, color: palette.secondary),
+                          const SizedBox(width: 3),
                           Expanded(
                               child: Column(children: [
                             Expanded(

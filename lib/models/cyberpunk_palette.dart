@@ -10,6 +10,7 @@ class CyberpunkPalette {
     required this.label,
     required this.primary,
     required this.secondary,
+    this.description,
     this.isMinimal = false,
     this.highlight,
     this.trueBlack = false,
@@ -24,6 +25,10 @@ class CyberpunkPalette {
   /// Stored in prefs — stable even if [label] wording changes later.
   final String id;
   final String label;
+
+  /// One-line summary shown under the label in Settings > Themes — kept
+  /// beside the palette definition instead of a switch on [id] in the UI.
+  final String? description;
 
   /// Focus border/gradient/text accent, for every palette except
   /// [isMinimal] ones, where these stay reserved for the app

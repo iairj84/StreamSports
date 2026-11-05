@@ -3982,8 +3982,11 @@ class _TimelineGuideState extends State<_TimelineGuide>
   }
 
   static const double _pixelsPerMinute = 6;
+  /// Timeline span: one hour back so a just-finished programme stays
+  /// visible, then a full day forward. The guide used to stop five hours
+  /// out, which hid everything after the current evening.
   static const Duration _windowBefore = Duration(hours: 1);
-  static const Duration _windowAfter = Duration(hours: 5);
+  static const Duration _windowAfter = Duration(hours: 23);
   double get _rowHeight => _guideRowHeight(context);
   double get _channelColumnWidth => _landscapeGuide(context)
       ? 132

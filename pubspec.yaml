@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "iptv-app - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 0.1.8+2473
+version: 0.1.9+2474
 
 environment:
   # Preserve the package language version; locked dependencies require Dart 3.12+.

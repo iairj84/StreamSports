@@ -305,7 +305,7 @@ class AppConstants {
   /// old flat single-color presets, which couldn't represent a deliberate
   /// two-hue "cyberpunk" accent (Material's `ColorScheme.fromSeed` only
   /// derives one hue's tonal ramp). "Dark/Gold" is deliberately the most
-  /// restrained of the four — muted rather than neon — so there's a safe
+  /// restrained of the set — muted rather than neon — so there's a safe
   /// option for a shared device an older user might also use.
   static const List<CyberpunkPalette> cyberpunkPalettes = [
     CyberpunkPalette(
@@ -313,18 +313,42 @@ class AppConstants {
       label: 'Dark grey',
       primary: Color(0xFF90CAF9),
       secondary: Color(0xFF90CAF9),
+      description: 'Our original look · slate surfaces, cool blue accents',
     ),
     CyberpunkPalette(
       id: 'oled',
       label: 'OLED black',
       primary: Color(0xFF90CAF9),
       secondary: Color(0xFF90CAF9),
+      description: 'True black surfaces · soft blue accents',
     ),
     CyberpunkPalette(
       id: 'light',
       label: 'Light',
       primary: Color(0xFF17649B),
       secondary: Color(0xFF17649B),
+      description: 'Soft white surfaces · deep blue accents',
+    ),
+    CyberpunkPalette(
+      id: 'midnight',
+      label: 'Midnight',
+      primary: Color(0xFF64C7FF),
+      secondary: Color(0xFF8B7CFF),
+      description: 'Deep navy surfaces · cyan and indigo accents',
+    ),
+    CyberpunkPalette(
+      id: 'ember',
+      label: 'Ember',
+      primary: Color(0xFFFFB459),
+      secondary: Color(0xFFFF7A59),
+      description: 'Warm charcoal surfaces · amber and coral accents',
+    ),
+    CyberpunkPalette(
+      id: 'forest',
+      label: 'Forest',
+      primary: Color(0xFF6FE3A8),
+      secondary: Color(0xFF7FD7FF),
+      description: 'Muted green surfaces · mint and ice accents',
     ),
   ];
 

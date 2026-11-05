@@ -58,6 +58,7 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
     scaffoldBackgroundColor: scheme.surface,
     focusColor: scheme.primaryContainer,
     dividerColor: scheme.outlineVariant,
+    splashFactory: NoSplash.splashFactory,
     appBarTheme: AppBarTheme(
       backgroundColor: scheme.surface,
       foregroundColor: scheme.onSurface,
@@ -68,8 +69,10 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: scheme.surface,
+      elevation: 12,
+      shadowColor: Colors.black,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: scheme.outlineVariant)),
     ),
     snackBarTheme: SnackBarThemeData(
@@ -79,24 +82,64 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
       closeIconColor: scheme.onSurfaceVariant,
       elevation: 0,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
           side: BorderSide(color: scheme.outlineVariant)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: scheme.surfaceContainerHighest,
+      hintStyle: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: scheme.outline)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: scheme.outlineVariant)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: scheme.primary, width: 1.5)),
     ),
     cardTheme: CardThemeData(
       color: scheme.surfaceContainerHighest,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: scheme.outlineVariant)),
     ),
+    listTileTheme: ListTileThemeData(
+        iconColor: scheme.onSurfaceVariant, textColor: scheme.onSurface),
+    // Chips, tooltips and scrollbars had no theme at all before, so they
+    // fell back to Material defaults that clash with the palettes.
+    chipTheme: ChipThemeData(
+        backgroundColor: scheme.surfaceContainerHighest,
+        selectedColor: scheme.primaryContainer,
+        side: BorderSide(color: scheme.outlineVariant),
+        labelStyle: TextStyle(fontSize: 12, color: scheme.onSurface),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8))),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: scheme.surfaceContainerHighest,
+        circularTrackColor: scheme.surfaceContainerHighest),
+    tooltipTheme: TooltipThemeData(
+      waitDuration: const Duration(milliseconds: 600),
+      textStyle: TextStyle(fontSize: 12, color: scheme.onSurface),
+      decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: scheme.outlineVariant)),
+    ),
+    scrollbarTheme: ScrollbarThemeData(
+        thickness: const WidgetStatePropertyAll(3),
+        radius: const Radius.circular(4),
+        thumbColor:
+            WidgetStatePropertyAll(scheme.outline.withValues(alpha: .7))),
     popupMenuTheme: PopupMenuThemeData(
       color: scheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      elevation: 12,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: scheme.outlineVariant)),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(style: _tvButtonStyle(scheme)),
     filledButtonTheme: FilledButtonThemeData(style: _tvButtonStyle(scheme)),
@@ -319,7 +362,7 @@ ButtonStyle _tvButtonStyle(ColorScheme scheme) {
   final focusBorder = scheme.primary;
   return ButtonStyle(
     shape: WidgetStateProperty.all(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(3))),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
     backgroundColor: WidgetStateProperty.resolveWith((states) {
       if (states.contains(WidgetState.focused)) return focusFill;
       return null;

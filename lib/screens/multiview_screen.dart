@@ -18,7 +18,7 @@ import '../widgets/multiview_channel_picker.dart';
 import '../widgets/player_dialog.dart';
 import '../widgets/tv_menu_tile.dart';
 
-enum _MultiviewLayout { automatic, sideBySide, stacked, grid }
+enum _MultiviewLayout { automatic, sideBySide, stacked, grid, spotlight }
 
 /// An independent, bounded playback session. Opening/closing this route is the
 /// ownership boundary: the normal preview stops before any grid player opens.
@@ -81,12 +81,54 @@ class _MultiviewScreenState extends State<MultiviewScreen>
 
   _MultiviewLayout _layout = _MultiviewLayout.automatic;
   bool _fillVideo = false;
-  int get _count => _layout == _MultiviewLayout.grid ? 4 : 2;
-  int _columns(Size size) => switch (_layout) {
-        _MultiviewLayout.stacked => 1,
-        _MultiviewLayout.automatic => size.height > size.width ? 1 : 2,
-        _ => 2,
-      };
+
+  /// Which cell takes the large slot in [_MultiviewLayout.spotlight].
+  int _bigIndex = 0;
+
+  static int _countFor(_MultiviewLayout layout) =>
+      layout == _MultiviewLayout.grid || layout == _MultiviewLayout.spotlight
+          ? 4
+          : 2;
+  int get _count => _countFor(_layout);
+  bool get _fourUp => _count == 4;
+
+  /// Cell rectangles, in cell order, for the active layout. Only Spotlight
+  /// gives screens different sizes: the enlarged screen takes two thirds of
+  /// the width and the other three stack beside it.
+  List<Rect> _slots(Rect area) {
+    Rect cell(double left, double top, double width, double height) =>
+        Rect.fromLTWH(area.left + area.width * left,
+            area.top + area.height * top, area.width * width,
+            area.height * height);
+    return switch (_layout) {
+      _MultiviewLayout.stacked => [cell(0, 0, 1, .5), cell(0, .5, 1, .5)],
+      _MultiviewLayout.sideBySide => [cell(0, 0, .5, 1), cell(.5, 0, .5, 1)],
+      _MultiviewLayout.automatic => area.height > area.width
+          ? [cell(0, 0, 1, .5), cell(0, .5, 1, .5)]
+          : [cell(0, 0, .5, 1), cell(.5, 0, .5, 1)],
+      _MultiviewLayout.grid => [
+        cell(0, 0, .5, .5),
+        cell(.5, 0, .5, .5),
+        cell(0, .5, .5, .5),
+        cell(.5, .5, .5, .5)
+      ],
+      _MultiviewLayout.spotlight => _spotlightSlots(cell),
+    };
+  }
+
+  List<Rect> _spotlightSlots(
+      Rect Function(double, double, double, double) cell) {
+    final rects = List<Rect>.filled(4, Rect.zero);
+    final small = [
+      for (var i = 0; i < 4; i++)
+        if (i != _bigIndex) i
+    ];
+    rects[_bigIndex] = cell(0, 0, 2 / 3, 1);
+    for (var i = 0; i < small.length; i++) {
+      rects[small[i]] = cell(2 / 3, i / 3, 1 / 3, 1 / 3);
+    }
+    return rects;
+  }
   int? _fullscreen;
   bool _ready = false, _dialog = false, _leaving = false, _smallDevice = true;
   bool get _tv => context.read<AppPreferences>().isTelevision;
@@ -309,6 +351,18 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                         icon: Icons.fullscreen,
                         title: 'Fullscreen',
                         onTap: () => Navigator.pop(ctx, 'full')),
+                  if (_fourUp)
+                    TvMenuTile(
+                        key: const ValueKey('multiview-enlarge'),
+                        icon: _layout == _MultiviewLayout.spotlight &&
+                                _bigIndex == i
+                            ? Icons.grid_view_outlined
+                            : Icons.aspect_ratio,
+                        title: _layout == _MultiviewLayout.spotlight &&
+                                _bigIndex == i
+                            ? 'Restore equal sizes'
+                            : 'Enlarge this screen',
+                        onTap: () => Navigator.pop(ctx, 'enlarge')),
                   TvMenuTile(
                       icon: Icons.swap_horiz,
                       title:
@@ -338,6 +392,13 @@ class _MultiviewScreenState extends State<MultiviewScreen>
         }
       case 'full':
         await _expand(i);
+      case 'enlarge':
+        if (_layout == _MultiviewLayout.spotlight && _bigIndex == i) {
+          await _layoutTo(_MultiviewLayout.grid);
+        } else {
+          _bigIndex = i;
+          await _layoutTo(_MultiviewLayout.spotlight);
+        }
       case 'change':
         await _pick(i);
       case 'retry':
@@ -385,6 +446,12 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                           ? 'Use SD or 720p feeds for smoother playback'
                           : 'Four equal screens'
                     ),
+                    (
+                      _MultiviewLayout.spotlight,
+                      Icons.picture_in_picture_alt_outlined,
+                      'One big, three small',
+                      'Four screens · enlarge any screen'
+                    ),
                   ])
                     TvMenuTile(
                         icon: option.$2,
@@ -424,7 +491,13 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                 ]))));
     _dialog = false;
     if (!mounted || selected == null) return;
-    final count = selected == _MultiviewLayout.grid ? 4 : 2;
+    await _layoutTo(selected);
+  }
+
+  /// Applies [selected] from either the layout dialog or a screen's own
+  /// enlarge action, keeping open streams and the visible cells in step.
+  Future<void> _layoutTo(_MultiviewLayout selected) async {
+    final count = _countFor(selected);
     if (count != _count) await _session.setVisibleCount(count);
     if (!mounted) return;
     setState(() {
@@ -451,11 +524,33 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                     'Add a channel to each screen. The speaker icon marks the channel you hear.\n\n'
                     'Choose another screen to listen to it, then select it again for fullscreen. Channel options let you change, reconnect or remove it.\n\n'
                     'Each channel needs a provider connection. Other devices count too.\n\n'
-                    'Two screens are recommended on smaller TVs. For four screens, choose SD or 720p feeds.'))));
+                    'Two screens are recommended on smaller TVs. For four screens, choose SD or 720p feeds.\n\n'
+                    'Screen options also enlarge one screen while the other three stay visible.'))));
     _dialog = false;
   }
 
-  KeyEventResult _key(int i, KeyEvent e, int columns) {
+  /// Nearest cell in [direction] by centre distance, so the remote follows
+  /// the on-screen geometry for every layout, including Spotlight's sizes.
+  int? _neighbor(int i, Offset direction, List<Rect> slots) {
+    final from = slots[i].center;
+    int? best;
+    var bestScore = double.infinity;
+    for (var j = 0; j < _count; j++) {
+      if (j == i) continue;
+      final delta = slots[j].center - from;
+      final along = delta.dx * direction.dx + delta.dy * direction.dy;
+      if (along <= 1) continue;
+      final across = (delta.dx * -direction.dy + delta.dy * direction.dx).abs();
+      final score = along + across * 2;
+      if (score < bestScore) {
+        bestScore = score;
+        best = j;
+      }
+    }
+    return best;
+  }
+
+  KeyEventResult _key(int i, KeyEvent e, List<Rect> slots) {
     if (e is KeyUpEvent) return KeyEventResult.ignored;
     final k = e.logicalKey;
     if (k == LogicalKeyboardKey.contextMenu || k == LogicalKeyboardKey.info) {
@@ -463,23 +558,21 @@ class _MultiviewScreenState extends State<MultiviewScreen>
       return KeyEventResult.handled;
     }
     if (k == LogicalKeyboardKey.arrowUp) {
-      if (_fullscreen != null || i < columns) {
-        _back.requestFocus();
-      } else {
-        _nodes[i - columns].requestFocus();
-      }
+      final next =
+          _fullscreen == null ? _neighbor(i, const Offset(0, -1), slots) : null;
+      (next == null ? _back : _nodes[next]).requestFocus();
     } else if (k == LogicalKeyboardKey.arrowDown) {
-      if (_fullscreen == null && i + columns < _count) {
-        _nodes[i + columns].requestFocus();
-      } else {
-        _changeNode.requestFocus();
-      }
+      final next =
+          _fullscreen == null ? _neighbor(i, const Offset(0, 1), slots) : null;
+      (next == null ? _changeNode : _nodes[next]).requestFocus();
     } else if (k == LogicalKeyboardKey.arrowLeft) {
-      if (_fullscreen == null && i % columns > 0) _nodes[i - 1].requestFocus();
+      final next =
+          _fullscreen == null ? _neighbor(i, const Offset(-1, 0), slots) : null;
+      if (next != null) _nodes[next].requestFocus();
     } else if (k == LogicalKeyboardKey.arrowRight) {
-      if (_fullscreen == null && i % columns < columns - 1 && i + 1 < _count) {
-        _nodes[i + 1].requestFocus();
-      }
+      final next =
+          _fullscreen == null ? _neighbor(i, const Offset(1, 0), slots) : null;
+      if (next != null) _nodes[next].requestFocus();
     } else {
       return KeyEventResult.ignored;
     }
@@ -497,7 +590,7 @@ class _MultiviewScreenState extends State<MultiviewScreen>
         : 'Back returns to multiview';
   }
 
-  Widget _cell(int i, int columns) => RepaintBoundary(
+  Widget _cell(int i, List<Rect> slots, Size area) => RepaintBoundary(
         key: ValueKey('multiview-surface-$i'),
         child: ListenableBuilder(
           listenable: _cellChanges[i],
@@ -507,7 +600,7 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                 _session.active == i && !_session.muted && cell.channel != null;
             final initialized = cell.controller?.value.isInitialized == true;
             return Focus(
-              onKeyEvent: (_, e) => _key(i, e, columns),
+              onKeyEvent: (_, e) => _key(i, e, slots),
               child: HoldToActivate(
                 onTap: () => _activate(i),
                 onHold: cell.channel == null ? null : () => _actions(i),
@@ -632,11 +725,12 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                               nodes: const [],
                               child: SafeArea(
                                 top: false,
-                                left: _fullscreen != null || i % columns == 0,
+                                left: _fullscreen != null ||
+                                    slots[i].left <= .5,
                                 right: _fullscreen != null ||
-                                    i % columns == columns - 1,
+                                    slots[i].right >= area.width - .5,
                                 bottom: _fullscreen != null ||
-                                    i + columns >= _count,
+                                    slots[i].bottom >= area.height - .5,
                                 child: SizedBox(
                                   key: ValueKey('multiview-channel-label-$i'),
                                   height: 44,
@@ -768,11 +862,20 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                       focusNode: _layoutNode,
                       onPressed: _layouts,
                       icon: Icon(
-                          _count == 2
-                              ? (_columns(MediaQuery.sizeOf(context)) == 1
+                          switch (_layout) {
+                            _MultiviewLayout.sideBySide =>
+                              Icons.view_column_outlined,
+                            _MultiviewLayout.stacked =>
+                              Icons.view_agenda_outlined,
+                            _MultiviewLayout.automatic =>
+                              MediaQuery.sizeOf(context).height >
+                                      MediaQuery.sizeOf(context).width
                                   ? Icons.view_agenda_outlined
-                                  : Icons.view_column_outlined)
-                              : Icons.grid_view,
+                                  : Icons.view_column_outlined,
+                            _MultiviewLayout.grid => Icons.grid_view,
+                            _MultiviewLayout.spotlight =>
+                              Icons.picture_in_picture_alt_outlined,
+                          },
                           size: 17),
                       label: Row(mainAxisSize: MainAxisSize.min, children: [
                         Text(narrow ? '$_count' : '$_count screens',
@@ -909,7 +1012,6 @@ class _MultiviewScreenState extends State<MultiviewScreen>
         child: Scaffold(
             backgroundColor: const Color(0xFF111820),
             body: LayoutBuilder(builder: (context, box) {
-              final columns = _columns(Size(box.maxWidth, box.maxHeight));
               return Stack(children: [
                 Positioned.fill(
                     child: !_ready || _leaving
@@ -918,33 +1020,29 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                                 ? 'Closing multiview…'
                                 : 'Preparing multiview…'))
                         : LayoutBuilder(builder: (_, area) {
-                            final rows = (_count / columns).ceil();
-                            final width = area.maxWidth / columns;
-                            final height = area.maxHeight / rows;
-                            // Stable sibling slots preserve video state without
-                            // reparenting a surface during fullscreen transitions.
+                            // Slots come from the layout, so screens can differ
+                            // in size; each is still a stable sibling.
+                            final slots = _slots(Rect.fromLTWH(
+                                0, 0, area.maxWidth, area.maxHeight));
                             return Stack(children: [
                               for (var i = 0; i < _count; i++)
                                 Positioned(
-                                    left: _fullscreen == i
-                                        ? 0
-                                        : (i % columns) * width,
-                                    top: _fullscreen == i
-                                        ? 0
-                                        : (i ~/ columns) * height,
+                                    left: _fullscreen == i ? 0 : slots[i].left,
+                                    top: _fullscreen == i ? 0 : slots[i].top,
                                     width: _fullscreen == i
                                         ? area.maxWidth
-                                        : width,
+                                        : slots[i].width,
                                     height: _fullscreen == i
                                         ? area.maxHeight
-                                        : height,
+                                        : slots[i].height,
                                     child: ExcludeFocus(
                                         excluding: _fullscreen != null &&
                                             _fullscreen != i,
                                         child: Offstage(
                                             offstage: _fullscreen != null &&
                                                 _fullscreen != i,
-                                            child: _cell(i, columns))))
+                                            child: _cell(i, slots,
+                                                area.biggest))))
                             ]);
                           })),
                 Positioned(

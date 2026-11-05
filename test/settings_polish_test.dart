@@ -236,7 +236,7 @@ void main() {
     await restored.init();
     expect(restored.palette.id, 'classic_tv');
     expect(restored.guideViewMode, 'timeline');
-    expect(AppConstants.cyberpunkPalettes, hasLength(3));
+    expect(AppConstants.cyberpunkPalettes, hasLength(6));
     restored.dispose();
   });
   testWidgets('themes persist and old layout switches are absent',
@@ -244,10 +244,12 @@ void main() {
     await open(tester, const ThemeScreen(), const Size(320, 640));
     expect(find.text('Channel list'), findsNothing);
     expect(find.text('Schedule grid'), findsNothing);
+    // Top-down: the list is taller than a 320x640 viewport now that more
+    // palettes exist, so each next tile sits below the one just tapped.
     for (final (label, id) in [
-      ('Light', 'light'),
+      ('Dark grey', 'classic_tv'),
       ('OLED black', 'oled'),
-      ('Dark grey', 'classic_tv')
+      ('Light', 'light')
     ]) {
       await tester.ensureVisible(find.text(label));
       await tester.tap(find.text(label));
