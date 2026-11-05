@@ -568,6 +568,15 @@ class _MultiviewScreenState extends State<MultiviewScreen>
     return best;
   }
 
+  /// Left/Right between stacked screens has no horizontal neighbour, so with
+  /// two cells fall back to the other one. Sideways moves are what hand over
+  /// the sound, and a stacked pair only ever has that one other cell.
+  int? _sideways(int i, int direction, List<Rect> slots) {
+    final neighbor = _neighbor(i, Offset(direction.toDouble(), 0), slots);
+    if (neighbor != null || _count != 2) return neighbor;
+    return i == 0 ? 1 : 0;
+  }
+
   /// Moving onto a screen with Left/Right also gives it the sound, so the
   /// cursor and the speaker never disagree and Select stays free to mean
   /// fullscreen. Up/Down remain navigation-only, and mute wins.
@@ -596,15 +605,13 @@ class _MultiviewScreenState extends State<MultiviewScreen>
           _fullscreen == null ? _neighbor(i, const Offset(0, 1), slots) : null;
       (next == null ? _changeNode : _nodes[next]).requestFocus();
     } else if (k == LogicalKeyboardKey.arrowLeft) {
-      final next =
-          _fullscreen == null ? _neighbor(i, const Offset(-1, 0), slots) : null;
+      final next = _fullscreen == null ? _sideways(i, -1, slots) : null;
       if (next != null) {
         _nodes[next].requestFocus();
         _followAudio(next);
       }
     } else if (k == LogicalKeyboardKey.arrowRight) {
-      final next =
-          _fullscreen == null ? _neighbor(i, const Offset(1, 0), slots) : null;
+      final next = _fullscreen == null ? _sideways(i, 1, slots) : null;
       if (next != null) {
         _nodes[next].requestFocus();
         _followAudio(next);

@@ -270,7 +270,7 @@ void main() {
       await settle(tester);
       expect(tester.state(find.byType(VideoPlayerHdr).at(1)), same(videoState));
       final controller = session.cells[1].controller;
-      for (final layout in ['Side by side', 'Stacked']) {
+      for (final layout in ['Side by side', 'Stacked', 'One big, one small']) {
         tester
             .widget<TextButton>(find.byKey(const ValueKey('multiview-layout')))
             .focusNode!
@@ -296,7 +296,7 @@ void main() {
             tester
                 .getRect(find.byKey(const ValueKey('multiview-video-area-1'))),
             secondRect);
-        if (layout == 'Stacked') {
+        if (layout != 'Side by side') {
           if (size.width >= 960) {
             expect(firstRect.top, 0);
             expect(secondRect.bottom, size.height);
@@ -350,9 +350,41 @@ void main() {
         expect(session.cells[1].controller, same(controller));
         expect((controller as FakeController).disposed, false);
         expect(session.active, 1);
-        expect(storage.getMultiviewLayout(),
-            layout == 'Stacked' ? 'stacked' : 'sideBySide');
+        expect(
+            storage.getMultiviewLayout(),
+            switch (layout) {
+              'Stacked' => 'stacked',
+              'One big, one small' => 'oneUp',
+              _ => 'sideBySide',
+            });
         expect(tester.takeException(), isNull);
+      }
+      if (size == const Size(1280, 720)) {
+        // One big, one small stacks its screens, so a sideways move has no
+        // horizontal neighbour — it still has to hand over the audio.
+        tester
+            .widget<TextButton>(find.byKey(const ValueKey('multiview-layout')))
+            .focusNode!
+            .requestFocus();
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('multiview-layout')));
+        await settle(tester);
+        await tester.ensureVisible(find.text('One big, one small'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('One big, one small'));
+        await settle(tester);
+        expect(find.byKey(const ValueKey('multiview-cell-1')), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await settle(tester);
+        final moved = session.active;
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await settle(tester);
+        expect(session.active, isNot(moved),
+            reason: 'Sideways moves must carry the sound in a stacked pair.');
+        // Restore the audio this test picked earlier for the checks below.
+        await session.selectAudio(1);
+        await settle(tester);
+        expect(session.active, 1);
       }
       tester
           .widget<TextButton>(find.byKey(const ValueKey('multiview-layout')))
