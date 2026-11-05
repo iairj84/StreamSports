@@ -18,6 +18,7 @@ import '../widgets/tv_preview_remote_navigation.dart';
 import '../utils/formula_one.dart';
 import '../widgets/sports_header_controls.dart';
 import '../widgets/sports_hub_layout.dart';
+import '../widgets/sports_hero_details.dart';
 import '../widgets/sports_toolbar_navigation.dart';
 import '../utils/sports_time_filter.dart';
 import '../utils/sports_scroll_anchor.dart';
@@ -4390,6 +4391,11 @@ class _Hero extends StatelessWidget {
                         Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: summary),
+                        if (g != null)
+                          Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: SportsHeroDetails(
+                                  game: g, hideScores: hideScores)),
                       ]),
                 )),
                 if (activity != null)
