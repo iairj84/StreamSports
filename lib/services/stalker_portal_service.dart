@@ -593,7 +593,7 @@ class StalkerPortalService extends CatalogApi {
       (await getVodInfo(streamId)).plot;
 
   /// Only a selected stream is resolved. Temporary URLs and tokens never
-  /// replace the stable command stored in favourites, history or SQLite.
+  /// replace the stable command stored in favorites, history or SQLite.
   Future<Channel> resolve(Channel channel) async {
     final reference = Uri.parse(channel.url);
     if (reference.scheme != 'stalker' || channel.playlistId != profile.id) {

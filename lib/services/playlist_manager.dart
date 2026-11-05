@@ -21,7 +21,7 @@ import 'playlist_session.dart';
 import 'stalker_portal_service.dart';
 import 'storage_service.dart';
 
-/// Combines playlist sessions and dispatches catalogue, visibility and favourite
+/// Combines playlist sessions and dispatches catalogue, visibility and favorite
 /// changes. M3U playlists supply live channels; Xtream libraries load categories
 /// and titles on demand. Existing viewer storage namespaces remain compatible.
 class PlaylistManager extends ChangeNotifier {
@@ -864,7 +864,7 @@ class PlaylistManager extends ChangeNotifier {
   /// "Auto-Pair Channels" for EPG assignment — see
   /// `EpgChannelMatchingScreen`'s own doc comment. Same unambiguous-
   /// exact-match-only rule as [autoPairChannelLinks]; also skips a
-  /// channel that's already showing real programme data (an exact-id
+  /// channel that's already showing real program data (an exact-id
   /// automatic match, or a previous assignment) — nothing to fix there.
   Future<Set<String>> autoPairEpgIds(EpgService epg) async {
     final byKey = <String, List<String>>{};
@@ -1180,7 +1180,7 @@ class PlaylistManager extends ChangeNotifier {
       _sessionFor(playlistId)?.favoritedGroups ?? {};
 
   /// Every whole-favorited group's title across every enabled playlist —
-  /// used by the sidebar's own "Favourites" group-title list. Same-named
+  /// used by the sidebar's own "Favorites" group-title list. Same-named
   /// groups from two different playlists collapse into one entry here;
   /// an accepted, minor edge case (this feeds a display-only title list,
   /// not the actual channel lookup, which stays correctly scoped per
@@ -1375,8 +1375,8 @@ class PlaylistManager extends ChangeNotifier {
         return c.isFavorite || (favoritedGroups?.contains(c.group) ?? false);
       }).toList();
 
-  /// The TV tab's Favourites list: starred live channels plus every
-  /// channel of a favourited live group, per playlist in order (starred
+  /// The TV tab's Favorites list: starred live channels plus every
+  /// channel of a favorited live group, per playlist in order (starred
   /// first within each playlist).
   List<Channel> get favoriteLiveChannelsWithGroups =>
       _enabledSessionsSorted.expand((s) {
@@ -1489,10 +1489,10 @@ class PlaylistManager extends ChangeNotifier {
     notifyLibraryChanged();
   }
 
-  /// Hold on a tab's Favourites entry: empties that tab's Favourites for the
-  /// active viewer — its starred items and its favourited groups (the
-  /// Favourites view shows both). [tab] is 'TV', 'Movies' or 'TV Shows';
-  /// [groups] are the tab's favourited groups, from the screen that lists
+  /// Hold on a tab's Favorites entry: empties that tab's Favorites for the
+  /// active viewer — its starred items and its favorited groups (the
+  /// Favorites view shows both). [tab] is 'TV', 'Movies' or 'TV Shows';
+  /// [groups] are the tab's favorited groups, from the screen that lists
   /// them. Movies/series not loaded yet are cleared by id prefix, so a
   /// starred title in an unopened category doesn't survive.
   Future<void> clearFavorites(

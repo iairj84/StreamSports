@@ -1,4 +1,4 @@
-import '../models/sports_favourites_filter.dart';
+import '../models/sports_favorites_filter.dart';
 import 'dart:math' as math;
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../utils/sports_browse_selection.dart';
@@ -124,25 +124,25 @@ class _SportsScreenState extends State<SportsScreen>
   late final SportsChannelMatcher _matcher;
   late SportsChannelPicks _picks;
   late SportsFollows _follows;
-  SportsFavouritesFilter _favouritesFilter = SportsFavouritesFilter.all;
-  SportsFavouritesFilter _browseFavouritesFilter = SportsFavouritesFilter.all;
-  bool get _onlyFavourites => _favouritesFilter.isFiltered;
+  SportsFavoritesFilter _favoritesFilter = SportsFavoritesFilter.all;
+  SportsFavoritesFilter _browseFavoritesFilter = SportsFavoritesFilter.all;
+  bool get _onlyFavorites => _favoritesFilter.isFiltered;
   final _toolbarKey = GlobalKey();
 
   late List<SportsLeague> _leagues;
   late List<SportsLeague> _eventLeagues;
-  late Set<String> _favouriteLeagueIds;
-  late List<SportsLeague> _favouriteFeeds;
-  late List<SportsLeague> _favouriteScheduleFeeds;
+  late Set<String> _favoriteLeagueIds;
+  late List<SportsLeague> _favoriteFeeds;
+  late List<SportsLeague> _favoriteScheduleFeeds;
   late final _allScheduleFeeds =
       sportsBrowseLeagues.where(supportsSportsSchedule).toList();
   List<SportsLeague> get _browseCatalogue =>
-      _onlyFavourites ? _favouriteFeeds : sportsBrowseLeagues;
-  bool _isFavouriteGame(SportsGame game) =>
-      (_favouritesFilter.includesLeagues &&
-          _favouriteLeagueIds.contains(game.league.id)) ||
-      (_favouritesFilter.includesTeams && _follows.involves(game));
-  List<SportsLeague> _feedsFor(SportsFavouritesFilter filter) => {
+      _onlyFavorites ? _favoriteFeeds : sportsBrowseLeagues;
+  bool _isFavoriteGame(SportsGame game) =>
+      (_favoritesFilter.includesLeagues &&
+          _favoriteLeagueIds.contains(game.league.id)) ||
+      (_favoritesFilter.includesTeams && _follows.involves(game));
+  List<SportsLeague> _feedsFor(SportsFavoritesFilter filter) => {
         if (filter.includesLeagues)
           for (final league in _leagues) league.id: league,
         if (filter.includesTeams)
@@ -151,9 +151,9 @@ class _SportsScreenState extends State<SportsScreen>
               league.id: league,
       }.values.toList();
 
-  void _updateFavouriteFeeds() {
-    _favouriteFeeds = _feedsFor(_favouritesFilter);
-    _favouriteScheduleFeeds = _feedsFor(_browseFavouritesFilter)
+  void _updateFavoriteFeeds() {
+    _favoriteFeeds = _feedsFor(_favoritesFilter);
+    _favoriteScheduleFeeds = _feedsFor(_browseFavoritesFilter)
         .where(supportsSportsSchedule)
         .toList();
   }
@@ -707,7 +707,7 @@ class _SportsScreenState extends State<SportsScreen>
     _picks = SportsChannelPicks.load(_storage);
     _follows = SportsFollows.load(_storage);
     _leagues = _savedLeagues();
-    _favouriteLeagueIds = _leagues.map((l) => l.id).toSet();
+    _favoriteLeagueIds = _leagues.map((l) => l.id).toSet();
     final eventSelection = _storage.getSportsEventsSelection();
     if (eventSelection.length == 3) {
       _sportFilter = sportsBrowseLeagues.any(
@@ -715,12 +715,12 @@ class _SportsScreenState extends State<SportsScreen>
           ? eventSelection[0]
           : null;
       _leagueFilter = sportsLeagueById(eventSelection[1])?.id;
-      _favouritesFilter = SportsFavouritesFilter.values.firstWhere(
+      _favoritesFilter = SportsFavoritesFilter.values.firstWhere(
           (value) => value.name == eventSelection[2],
-          orElse: () => SportsFavouritesFilter.all);
+          orElse: () => SportsFavoritesFilter.all);
     }
-    _browseFavouritesFilter = _favouritesFilter;
-    _updateFavouriteFeeds();
+    _browseFavoritesFilter = _favoritesFilter;
+    _updateFavoriteFeeds();
     _eventLeagues = _eventFeedsForScope;
     // Events starts unfiltered; other browsing tabs retain their own selection.
     final remembered = _storage.getSportsBrowseSelection();
@@ -1167,7 +1167,7 @@ class _SportsScreenState extends State<SportsScreen>
     if (preparedPlaylist) _loadExtras(_day);
     // Broadcaster/name hints can be offered while the initial guide is still
     // loading. Never downgrade a previously completed match or mark this check
-    // complete; the full scorer must still validate the current programme.
+    // complete; the full scorer must still validate the current program.
     _syncMatchInputs();
     final earlyGames = _games
         .where((g) =>
@@ -1433,12 +1433,12 @@ class _SportsScreenState extends State<SportsScreen>
   // the sport or Live filter. With channel applies to both counts and cards.
   Iterable<SportsGame> get _countableGames => _games.where(_acceptsChannel);
   Iterable<SportsGame> get _visibleGames => _scopedGames();
-  Iterable<SportsGame> _scopedGames({bool favourites = true}) {
+  Iterable<SportsGame> _scopedGames({bool favorites = true}) {
     final now = _now;
     return _countableGames.where((g) =>
         (_sportFilter == null || _sportOf(g) == _sportFilter) &&
         matchesSportsLeague(g.league, _leagueFilter) &&
-        (!favourites || !_onlyFavourites || _isFavouriteGame(g)) &&
+        (!favorites || !_onlyFavorites || _isFavoriteGame(g)) &&
         _timeFilter.accepts(g, now));
   }
 
@@ -1454,7 +1454,7 @@ class _SportsScreenState extends State<SportsScreen>
 
   void _saveEventsSelection() {
     unawaited(_storage.setSportsEventsSelection(
-        _sportFilter, _leagueFilter, _favouritesFilter.name));
+        _sportFilter, _leagueFilter, _favoritesFilter.name));
   }
 
   void _selectSport(String? sport) {
@@ -1466,7 +1466,7 @@ class _SportsScreenState extends State<SportsScreen>
     });
     _saveEventsSelection();
     _syncEventLeagueScope();
-    // Favourite league scores are already loaded: changing sport stays local.
+    // Favorite league scores are already loaded: changing sport stays local.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusZone(0, _sections);
     });
@@ -1488,7 +1488,7 @@ class _SportsScreenState extends State<SportsScreen>
   List<_Section> _cachedSections = const [];
   List<_Section> get _sections {
     final scope = (
-      _favouritesFilter,
+      _favoritesFilter,
       _sportFilter,
       _leagueFilter,
       _timeFilter,
@@ -1525,21 +1525,21 @@ class _SportsScreenState extends State<SportsScreen>
           ? _now.millisecondsSinceEpoch ~/ 60000
           : null,
       _follows.revision,
-      _favouriteLeagueIds
+      _favoriteLeagueIds
     );
     if (_orderedSectionsKey != sourceKey) {
       _orderedSectionsKey = sourceKey;
-      _orderedSections = _makeSections(includeAllFavourites: true);
+      _orderedSections = _makeSections(includeAllFavorites: true);
     }
-    final key = (_favouritesFilter, sourceKey);
+    final key = (_favoritesFilter, sourceKey);
     if (_sectionsKey != key) {
       _sectionsKey = key;
-      // Favourites preserve the already ranked order; toggling never re-sorts
+      // Favorites preserve the already ranked order; toggling never re-sorts
       // an unchanged feed. Keep only one base snapshot and one local subset.
-      final latest = _onlyFavourites
+      final latest = _onlyFavorites
           ? [
               for (final section in _orderedSections)
-                if (section.games.where(_isFavouriteGame).toList()
+                if (section.games.where(_isFavoriteGame).toList()
                     case final games when games.isNotEmpty)
                   _Section(section.id, section.label, games),
             ]
@@ -1694,8 +1694,8 @@ class _SportsScreenState extends State<SportsScreen>
     });
   }
 
-  List<_Section> _makeSections({bool includeAllFavourites = false}) {
-    final visible = _scopedGames(favourites: !includeAllFavourites).toList();
+  List<_Section> _makeSections({bool includeAllFavorites = false}) {
+    final visible = _scopedGames(favorites: !includeAllFavorites).toList();
     List<SportsGame> followedFirst(Iterable<SportsGame> games) =>
         orderSportsGames(games, followed: _follows.involves);
     if (_groupedBySport) {
@@ -2004,8 +2004,8 @@ class _SportsScreenState extends State<SportsScreen>
     _syncEventLeagueScope();
   }
 
-  List<SportsLeague> get _eventFeedsForScope => _onlyFavourites
-      ? _favouriteFeeds
+  List<SportsLeague> get _eventFeedsForScope => _onlyFavorites
+      ? _favoriteFeeds
       : sportsBrowseLeagues
           .where((league) =>
               (_sportFilter == null ||
@@ -2130,17 +2130,17 @@ class _SportsScreenState extends State<SportsScreen>
     }
     setState(() {
       _leagues = _savedLeagues();
-      _favouriteLeagueIds = _leagues.map((l) => l.id).toSet();
-      _updateFavouriteFeeds();
+      _favoriteLeagueIds = _leagues.map((l) => l.id).toSet();
+      _updateFavoriteFeeds();
       _lastLoadCompleted = null;
-      if (_onlyFavourites &&
+      if (_onlyFavorites &&
           _leagueFilter != null &&
-          !_favouriteFeeds.any((l) => l.id == _leagueFilter)) {
+          !_favoriteFeeds.any((l) => l.id == _leagueFilter)) {
         _leagueFilter = null;
       }
-      if (_onlyFavourites &&
+      if (_onlyFavorites &&
           _sportFilter != null &&
-          !_favouriteFeeds
+          !_favoriteFeeds
               .any((l) => l.espnPath.startsWith('$_sportFilter/'))) {
         _sportFilter = null;
       }
@@ -2686,16 +2686,16 @@ class _SportsScreenState extends State<SportsScreen>
                                     : sportsLeagueById(
                                         _scheduleBrowse.leagueId!),
                                 overviewLeagues:
-                                    _browseFavouritesFilter.isFiltered
-                                        ? _favouriteScheduleFeeds
+                                    _browseFavoritesFilter.isFiltered
+                                        ? _favoriteScheduleFeeds
                                         : _allScheduleFeeds,
-                                favouriteLeagueIds: _favouriteLeagueIds,
-                                favouritesFilter: _browseFavouritesFilter,
+                                favoriteLeagueIds: _favoriteLeagueIds,
+                                favoritesFilter: _browseFavoritesFilter,
                                 keyboardOpen: keyboardOpen,
                                 onLeagueChanged: _rememberBrowseLeague,
                                 onScopeChanged: _rememberScheduleScope,
                                 onManageLeagues: _editLeagues,
-                                onFavouritesChanged: _setBrowseFavouritesFilter,
+                                onFavoritesChanged: _setBrowseFavoritesFilter,
                                 onGameDetails: _showGameDetails,
                                 channelMatchForGame: (game) =>
                                     _displayedMatch(game, preview),
@@ -2723,9 +2723,9 @@ class _SportsScreenState extends State<SportsScreen>
                                     service: widget.standings,
                                     initialLeague: _initialStandingsLeague,
                                     onLeagueChanged: _rememberBrowseLeague,
-                                    favouriteLeagueIds: _favouriteLeagueIds,
-                                    favouritesFilter: _browseFavouritesFilter,
-                                    onFavouritesChanged: _setBrowseFavouritesFilter,
+                                    favoriteLeagueIds: _favoriteLeagueIds,
+                                    favoritesFilter: _browseFavoritesFilter,
+                                    onFavoritesChanged: _setBrowseFavoritesFilter,
                                     onManageLeagues: _editLeagues,
                                     embedded: true,
                                     keyboardOpen: keyboardOpen,
@@ -2782,7 +2782,7 @@ class _SportsScreenState extends State<SportsScreen>
                                                         _chooseRedZone())),
                                                 const SizedBox(width: 6),
                                               ],
-                                              _buildFavouritesFilter(),
+                                              _buildFavoritesFilter(),
                                               const SizedBox(width: 6),
                                               SportsToolbarActions(children: [
                                                 _buildEventFilterButton(),
@@ -2841,13 +2841,13 @@ class _SportsScreenState extends State<SportsScreen>
     final choice = await showSportsFilterPicker(context,
         title: 'Choose sport',
         itemLabel: 'sports',
-        description: _onlyFavourites
-            ? _favouritesFilter.description
+        description: _onlyFavorites
+            ? _favoritesFilter.description
             : 'All leagues · use sport or league to narrow results',
         selected: _sportFilter ?? '',
         options: [
           ...sportsSportOptions(_browseCatalogue, _pickerCounts(_sportOf),
-              favouriteOnly: _onlyFavourites),
+              favoriteOnly: _onlyFavorites),
           sportsManageLeaguesOption(_leagues.length),
         ]);
     if (choice == null || !mounted) return;
@@ -2869,15 +2869,15 @@ class _SportsScreenState extends State<SportsScreen>
     final choice = await showSportsFilterPicker(context,
         title: 'Choose league',
         itemLabel: 'leagues',
-        description: _onlyFavourites
-            ? _favouritesFilter.description
+        description: _onlyFavorites
+            ? _favoritesFilter.description
             : 'All leagues · use sport or league to narrow results',
         topFirst: true,
         selected: _leagueFilter ?? '',
         options: sportsLeagueOptions(_browseCatalogue, counts,
             sport: _sportFilter,
-            favouriteCount: _leagues.length,
-            favouritesOnly: _onlyFavourites));
+            favoriteCount: _leagues.length,
+            favoritesOnly: _onlyFavorites));
     if (choice != null && mounted) {
       if (choice == '__manage_leagues__') {
         await _editLeagues();
@@ -2892,7 +2892,7 @@ class _SportsScreenState extends State<SportsScreen>
   void _setGuideView(String view) {
     if (_sportsView == view) return;
     if (view == 'schedule') {
-      _scheduleBrowse.favouritesFilter = _browseFavouritesFilter;
+      _scheduleBrowse.favoritesFilter = _browseFavoritesFilter;
       final league =
           _browseLeague == null ? null : sportsLeagueById(_browseLeague!);
       final scheduleLeague = league != null &&
@@ -3160,7 +3160,7 @@ class _SportsScreenState extends State<SportsScreen>
                           child: const Text('Got it'))
                     ],
                     child: const Text(
-                        'Sports programmes airing now, using replay labels, past event dates and classic seasons in the guide. Likely replays have a clear event listing but no live marker; they are marked separately.\n\nTap to preview; tap again for fullscreen. Open the details button for the full programme description and any other channels.\n\nNo scores are shown here. Use the ••• menu to hide likely replays or browse replay channels without current programme details; their availability is unverified. Highlights, info channels and inactive slots are excluded. Refresh checks the saved guide; normal guide updates continue as usual.',
+                        'Sports programs airing now, using replay labels, past event dates and classic seasons in the guide. Likely replays have a clear event listing but no live marker; they are marked separately.\n\nTap to preview; tap again for fullscreen. Open the details button for the full program description and any other channels.\n\nNo scores are shown here. Use the ••• menu to hide likely replays or browse replay channels without current program details; their availability is unverified. Highlights, info channels and inactive slots are excluded. Refresh checks the saved guide; normal guide updates continue as usual.',
                         style: TextStyle(fontSize: 12, height: 1.4)),
                   ))));
 
@@ -3312,40 +3312,40 @@ class _SportsScreenState extends State<SportsScreen>
                         : interfaceColor(context, Colors.white54))),
             icon: const Icon(Icons.refresh, size: 14),
           )));
-  void _toggleFavouritesFilter() => _setFavouritesFilter(_onlyFavourites
-      ? SportsFavouritesFilter.all
-      : SportsFavouritesFilter.favourites);
+  void _toggleFavoritesFilter() => _setFavoritesFilter(_onlyFavorites
+      ? SportsFavoritesFilter.all
+      : SportsFavoritesFilter.favorites);
 
-  void _setBrowseFavouritesFilter(SportsFavouritesFilter value) {
-    if (_browseFavouritesFilter == value) return;
+  void _setBrowseFavoritesFilter(SportsFavoritesFilter value) {
+    if (_browseFavoritesFilter == value) return;
     setState(() {
-      _browseFavouritesFilter = value;
-      _scheduleBrowse.favouritesFilter = value;
-      _updateFavouriteFeeds();
+      _browseFavoritesFilter = value;
+      _scheduleBrowse.favoritesFilter = value;
+      _updateFavoriteFeeds();
     });
   }
 
-  void _setFavouritesFilter(SportsFavouritesFilter value) {
-    if (_favouritesFilter == value) return;
+  void _setFavoritesFilter(SportsFavoritesFilter value) {
+    if (_favoritesFilter == value) return;
     if (_verticalScroll.hasClients) _verticalScroll.jumpTo(0);
     setState(() {
-      _favouritesFilter = value;
-      _browseFavouritesFilter = value;
-      _scheduleBrowse.favouritesFilter = value;
-      _updateFavouriteFeeds();
+      _favoritesFilter = value;
+      _browseFavoritesFilter = value;
+      _scheduleBrowse.favoritesFilter = value;
+      _updateFavoriteFeeds();
       _heroGame = null;
     });
     _saveEventsSelection();
     _syncEventLeagueScope();
   }
 
-  Widget _buildFavouritesFilter() => SportsFavouritesFilterButton(
-      key: const ValueKey('events-favourites-only'),
-      focusNode: _chipNode('events-favourites-only'),
-      filter: _favouritesFilter,
-      favouriteLeagueCount: _favouriteLeagueIds.length,
-      favouriteTeamCount: _follows.teams.length,
-      onChanged: _setFavouritesFilter);
+  Widget _buildFavoritesFilter() => SportsFavoritesFilterButton(
+      key: const ValueKey('events-favorites-only'),
+      focusNode: _chipNode('events-favorites-only'),
+      filter: _favoritesFilter,
+      favoriteLeagueCount: _favoriteLeagueIds.length,
+      favoriteTeamCount: _follows.teams.length,
+      onChanged: _setFavoritesFilter);
 
   Widget _buildSportsOptions() => SizedBox(
       width: _tvNavigation ? 28 : 32,
@@ -3397,12 +3397,12 @@ class _SportsScreenState extends State<SportsScreen>
               _hideScores ? tr('Show scores') : tr('Hide scores'),
               'Control score visibility while browsing.',
               icon: Icons.visibility_outlined),
-          const SportsChoice('teams', 'Favourite teams & athletes',
+          const SportsChoice('teams', 'Favorite teams & athletes',
               'Manage the teams and athletes highlighted in Sports.',
               icon: Icons.star_border),
           if (widget.onChooseChannel == null)
             const SportsChoice('standings', 'Standings',
-                'Browse league tables and favourite teams.',
+                'Browse league tables and favorite teams.',
                 icon: Icons.table_chart_outlined),
           const SportsChoice('leagues', sportsManageLeaguesLabel,
               'Choose your default leagues in Events & Schedule.',
@@ -3437,7 +3437,7 @@ class _SportsScreenState extends State<SportsScreen>
         if (mounted) {
           setState(() {
             _browseSnapshot = null;
-            _updateFavouriteFeeds();
+            _updateFavoriteFeeds();
           });
           _syncEventLeagueScope();
           if (_events) _resumeEvents();
@@ -3624,12 +3624,12 @@ class _SportsScreenState extends State<SportsScreen>
                                   ? 'Some event feeds are unavailable.\nRefresh to retry, or open the info button beside refresh.'
                                   : null) ??
                               _channelError ??
-                              (_onlyFavourites && !_games.any(_isFavouriteGame)
-                                  ? _favouritesFilter.emptySelectionMessage(
+                              (_onlyFavorites && !_games.any(_isFavoriteGame)
+                                  ? _favoritesFilter.emptySelectionMessage(
                                           hasLeagues:
-                                              _favouriteLeagueIds.isNotEmpty,
+                                              _favoriteLeagueIds.isNotEmpty,
                                           hasTeams: !_follows.isEmpty) ??
-                                      'No favourites match these filters'
+                                      'No favorites match these filters'
                                   : _timeFilter != SportsTimeFilter.all
                                       ? 'No ${_timeFilter.label.toLowerCase()} events for these filters'
                                       : _withChannel && _games.isNotEmpty
@@ -3641,10 +3641,10 @@ class _SportsScreenState extends State<SportsScreen>
                           style: TextStyle(
                               color: interfaceColor(context, Colors.white70),
                               fontSize: 16)),
-                      if (_onlyFavourites) ...[
+                      if (_onlyFavorites) ...[
                         const SizedBox(height: 10),
                         TextButton.icon(
-                            onPressed: _toggleFavouritesFilter,
+                            onPressed: _toggleFavoritesFilter,
                             icon: const Icon(Icons.star_border, size: 18),
                             label: const Text('Show all events')),
                       ],
@@ -4336,7 +4336,7 @@ class _Hero extends StatelessWidget {
         final subtitle = g == null
             ? (playingChannel?.name ??
                 (replays
-                    ? 'Select a programme to preview'
+                    ? 'Select a program to preview'
                     : standings
                         ? 'Select a channel in Events or Schedule'
                         : 'Select an event to preview'))

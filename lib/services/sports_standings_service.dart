@@ -682,7 +682,7 @@ LeagueStandings parseLeagueStandings(
 }
 
 /// World Rugby supplies global positions, not a league table. Join only exact,
-/// unique country names to the already loaded ESPN directory so favourites keep
+/// unique country names to the already loaded ESPN directory so favorites keep
 /// their existing identities. Unknown or ambiguous countries remain unranked.
 LeagueStandings parseWorldRugbyRankings((Uint8List, LeagueStandings) input) {
   final (body, directory) = input;

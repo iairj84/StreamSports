@@ -52,11 +52,11 @@ void main() {
       if (sport == 'cricket' || sport == 'rugby') continue;
       expect(sports, contains(sport), reason: sport);
       final choices = sportsLeagueOptions(leagues, {},
-          sport: sport, favouriteCount: leagues.length);
+          sport: sport, favoriteCount: leagues.length);
       expect(choices.any((o) => o.id.startsWith('guide.')), isTrue,
           reason: sport);
     }
-    final ids = sportsLeagueOptions(leagues, {}, favouriteCount: leagues.length)
+    final ids = sportsLeagueOptions(leagues, {}, favoriteCount: leagues.length)
         .map((o) => o.id)
         .toList();
     expect(ids.toSet().length, ids.length);
@@ -110,7 +110,7 @@ void main() {
                                   options: isSport
                                       ? sportsSportOptions(leagues, {})
                                       : sportsLeagueOptions(leagues, {},
-                                          favouriteCount: leagues.length));
+                                          favoriteCount: leagues.length));
                             },
                             child: const Text('Open')))))));
         await tester.tap(find.text('Open'));

@@ -147,7 +147,7 @@ class _SportsChannelOptionsDialogState
                     SportsChannelEvidence.specific =>
                       'The guide or channel name identifies this event.',
                     SportsChannelEvidence.likely =>
-                      'Includes listed broadcasters. Check the programme before watching.',
+                      'Includes listed broadcasters. Check the program before watching.',
                   },
                   style: TextStyle(
                       fontSize: 10.5,

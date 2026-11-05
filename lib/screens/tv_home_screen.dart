@@ -183,7 +183,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// spot (top, bottom or inside the channel list).
   final FocusNode _tvTabFocusNode = FocusNode(debugLabel: 'tv-tab-TV');
 
-  /// Explicit focus target for the first groups-row action. Only one of Favourites, All or
+  /// Explicit focus target for the first groups-row action. Only one of Favorites, All or
   /// What's New is mounted at a time, so they can share the node.
   final FocusNode _firstGroupRowFocusNode =
       FocusNode(debugLabel: 'first-group-row');
@@ -261,8 +261,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop('favorite'),
             child: Text(isFavorited
-                ? tr('Remove from Favourites')
-                : tr('Add to Favourites')),
+                ? tr('Remove from Favorites')
+                : tr('Add to Favorites')),
           ),
           SimpleDialogOption(
             onPressed: () =>
@@ -388,8 +388,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     !canOpenMultiview(context) || isGuideSection(channel),
                 icon: isFavorited ? Icons.star : Icons.star_border,
                 title: isFavorited
-                    ? tr('Remove from Favourites')
-                    : tr('Add to Favourites'),
+                    ? tr('Remove from Favorites')
+                    : tr('Add to Favorites'),
                 onTap: () => Navigator.pop(context, 'favorite')),
             TvMenuTile(
                 icon:
@@ -652,7 +652,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   /// [playlistId] is required for a real group selection (from a
   /// `_GroupRow`, which always has its own `M3uGroup.playlistId` on
-  /// hand), null for the sentinels ("All", "Favourites") — Favorites-tab
+  /// hand), null for the sentinels ("All", "Favorites") — Favorites-tab
   /// selections re-resolve their own playlistId via
   /// [_favoriteGroupCategory] instead of trusting the caller, since that
   /// column mixes bare titles pulled from every playlist's favorited
@@ -903,7 +903,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // The fullscreen owner survives until route disposal, even though the
     // surface has already moved back. Search/Settings keep the browsed group.
     if (context.read<PlaybackService>().hasFullscreenOwner) {
-      // Preserve the synthetic Favourites selection when it still contains the playing
+      // Preserve the synthetic Favorites selection when it still contains the playing
       // channel; normal group fallback cannot reconstruct that selection.
       final playing = context.read<PlaybackService>().currentChannel;
       final stayOnFavorites = _selectedGroup == _favoritesGroupSentinel &&
@@ -1275,7 +1275,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // is null before playback starts.
     final playing = playback.currentChannel ?? playback.pendingResumeChannel;
     if (playing != null) {
-      // Prefer the synthetic Favourites group for a favourited channel before falling back to
+      // Prefer the synthetic Favorites group for a favorited channel before falling back to
       // its provider group.
       if (_isFavoriteLiveChannel(playlist, playing.id)) {
         return _favoritesGroupSentinel;
@@ -1374,7 +1374,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
 
     final playback = context.read<PlaybackService>();
-    // CH+/CH- in the player follow this exact list (e.g. Favourites order).
+    // CH+/CH- in the player follow this exact list (e.g. Favorites order).
     playback.zapList = _currentLiveChannels(context.read<PlaylistManager>());
     final pending = _previewChannelId == channel.id ? _previewFuture : null;
     if (pending != null || playback.currentChannel?.id == channel.id) {
@@ -1714,8 +1714,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         .showSnackBar(SnackBar(content: Text(tr('Watched history deleted.'))));
   }
 
-  /// Hold Select on this tab's Favourites row: empty this tab's Favourites
-  /// (starred items + favourited groups) after a confirm.
+  /// Hold Select on this tab's Favorites row: empty this tab's Favorites
+  /// (starred items + favorited groups) after a confirm.
   Future<void> _confirmClearFavorites() async {
     final tab = _tab;
     final ok = await showGuardedDialog<bool>(
@@ -1723,9 +1723,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // Opened by a hold: see _confirmClearChannelHistory.
       builder: (dialogContext) => SwallowHeldActivate(
           child: AlertDialog(
-        title: Text(tr('Clear favourites?')),
+        title: Text(tr('Clear favorites?')),
         content: Text(tr(
-            'Removes every starred item and favourite group from this tab\'s Favourites.')),
+            'Removes every starred item and favorite group from this tab\'s Favorites.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -1752,7 +1752,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     await playlist.clearFavorites(tab, groups);
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(tr('Favourites cleared.'))));
+        .showSnackBar(SnackBar(content: Text(tr('Favorites cleared.'))));
   }
 
   void _closeApp() {
@@ -2140,7 +2140,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       1 => tr('Live TV'),
       _ => switch (_effectiveLiveGroup(playlist)) {
           null => tr('TV'),
-          _favoritesGroupSentinel => tr('Favourites'),
+          _favoritesGroupSentinel => tr('Favorites'),
           _historyGroupSentinel => tr('History'),
           _allGroupSentinel => tr('All channels'),
           final group => _selectedLiveCollection?.title == group
@@ -2381,14 +2381,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       key: const ValueKey('TV'),
       slivers: [
         SliverList.list(children: [
-          // Hold Select = clear this tab's Favourites (after a confirm).
+          // Hold Select = clear this tab's Favorites (after a confirm).
           HoldToActivate(
             onTap: () => _onGroupSelected(_favoritesGroupSentinel),
             onHold: _confirmClearFavorites,
             child: _SelectableRow(
               navigation: true,
               icon: Icons.star,
-              label: tr('Favourites'),
+              label: tr('Favorites'),
               selected: effectiveGroup == _favoritesGroupSentinel,
               collapsed: collapsed,
               fontSize: _groupFontSize,
@@ -2962,7 +2962,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   Widget _buildLiveList(PlaylistManager playlist) {
     final channels = _currentLiveChannels(playlist);
-    // Favourites from two or more playlists: a playlist label above each
+    // Favorites from two or more playlists: a playlist label above each
     // one's first channel (the getter already groups them by playlist).
     // Inside the row's item, not an extra list item, so row indexes stay
     // what _restoreLiveFocus expects.
@@ -3014,7 +3014,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   Widget _buildLiveRow(PlaybackService playback, Channel channel, int i) {
     final isSelected = playback.currentChannel?.id == channel.id;
-    // Exclude the favourite star from remote traversal so Up/Down selects rows.
+    // Exclude the favorite star from remote traversal so Up/Down selects rows.
     // HoldToActivate supplies remote long-press actions alongside touch handling.
     return HoldToActivate(
       onTap: () => _previewOrOpenChannel(channel),
@@ -3362,7 +3362,7 @@ class _PlaylistDividerRow extends StatelessWidget {
   }
 }
 
-/// A real category row (unlike "All"/"Favourites", which are pseudo-entries
+/// A real category row (unlike "All"/"Favorites", which are pseudo-entries
 /// with no group-level actions) — long-press brings up "add/remove
 /// favorites" and "hide" for the whole group.
 ///
@@ -3697,7 +3697,7 @@ class _ProgramDetails extends StatelessWidget {
   }
 }
 
-/// The Timeline Guide's description header — the programme currently
+/// The Timeline Guide's description header — the program currently
 /// focused in the grid, not only the one playing. Kept separate from
 /// [_ProgramDetails] rather than parameterising it: that one always
 /// describes a channel's *live* programme plus what's next, while this one
@@ -3725,7 +3725,7 @@ class _GuideNowPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final timeFormat = TimeFormat.hm;
     // Whichever channel the guide is actually focused on, even if that
-    // row turned out to have no programme data (focusedProgram null but
+    // row turned out to have no program data (focusedProgram null but
     // focusedChannel set) — only falls back to whatever's playing when
     // nothing in the guide has been focused at all yet.
     final channel = focusedChannel ?? playingChannel;
@@ -3974,8 +3974,8 @@ class _TimelineGuideState extends State<_TimelineGuide>
   bool _mixedPlaylists = false;
 
   /// The playlist name on the first channel of each playlist's run when
-  /// the rows mix playlists (Favourites) — a tag inside the label cell,
-  /// not an extra row, so row indexes keep matching the programme rows.
+  /// the rows mix playlists (Favorites) — a tag inside the label cell,
+  /// not an extra row, so row indexes keep matching the program rows.
   String? _playlistTagFor(int i) {
     final channels = widget.channels;
     if (!identical(_tagsFor, channels)) {
@@ -4642,7 +4642,7 @@ class _TimelineGuideState extends State<_TimelineGuide>
     if (blocks?.isEmpty ?? false) _rowBlocks.remove(rowIndex);
   }
 
-  /// Whichever block last took focus, as a row + the programme itself
+  /// Whichever block last took focus, as a row + the program itself
   /// (not a fixed moment in time) — [moveVertical] derives its actual
   /// reference moment fresh, on every call, via [_referenceTime]. Two
   /// earlier attempts at a fixed reference both broke on a currently-
@@ -4749,7 +4749,7 @@ class _TimelineGuideState extends State<_TimelineGuide>
     return true;
   }
 
-  /// "Now" for a programme that's actually airing right now (recomputed
+  /// "Now" for a program that's actually airing right now (recomputed
   /// fresh, never the stale value from whenever focus first landed on
   /// it) — that's the case that actually matters, since it's what makes
   /// Down/Up from a long "now playing" block land on the *other*
@@ -5020,7 +5020,7 @@ class _TimelineGuideState extends State<_TimelineGuide>
     _preserveDensityAnchor();
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateTimeViewport());
     // Keep loading and empty-guide states distinct, with focusable placeholders until
-    // programme data arrives.
+    // program data arrives.
     final epgLoading = widget.epg.isLoading || widget.epg.lastUpdated == null;
     final scheme = Theme.of(context).colorScheme;
     final toolbarColor = Color.alphaBlend(
@@ -5655,7 +5655,7 @@ class _TimelineKeyboardKeyState extends State<_TimelineKeyboardKey> {
 }
 
 /// The left column's per-row channel identity — purely informational, not
-/// itself focusable; D-pad focus lives entirely on the programme blocks in
+/// itself focusable; D-pad focus lives entirely on the program blocks in
 /// [_TimelineRow], same as the plain channel list never puts focus on a
 /// row's logo.
 double _guideLabelTextInset(BuildContext context, Channel channel) {
@@ -5893,7 +5893,7 @@ class _TimelineRow extends StatelessWidget {
             blocks.putIfAbsent(
                 program,
                 () => Positioned(
-                      // Keyed by the programme's own span: a block's registered
+                      // Keyed by the program's own span: a block's registered
                       // start/end (see _registerBlock) is captured once at mount,
                       // so after an EPG refresh an unkeyed block would be matched
                       // by position to a *different* programme and keep answering
@@ -6086,7 +6086,7 @@ class _ProgramBlockState extends State<_ProgramBlock> {
     super.dispose();
   }
 
-  /// Scroll horizontally only when the programme is entirely off-screen. Partially visible
+  /// Scroll horizontally only when the program is entirely off-screen. Partially visible
   /// blocks retain position and use sticky titles; directional handlers position the viewport
   /// explicitly.
   void _revealHorizontally() {

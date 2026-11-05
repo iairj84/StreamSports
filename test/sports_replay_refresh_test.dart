@@ -137,7 +137,7 @@ void main() {
                           channelId: '$sport-$i',
                           title: '$sport programme $i',
                           description:
-                              'Extended coverage of $sport, with the key moments, competitors and venue details from this programme. (Sports)',
+                              'Extended coverage of $sport, with the key moments, competitors and venue details from this program. (Sports)',
                           start: now.subtract(const Duration(minutes: 15)),
                           stop: now.add(const Duration(hours: 1))))
                 ])
@@ -168,7 +168,7 @@ void main() {
               tester.getRect(find.byKey(const ValueKey('replays-scroll')))),
           isTrue);
       final synopsis = find.text(
-          'Extended coverage of darts, with the key moments, competitors and venue details from this programme.');
+          'Extended coverage of darts, with the key moments, competitors and venue details from this program.');
       expect(synopsis, findsWidgets,
           reason: 'Both replay and highlight cards include the guide synopsis');
       expect(tester.widget<Text>(synopsis.first).maxLines, greaterThan(1));

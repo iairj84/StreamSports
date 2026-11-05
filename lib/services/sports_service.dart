@@ -32,7 +32,7 @@ final sportsBrowseLeagues = List<SportsLeague>.unmodifiable({
     if (league.id != 'rugby.live') league.id: league,
 }.values);
 
-/// The viewer's favourite leagues, loaded by default. Existing enabled-league
+/// The viewer's favorite leagues, loaded by default. Existing enabled-league
 /// preferences retain their keys and selection; browsing never rewrites them.
 List<SportsLeague> savedSportsLeagues(StorageService storage) {
   final hiddenGuide = storage.getHiddenGuideLeagues().toSet();
@@ -58,8 +58,8 @@ List<SportsLeague> savedSportsLeagues(StorageService storage) {
       : [for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!];
 }
 
-/// Optional opening league, retained under its legacy single-favourite key.
-/// It must still belong to the default favourite-league selection.
+/// Optional opening league, retained under its legacy single-favorite key.
+/// It must still belong to the default favorite-league selection.
 SportsLeague? favoriteSportsLeague(StorageService storage) {
   final id = storage.getSportsFavoriteLeague();
   if (id == null) return null;

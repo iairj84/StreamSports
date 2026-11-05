@@ -399,7 +399,7 @@ class _StandingsTeamTileState extends State<StandingsTeamTile> {
                         minimumSize: Size(geometry.action, geometry.action),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     tooltip:
-                        widget.followed ? 'Remove favourite' : 'Add favourite',
+                        widget.followed ? 'Remove favorite' : 'Add favorite',
                     isSelected: widget.followed,
                     color: widget.followed
                         ? colors.primary

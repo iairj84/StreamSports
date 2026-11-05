@@ -690,7 +690,7 @@ Future<void> showPlayerSettings(
   VoidCallback? onToggleFavorite,
 }) {
   var fill = pictureFill;
-  var favourite = isFavorite == true;
+  var favorite = isFavorite == true;
   return showGuardedDialog<void>(
       context: context,
       barrierColor: const Color(0x40000000),
@@ -771,16 +771,16 @@ Future<void> showPlayerSettings(
                       const PlayerSection('Watching'),
                     if (onToggleFavorite != null)
                       PlayerSettingRow(
-                          icon: favourite
+                          icon: favorite
                               ? Icons.star_rounded
                               : Icons.star_outline_rounded,
-                          title: favourite
-                              ? 'Remove from favourites'
-                              : 'Add to favourites',
-                          selected: favourite,
+                          title: favorite
+                              ? 'Remove from favorites'
+                              : 'Add to favorites',
+                          selected: favorite,
                           onTap: () {
                             onToggleFavorite();
-                            update(() => favourite = !favourite);
+                            update(() => favorite = !favorite);
                           }),
                     if (linkedChannel != null)
                       _LinkedChannelButton(linkedChannel: linkedChannel),

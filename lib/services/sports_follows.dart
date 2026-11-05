@@ -2,7 +2,7 @@ import 'dart:collection';
 import '../models/sports.dart';
 import 'storage_service.dart';
 
-/// Saved team favourites, shared by Sports browsing and the optional team picker.
+/// Saved team favorites, shared by Sports browsing and the optional team picker.
 /// Stored per viewer profile, in follow order.
 class SportsFollows {
   SportsFollows.load(this._storage)

@@ -69,7 +69,7 @@ void main() {
   void complete(List<ChannelMatch> matches) =>
       session.apply(batch(matches), session.identities, 1, now, complete: true);
 
-  test('a corrected live marker replaces the programme shown in suggestions',
+  test('a corrected live marker replaces the program shown in suggestions',
       () {
     complete([strong]);
     final p = strong.programme!;

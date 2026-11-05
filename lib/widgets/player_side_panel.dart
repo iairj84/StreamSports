@@ -40,7 +40,7 @@ class PlayerSidePanel extends StatefulWidget {
 }
 
 class _PlayerSidePanelState extends State<PlayerSidePanel> {
-  static const _tabs = ['Recent', 'Favourites', 'This group'];
+  static const _tabs = ['Recent', 'Favorites', 'This group'];
   static const _tabOrder = [0, 1, 2];
   double get _rowHeight =>
       (104) +
@@ -533,7 +533,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
                           style: TextStyle(fontSize: 9, color: accent))),
               ]),
               const SizedBox(height: 4),
-              Text(now?.title ?? tr('Programme unavailable'),
+              Text(now?.title ?? tr('Program unavailable'),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

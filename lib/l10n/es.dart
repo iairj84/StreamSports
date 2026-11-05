@@ -342,9 +342,8 @@ const Map<String, String> kEs = {
   // ── TV home ──────────────────────────────────────────────────────────
   'TV': "TV",
   'Favorites': "Favoritos",
-  'Favourites': "Favoritos",
-  'Remove from Favourites': "Quitar de favoritos",
-  'Add to Favourites': "Añadir a favoritos",
+  'Remove from Favorites': "Quitar de favoritos",
+  'Add to Favorites': "Añadir a favoritos",
   'Cancel Hide': "Cancelar ocultar",
   'Hide Group': "Ocultar grupo",
   'Move Up / Down': "Subir / bajar",
@@ -605,7 +604,7 @@ const Map<String, String> kEs = {
   'Hide Movies and TV Shows': "Ocultar Películas y Series",
   'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.':
       "Quita ambas pestañas y sus resultados de búsqueda, p. ej. si ves películas y series en otro lugar.",
-  'Favorite channels are in the TV tab, under Favourites.':
+  'Favorite channels are in the TV tab, under Favorites.':
       "Los canales favoritos están en la pestaña TV, en Favoritos.",
   'Show the Multiview tip': "Mostrar el consejo de Multivista",
   'The connections reminder shown when opening Multiview.':
@@ -910,7 +909,7 @@ const Map<String, String> kEs = {
   'Times show as 9:30 PM': "Las horas se muestran así: 9:30 PM",
   'Welcome back, legend':
       "Bienvenido de nuevo, leyenda",
-  'No favourites yet. Hold Select on a poster or a group to add one.':
+  'No favorites yet. Hold Select on a poster or a group to add one.':
       "Todavía no hay favoritos. Mantén OK sobre un póster o un grupo para añadir uno.",
   'Rotate': "Girar",
   'You have great taste':
@@ -986,11 +985,11 @@ const Map<String, String> kEs = {
   '{n} profiles': "{n} perfiles",
   '{n} favorite': "{n} favorito",
   '{n} favorites': "{n} favoritos",
-  'Clear favourites?':
+  'Clear favorites?':
       "¿Borrar favoritos?",
-  "Removes every starred item and favourite group from this tab's Favourites.":
+  "Removes every starred item and favorite group from this tab's Favorites.":
       "Quita todos los elementos marcados y grupos favoritos de los Favoritos de esta pestaña.",
-  'Favourites cleared.':
+  'Favorites cleared.':
       "Favoritos borrados.",
   'Delete watched history?': "¿Eliminar el historial de visualización?",
   'Removes the History list of live channels.':
@@ -1173,13 +1172,13 @@ const Map<String, String> kEs = {
   'genre.Reality-TV': 'Telerrealidad',
   'genre.Talk-Show': 'Programa de entrevistas',
   'genre.Game-Show': 'Concurso',
-  // Sports: favourite league
-  'OK: show/hide or add · Hold OK: favourite league, or send an added league back to the bank': 'OK: mostrar/ocultar o añadir · Mantén OK: liga favorita, o devolver una liga añadida al banco',
-  'Make favourite league': 'Hacerla liga favorita',
-  'Remove from favourite': 'Quitar de favorita',
+  // Sports: favorite league
+  'OK: show/hide or add · Hold OK: favorite league, or send an added league back to the bank': 'OK: mostrar/ocultar o añadir · Mantén OK: liga favorita, o devolver una liga añadida al banco',
+  'Make favorite league': 'Hacerla liga favorita',
+  'Remove from favorite': 'Quitar de favorita',
   '{tab} opens on it and its games come first in Live now': '{tab} se abre en ella y sus partidos salen primero en En vivo',
   'Send back to the league bank': 'Devolver al banco de ligas',
-  'Favourite league': 'Liga favorita',
+  'Favorite league': 'Liga favorita',
   // Player side panel: Pull stats
   '◀ ▶ tabs  ·  OK to watch  ·  Hold OK for stats  ·  Back to close': '◀ ▶ pestañas  ·  OK para ver  ·  Mantén OK: estadísticas  ·  Atrás para cerrar',
   // Sports hero on Windows

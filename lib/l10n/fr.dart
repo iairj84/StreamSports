@@ -341,9 +341,8 @@ const Map<String, String> kFr = {
   // ── TV home ──────────────────────────────────────────────────────────
   'TV': "Télé",
   'Favorites': "Favoris",
-  'Favourites': "Favoris",
-  'Remove from Favourites': "Retirer des favoris",
-  'Add to Favourites': "Ajouter aux favoris",
+  'Remove from Favorites': "Retirer des favoris",
+  'Add to Favorites': "Ajouter aux favoris",
   'Cancel Hide': "Annuler le masquage",
   'Hide Group': "Masquer le groupe",
   'Move Up / Down': "Monter / descendre",
@@ -606,7 +605,7 @@ const Map<String, String> kFr = {
   'Hide Movies and TV Shows': "Masquer Films et Séries",
   'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.':
       "Retire les deux onglets et leurs résultats de recherche, par ex. si vous regardez films et séries ailleurs.",
-  'Favorite channels are in the TV tab, under Favourites.':
+  'Favorite channels are in the TV tab, under Favorites.':
       "Les chaînes favorites sont dans l'onglet TV, sous Favoris.",
   'Show the Multiview tip': "Afficher le conseil Multivue",
   'The connections reminder shown when opening Multiview.':
@@ -912,7 +911,7 @@ const Map<String, String> kFr = {
   'Times show as 21:30': "Les heures s'affichent ainsi : 21:30",
   'Times show as 9:30 PM': "Les heures s'affichent ainsi : 9:30 PM",
   'Welcome back, legend': "Bon retour, légende",
-  'No favourites yet. Hold Select on a poster or a group to add one.':
+  'No favorites yet. Hold Select on a poster or a group to add one.':
       "Aucun favori pour l'instant. Maintiens OK sur une affiche ou un groupe pour en ajouter.",
   'Rotate': "Pivoter",
   'You have great taste': "Tu as vraiment bon goût",
@@ -974,10 +973,10 @@ const Map<String, String> kFr = {
   '{n} profiles': "{n} profils",
   '{n} favorite': "{n} favori",
   '{n} favorites': "{n} favoris",
-  'Clear favourites?': "Effacer les favoris?",
-  "Removes every starred item and favourite group from this tab's Favourites.":
+  'Clear favorites?': "Effacer les favoris?",
+  "Removes every starred item and favorite group from this tab's Favorites.":
       "Retire tous les éléments étoilés et groupes favoris des Favoris de cet onglet.",
-  'Favourites cleared.': "Favoris effacés.",
+  'Favorites cleared.': "Favoris effacés.",
   'Delete watched history?': "Supprimer l'historique de visionnage?",
   'Removes the History list of live channels.':
       "Efface la liste Historique des chaînes en direct.",
@@ -1199,15 +1198,15 @@ const Map<String, String> kFr = {
   'genre.Reality-TV': 'Téléréalité',
   'genre.Talk-Show': 'Talk-show',
   'genre.Game-Show': 'Jeu télévisé',
-  // Sports: favourite league
-  'OK: show/hide or add · Hold OK: favourite league, or send an added league back to the bank':
+  // Sports: favorite league
+  'OK: show/hide or add · Hold OK: favorite league, or send an added league back to the bank':
       'OK : afficher/masquer ou ajouter · Maintenir OK : ligue favorite, ou renvoyer une ligue ajoutée à la banque',
-  'Make favourite league': 'En faire la ligue favorite',
-  'Remove from favourite': 'Retirer des favoris',
+  'Make favorite league': 'En faire la ligue favorite',
+  'Remove from favorite': 'Retirer des favoris',
   '{tab} opens on it and its games come first in Live now':
       '{tab} s\'ouvre dessus et ses matchs passent en premier dans En direct',
   'Send back to the league bank': 'Renvoyer à la banque de ligues',
-  'Favourite league': 'Ligue favorite',
+  'Favorite league': 'Ligue favorite',
   // Player side panel: Pull stats
   '◀ ▶ tabs  ·  OK to watch  ·  Hold OK for stats  ·  Back to close':
       '◀ ▶ onglets  ·  OK pour regarder  ·  Maintenir OK : stats  ·  Retour pour fermer',
@@ -1243,14 +1242,12 @@ const Map<String, String> kFr = {
   "Star channels in the guide to keep them here.":
       "Ajoutez des chaînes aux favoris dans le guide pour les retrouver ici.",
   "No channels available.": "Aucune chaîne disponible.",
-  "Programme unavailable": "Émission indisponible",
+  "Program unavailable": "Émission indisponible",
   "This group": "Ce groupe",
   "My teams": "Mes équipes",
   "Live sport": "Sport en direct",
   "Recent": "Récentes",
   "Playing": "En lecture",
-  "Add to favourites": "Ajouter aux favoris",
-  "Remove from favourites": "Retirer des favoris",
   "Reconnect": "Reconnecter",
   "Fullscreen": "Plein écran",
   "Picture-in-picture": "Image dans l’image",

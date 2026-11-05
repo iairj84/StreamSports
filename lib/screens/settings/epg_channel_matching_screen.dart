@@ -323,7 +323,7 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
                               epg.currentProgramInCatalog(entry.key);
                           return ListTile(
                             title: Text(entry.value),
-                            // Show the current programme to help distinguish guide entries
+                            // Show the current program to help distinguish guide entries
                             // with similar names.
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

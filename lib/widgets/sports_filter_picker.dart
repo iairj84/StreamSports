@@ -1,4 +1,4 @@
-import '../models/sports_favourites_filter.dart';
+import '../models/sports_favorites_filter.dart';
 import '../utils/guarded_dialog.dart';
 import 'package:provider/provider.dart';
 import '../services/app_preferences.dart';
@@ -15,53 +15,53 @@ import '../utils/sports_presentation.dart';
 
 typedef SportsFilterCounts = Map<String, ({int live, int upcoming})>;
 
-const sportsManageLeaguesLabel = 'Manage favourite leagues';
+const sportsManageLeaguesLabel = 'Manage favorite leagues';
 
 /// Uses the same labelled dropdown as Sport/League; opening it does no work.
-class SportsFavouritesFilterButton extends StatelessWidget {
-  const SportsFavouritesFilterButton(
+class SportsFavoritesFilterButton extends StatelessWidget {
+  const SportsFavoritesFilterButton(
       {super.key,
       required this.filter,
       required this.onChanged,
-      this.favouriteLeagueCount,
-      this.favouriteTeamCount,
+      this.favoriteLeagueCount,
+      this.favoriteTeamCount,
       this.focusNode});
-  final SportsFavouritesFilter filter;
-  final ValueChanged<SportsFavouritesFilter> onChanged;
+  final SportsFavoritesFilter filter;
+  final ValueChanged<SportsFavoritesFilter> onChanged;
   final FocusNode? focusNode;
-  final int? favouriteLeagueCount, favouriteTeamCount;
+  final int? favoriteLeagueCount, favoriteTeamCount;
 
-  String _description(SportsFavouritesFilter option) {
-    if (favouriteLeagueCount == null || favouriteTeamCount == null) {
+  String _description(SportsFavoritesFilter option) {
+    if (favoriteLeagueCount == null || favoriteTeamCount == null) {
       return option.description;
     }
     final empty = option.emptySelectionMessage(
-        hasLeagues: favouriteLeagueCount! > 0,
-        hasTeams: favouriteTeamCount! > 0);
+        hasLeagues: favoriteLeagueCount! > 0,
+        hasTeams: favoriteTeamCount! > 0);
     if (empty != null) return empty;
     return switch (option) {
-      SportsFavouritesFilter.leagues =>
-        '$favouriteLeagueCount saved · includes the whole league',
-      SportsFavouritesFilter.teams =>
-        '$favouriteTeamCount saved · only these teams & athletes, in any league',
+      SportsFavoritesFilter.leagues =>
+        '$favoriteLeagueCount saved · includes the whole league',
+      SportsFavoritesFilter.teams =>
+        '$favoriteTeamCount saved · only these teams & athletes, in any league',
       _ => option.description,
     };
   }
 
   Future<void> _choose(BuildContext context) async {
-    final selected = await showSportsChoices<SportsFavouritesFilter>(context,
+    final selected = await showSportsChoices<SportsFavoritesFilter>(context,
         title: 'Show results',
         description: 'Sport, league and date filters still apply.',
         selected: filter,
         choices: [
-          for (final option in SportsFavouritesFilter.values)
+          for (final option in SportsFavoritesFilter.values)
             SportsChoice(option, option.label, _description(option),
-                key: ValueKey('sports-favourites-${option.name}'),
+                key: ValueKey('sports-favorites-${option.name}'),
                 icon: switch (option) {
-                  SportsFavouritesFilter.all => Icons.list_rounded,
-                  SportsFavouritesFilter.favourites => Icons.star_rounded,
-                  SportsFavouritesFilter.leagues => Icons.emoji_events_outlined,
-                  SportsFavouritesFilter.teams => Icons.groups_outlined,
+                  SportsFavoritesFilter.all => Icons.list_rounded,
+                  SportsFavoritesFilter.favorites => Icons.star_rounded,
+                  SportsFavoritesFilter.leagues => Icons.emoji_events_outlined,
+                  SportsFavoritesFilter.teams => Icons.groups_outlined,
                 }),
         ]);
     if (context.mounted && selected != null && selected != filter) {
@@ -74,11 +74,11 @@ class SportsFavouritesFilterButton extends StatelessWidget {
       width: 88,
       child: Semantics(
           label: 'Show results: ${filter.label}',
-          hint: 'Choose all results or a favourites filter',
+          hint: 'Choose all results or a favorites filter',
           child: SportsFilterButton(
-              caption: filter == SportsFavouritesFilter.leagues ||
-                      filter == SportsFavouritesFilter.teams
-                  ? 'Favourites'
+              caption: filter == SportsFavoritesFilter.leagues ||
+                      filter == SportsFavoritesFilter.teams
+                  ? 'Favorites'
                   : 'Show',
               value: filter.shortLabel,
               tooltip: 'Show: ${filter.label} · change result filter',
@@ -91,7 +91,7 @@ class SportsFavouritesFilterButton extends StatelessWidget {
 /// remain selectable. Counts describe availability, not catalogue membership.
 List<SportsFilterOption> sportsSportOptions(
     List<SportsLeague> leagues, SportsFilterCounts counts,
-    {bool showCounts = true, bool favouriteOnly = true}) {
+    {bool showCounts = true, bool favoriteOnly = true}) {
   final sports = leagues
       .map((l) => l.espnPath.split('/').first)
       .toSet()
@@ -110,8 +110,8 @@ List<SportsFilterOption> sportsSportOptions(
       SportsFilterOption(sport,
           sport.isEmpty ? 'All sports' : sportLabel(sport), sportIcon(sport),
           description: sport.isEmpty
-              ? favouriteOnly
-                  ? 'Across your favourites · clear sport & league filters'
+              ? favoriteOnly
+                  ? 'Across your favorites · clear sport & league filters'
                   : 'All available sports'
               : null,
           currentLabel: (sport.isEmpty && guideSports.isNotEmpty) ||
@@ -128,24 +128,24 @@ List<SportsFilterOption> sportsSportOptions(
 List<SportsFilterOption> sportsLeagueOptions(
         List<SportsLeague> leagues, SportsFilterCounts counts,
         {String? sport,
-        required int favouriteCount,
-        bool favouritesOnly = true}) =>
+        required int favoriteCount,
+        bool favoritesOnly = true}) =>
     [
       SportsFilterOption(
           '',
           sport == null ? 'All leagues' : 'All ${sportLabel(sport)} leagues',
           Icons.list,
           description: sport == null
-              ? favouritesOnly
-                  ? 'Across your favourites'
+              ? favoritesOnly
+                  ? 'Across your favorites'
                   : 'Across all sports'
-              : favouritesOnly
-                  ? 'Your favourites in ${sportLabel(sport)}'
+              : favoritesOnly
+                  ? 'Your favorites in ${sportLabel(sport)}'
                   : 'All ${sportLabel(sport)} leagues'),
       if (sport != null)
         const SportsFilterOption('__all_sports__', 'All sports', Icons.public,
             description: 'Clear the sport and league filters'),
-      sportsManageLeaguesOption(favouriteCount),
+      sportsManageLeaguesOption(favoriteCount),
       for (final league in leagues)
         if (sport == null || league.espnPath.split('/').first == sport)
           SportsFilterOption(league.id, league.name,
@@ -161,10 +161,10 @@ List<SportsFilterOption> sportsLeagueOptions(
               upcoming: counts[league.id]?.upcoming ?? 0),
     ];
 
-SportsFilterOption sportsManageLeaguesOption(int favouriteCount) =>
+SportsFilterOption sportsManageLeaguesOption(int favoriteCount) =>
     SportsFilterOption(
         '__manage_leagues__', sportsManageLeaguesLabel, Icons.tune,
-        description: '$favouriteCount saved · choose your favourite leagues');
+        description: '$favoriteCount saved · choose your favorite leagues');
 
 String shortSportLabel(String sport) => switch (sport) {
       'soccer' => 'Soccer',

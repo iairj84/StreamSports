@@ -242,7 +242,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         selected: _state,
         choices: const [
           SportsChoice('all', 'All leagues', ''),
-          SportsChoice('enabled', 'Favourites only', ''),
+          SportsChoice('enabled', 'Favorites only', ''),
           SportsChoice('disabled', 'Other leagues', ''),
         ]);
     if (mounted && result != null) _changeFilter(() => _state = result);
@@ -359,7 +359,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                             style: TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
                         if (!compact)
-                          Text('Choose leagues for the Favourites filter',
+                          Text('Choose leagues for the Favorites filter',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -431,7 +431,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                         key: const ValueKey('league-manager-state'),
                         caption: 'Show',
                         value: switch (_state) {
-                          'enabled' => 'Favourites only',
+                          'enabled' => 'Favorites only',
                           'disabled' => 'Other leagues',
                           _ => 'All leagues'
                         },
@@ -447,14 +447,14 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                         onPressed: _saving || shownCount == choices.length
                             ? null
                             : () => _bulk(true),
-                        child: const Text('Favourite shown')),
+                        child: const Text('Favorite shown')),
                     OutlinedButton(
                         key: const ValueKey('disable-visible-leagues'),
                         style: bulkStyle,
                         onPressed: _saving || shownCount == 0
                             ? null
                             : () => _bulk(false),
-                        child: const Text('Unfavourite shown')),
+                        child: const Text('Unfavorite shown')),
                     OutlinedButton(
                         key: ValueKey(_shown.isEmpty
                             ? 'restore-league-selection'
@@ -470,8 +470,8 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                         child: Text(_shown.isEmpty
                             ? 'Restore selection'
                             : _allEnabled
-                                ? 'All leagues favourited'
-                                : 'Favourite all leagues')),
+                                ? 'All leagues favorited'
+                                : 'Favorite all leagues')),
                   ])),
             Container(
                 padding: const EdgeInsets.fromLTRB(2, 5, 2, 6),
@@ -489,7 +489,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                               fontWeight: FontWeight.w600)),
                       const TextSpan(text: ' shown · '),
                       TextSpan(
-                          text: '${_shown.length} favourites',
+                          text: '${_shown.length} favorites',
                           style: TextStyle(
                               color: colors.primary,
                               fontWeight: FontWeight.w500)),
@@ -533,8 +533,8 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                       _shown.isEmpty
                           ? 'Your previous selection stays saved until you enable a league.'
                           : context.read<AppPreferences>().isTelevision
-                              ? 'OK: favourite · Hold OK: opening league · →: page controls'
-                              : 'Tap to favourite · Hold to set opening league',
+                              ? 'OK: favorite · Hold OK: opening league · →: page controls'
+                              : 'Tap to favorite · Hold to set opening league',
                       style: TextStyle(
                           fontSize: 10, color: colors.onSurfaceVariant))),
           ]));

@@ -146,7 +146,7 @@ void main() {
     expect(rows.every((m) => !m.isConfident), true);
   });
 
-  test('a programme boundary invalidates related-channel discovery', () async {
+  test('a program boundary invalidates related-channel discovery', () async {
     final c = channel('one', 'General Sports');
     final boundary = now.add(const Duration(seconds: 10));
     guide.current['one'] = programme('one', 'Football', to: boundary);

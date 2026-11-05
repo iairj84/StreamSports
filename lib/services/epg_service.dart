@@ -166,7 +166,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   /// EPG channel" browse the *feed's* full channel directory to search
   /// for a match, independent of which ids a given playlist happens to
   /// already own. Small either way (a few thousand short strings, not
-  /// full programme data) so keeping every source's entries around at
+  /// full program data) so keeping every source's entries around at
   /// once costs nothing worth guarding. Rebuilt fresh each app launch
   /// (not stored in [EpgDatabase]) — "Update EPG Now" is right there in
   /// the same settings screen that would use this.

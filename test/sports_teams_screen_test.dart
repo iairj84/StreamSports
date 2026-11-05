@@ -115,7 +115,7 @@ void main() {
   });
 
   testWidgets(
-      'Add team stays at top; favourite list starts without sports requests',
+      'Add team stays at top; favorite list starts without sports requests',
       (tester) async {
     await tester
         .runAsync(() => follows.follow('eng.1', '1', name: 'Saved Team'));
@@ -123,7 +123,7 @@ void main() {
     expect(calls, 0);
     expect(tester.getTopLeft(find.byKey(const ValueKey('add-team'))).dy,
         lessThan(tester.getTopLeft(find.text('Saved Team')).dy));
-    await tester.tap(find.byTooltip('Remove favourite'));
+    await tester.tap(find.byTooltip('Remove favorite'));
     await tester.pumpAndSettle();
     expect(follows.isEmpty, isTrue);
     expect(storage.getSportsFollowedTeams(), isEmpty);
@@ -158,7 +158,7 @@ void main() {
     });
   }
   testWidgets(
-      'team details retain full record without reloading standings or toggling favourites',
+      'team details retain full record without reloading standings or toggling favorites',
       (tester) async {
     await open(tester, size: const Size(320, 568));
     expect(find.text('PTS'), findsOneWidget);
@@ -276,7 +276,7 @@ void main() {
     expect(find.text('Premier League'), findsOneWidget);
   });
 
-  testWidgets('favourites add still offers leagues across every sport',
+  testWidgets('favorites add still offers leagues across every sport',
       (tester) async {
     await open(tester, favorites: true);
     await tester.tap(find.byKey(const ValueKey('add-team')));
@@ -292,7 +292,7 @@ void main() {
     expect(calls, 0);
   });
 
-  testWidgets('conference and favourites filters clear without refetching',
+  testWidgets('conference and favorites filters clear without refetching',
       (tester) async {
     service.close();
     final fixture = jsonDecode(table(teams: 4)) as Map<String, dynamic>;
@@ -323,10 +323,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Other Team'), findsOneWidget);
     expect(find.text('Team 1'), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('standings-favourites-only')));
+    await tester.tap(find.byKey(const ValueKey('standings-favorites-only')));
     await tester.pumpAndSettle();
     await tester
-        .tap(find.byKey(const ValueKey('sports-favourites-favourites')));
+        .tap(find.byKey(const ValueKey('sports-favorites-favorites')));
     await tester.pumpAndSettle();
     expect(find.text('Other Team'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('follow-500')));
@@ -338,13 +338,13 @@ void main() {
     expect(calls, 1);
   });
 
-  testWidgets('removing a favourite can undo to its original position',
+  testWidgets('removing a favorite can undo to its original position',
       (tester) async {
     for (var i = 1; i <= 3; i++) {
       await follows.follow('eng.1', '$i', name: 'Saved $i');
     }
     await open(tester, favorites: true);
-    await tester.tap(find.byTooltip('Remove favourite').at(1));
+    await tester.tap(find.byTooltip('Remove favorite').at(1));
     await tester.pumpAndSettle();
     expect(follows.teams.map((t) => t.teamId), ['1', '3']);
     await tester.tap(find.text('Undo'));
@@ -353,7 +353,7 @@ void main() {
     expect(calls, 0);
   });
 
-  test('saved favourite logos survive restart and removal', () async {
+  test('saved favorite logos survive restart and removal', () async {
     await follows.follow('eng.1', '1',
         name: 'One', logoUrl: 'https://a.espncdn.com/logo.png');
     final restored = SportsFollows.load(storage);
@@ -488,7 +488,7 @@ void main() {
   });
 
   testWidgets(
-      'national polls show their source, record and existing favourite ID',
+      'national polls show their source, record and existing favorite ID',
       (tester) async {
     tester.view.physicalSize = const Size(320, 568);
     tester.view.devicePixelRatio = 1;
@@ -894,14 +894,14 @@ void main() {
     expect(find.byKey(const ValueKey('standings-group')).hitTestable(),
         findsOneWidget);
     expect(
-        find.byKey(const ValueKey('standings-favourites-only')).hitTestable(),
+        find.byKey(const ValueKey('standings-favorites-only')).hitTestable(),
         findsOneWidget);
     expect(tester.getRect(find.byType(StandingsTeamTile).first).height,
         greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('TV unfollow preserves useful focus on the next favourite',
+  testWidgets('TV unfollow preserves useful focus on the next favorite',
       (tester) async {
     prefs.isTelevision = true;
     for (var i = 1; i <= 3; i++) {
@@ -911,7 +911,7 @@ void main() {
     final node = FocusManager.instance.rootScope.traversalDescendants
         .firstWhere((n) =>
             n.context?.findAncestorWidgetOfExactType<IconButton>()?.tooltip ==
-            'Remove favourite');
+            'Remove favorite');
     node.requestFocus();
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
@@ -979,7 +979,7 @@ void main() {
   });
 
   test(
-      'queued favourite edits preserve order, uniqueness, names and stored IDs',
+      'queued favorite edits preserve order, uniqueness, names and stored IDs',
       () async {
     await Future.wait([
       follows.follow('eng.1', '1', name: 'One'),

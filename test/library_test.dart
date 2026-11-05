@@ -720,14 +720,14 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets(
-      'favourites shelf uses current saved state and has no misleading category dropdown',
+      'favorites shelf uses current saved state and has no misleading category dropdown',
       (tester) async {
     final env = await mountLibrary(tester);
     await env.storage.setFavorites({movie(5).id});
     await tester.tap(find.byKey(const ValueKey('library-shelf-favorites')));
     await tester.pumpAndSettle();
     expect(find.text('Film 0005'), findsOneWidget);
-    expect(find.text('Your favourites'), findsOneWidget);
+    expect(find.text('Your favorites'), findsOneWidget);
     expect(find.text('Cinema'), findsNothing);
     expect(find.byIcon(Icons.star), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('library-shelf-categories')));

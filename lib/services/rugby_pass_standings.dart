@@ -245,7 +245,7 @@ String normalRugbyTeam(String name) {
       .replaceAll('-', ' ')
       .replaceAll(RegExp(r'\s+'), ' ');
   // Exact club aliases confirmed by the publisher's paired ID/name records.
-  // These also prevent duplicate ESPN scoreboard aliases replacing favourites.
+  // These also prevent duplicate ESPN scoreboard aliases replacing favorites.
   return const {
         'section paloise': 'pau',
         'bordeaux': 'bordeaux begles',

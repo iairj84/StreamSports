@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import '../models/sports.dart';
 import 'sports_widgets.dart';
 
-/// Focus and selection repaint this row without rebuilding the favourites
+/// Focus and selection repaint this row without rebuilding the favorites
 /// search, filters or list. The local Material also bounds ink repainting.
-class SportsFavouriteTile extends StatefulWidget {
-  const SportsFavouriteTile({
+class SportsFavoriteTile extends StatefulWidget {
+  const SportsFavoriteTile({
     super.key,
     required this.entry,
     required this.name,
@@ -30,10 +30,10 @@ class SportsFavouriteTile extends StatefulWidget {
   final VoidCallback onRemove;
 
   @override
-  State<SportsFavouriteTile> createState() => _SportsFavouriteTileState();
+  State<SportsFavoriteTile> createState() => _SportsFavoriteTileState();
 }
 
-class _SportsFavouriteTileState extends State<SportsFavouriteTile> {
+class _SportsFavoriteTileState extends State<SportsFavoriteTile> {
   final _visual = ValueNotifier<(bool, bool)>((false, false));
   final _rowFocus = FocusNode();
   final _removeFocus = FocusNode();
@@ -49,7 +49,7 @@ class _SportsFavouriteTileState extends State<SportsFavouriteTile> {
   }
 
   @override
-  void didUpdateWidget(SportsFavouriteTile oldWidget) {
+  void didUpdateWidget(SportsFavoriteTile oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selection != widget.selection) {
       oldWidget.selection.removeListener(_selectionChanged);
@@ -122,7 +122,7 @@ class _SportsFavouriteTileState extends State<SportsFavouriteTile> {
               onTap: widget.onTap,
               trailing: IconButton(
                   focusNode: _removeFocus,
-                  tooltip: 'Remove favourite',
+                  tooltip: 'Remove favorite',
                   icon: const Icon(Icons.star, size: 18),
                   onPressed: widget.onRemove),
             )),

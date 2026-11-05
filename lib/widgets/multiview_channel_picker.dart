@@ -58,7 +58,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
   final Map<String, List<Channel>> _byGroup = {};
   final Map<String, M3uGroup> _groupModels = {};
   final Map<String, String> _groupSections = {};
-  List<Channel> _favourites = const [];
+  List<Channel> _favorites = const [];
   List<Channel>? _sports;
   List<Channel>? _selectedGroupRows;
   bool _sportsOpen = false, _railOpen = true;
@@ -97,7 +97,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
       final history = context.read<PlaybackService>().recentlyPlayed;
       final recentIds = history.map((c) => c.id).toSet();
       final currentRecent = <String, Channel>{};
-      final playable = <Channel>[], favourites = <Channel>[];
+      final playable = <Channel>[], favorites = <Channel>[];
       _groups.clear();
       _byGroup.clear();
       _groupModels.clear();
@@ -115,12 +115,12 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
           continue;
         }
         playable.add(c);
-        if (c.isFavorite) favourites.add(c);
+        if (c.isFavorite) favorites.add(c);
         if (recentIds.contains(c.id)) currentRecent[c.id] = c;
         (_byGroup[_groupKey(c)] ??= []).add(c);
       }
       _catalog = playable;
-      _favourites = favourites;
+      _favorites = favorites;
       _sports = null;
       final metadata = [
         for (final channels in _byGroup.values)
@@ -232,7 +232,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
             ? _catalog
             : switch (shelf) {
                 'Recent' => _recent,
-                'Favourites' => _favourites,
+                'Favorites' => _favorites,
                 'Sports' => _sports ?? const <Channel>[],
                 _ => _catalog,
               };
@@ -498,7 +498,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
         node!.requestFocus();
       } else {
         _shelves[_group == null
-                ? ['Recent', 'Favourites', 'Sports', 'All']
+                ? ['Recent', 'Favorites', 'Sports', 'All']
                     .indexOf(_shelf)
                     .clamp(0, 3)
                 : 3]
@@ -530,7 +530,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                   sliver: SliverMainAxisGroup(slivers: [
                     SliverList.list(children: [
                       for (final item in [
-                        ('Favourites', Icons.star, 'Favourites'),
+                        ('Favorites', Icons.star, 'Favorites'),
                         ('Recent', Icons.history, 'History'),
                         ('All', Icons.list, 'All channels'),
                         ('Sports', Icons.sports, 'Sport channels'),
@@ -540,7 +540,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                           leading: Icon(item.$2, size: 18),
                           node: _shelves[[
                             'Recent',
-                            'Favourites',
+                            'Favorites',
                             'Sports',
                             'All'
                           ].indexOf(item.$1)],
@@ -651,7 +651,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                   visualDensity: VisualDensity.compact,
                   tooltip: _guideView
                       ? 'Compact channel list'
-                      : 'Show programme guide',
+                      : 'Show program guide',
                   icon: Icon(
                       _guideView
                           ? Icons.view_list_outlined
@@ -728,7 +728,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                                     prefixIcon:
                                         const Icon(Icons.search, size: 20),
                                     hintText: _group == null
-                                        ? 'Search channels or current programmes'
+                                        ? 'Search channels or current programs'
                                         : 'Search channels or programmes in this group',
                                     suffixIcon: _query.text.isEmpty
                                         ? null
@@ -776,7 +776,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                               children: [
                                 for (final shelf in [
                                   'Recent',
-                                  'Favourites',
+                                  'Favorites',
                                   'Sports',
                                   'All'
                                 ])
@@ -785,7 +785,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                                       child: TextButton(
                                           focusNode: _shelves[[
                                             'Recent',
-                                            'Favourites',
+                                            'Favorites',
                                             'Sports',
                                             'All'
                                           ].indexOf(shelf)],
@@ -880,7 +880,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                               _shelves[_group == null
                                       ? [
                                           'Recent',
-                                          'Favourites',
+                                          'Favorites',
                                           'Sports',
                                           'All'
                                         ].indexOf(_shelf)
@@ -895,7 +895,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                               _shelves[_group == null
                                       ? [
                                           'Recent',
-                                          'Favourites',
+                                          'Favorites',
                                           'Sports',
                                           'All'
                                         ].indexOf(_shelf)
@@ -949,8 +949,8 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                                                               .isNotEmpty
                                                           ? 'No matching channels'
                                                           : _shelf ==
-                                                                  'Favourites'
-                                                              ? 'No favourite channels yet'
+                                                                  'Favorites'
+                                                              ? 'No favorite channels yet'
                                                               : 'No channels in this view',
                                                   textAlign: TextAlign.center),
                                               if (!_loading)
@@ -1009,7 +1009,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                                                             ? 4
                                                             : [
                                                                 'Recent',
-                                                                'Favourites',
+                                                                'Favorites',
                                                                 'Sports',
                                                                 'All'
                                                               ]

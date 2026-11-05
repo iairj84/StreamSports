@@ -13,7 +13,7 @@ class SportsWorkProgress {
         SportsWorkStage.guideSnapshot => 'Reading current guide',
         SportsWorkStage.guide => 'Reading guide',
         SportsWorkStage.tennisGuide => 'Reading tennis guide',
-        SportsWorkStage.programmes => 'Indexing programmes',
+        SportsWorkStage.programmes => 'Indexing programs',
         SportsWorkStage.matching => 'Matching events',
         SportsWorkStage.verifying => 'Verifying matches',
       };

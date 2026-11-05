@@ -95,7 +95,7 @@ class LibraryCategoryTree {
       }
     }
     // Keep provider-order leaves unchanged. Sort only folders and their organised
-    // contents; never change category IDs, caches, favourites or saved selection.
+    // contents; never change category IDs, caches, favorites or saved selection.
     void finish(List<LibraryCategoryNode> nodes, {bool root = false}) {
       for (final n in nodes) {
         if (n.isFolder) finish(n.children);

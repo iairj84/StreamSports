@@ -578,7 +578,7 @@ void main() {
     expect(result[1].reason, MatchReason.guide);
   });
 
-  test('live matching prefers the current slot over a programme that has ended',
+  test('live matching prefers the current slot over a program that has ended',
       () async {
     final now = DateTime.now().toUtc();
     final game = SportsGame(

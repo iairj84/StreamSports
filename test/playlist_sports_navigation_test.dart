@@ -157,7 +157,7 @@ void main() {
               ValueKey(key));
 
   testWidgets(
-      'legacy favourite identities resolve once per league and persist in original order',
+      'legacy favorite identities resolve once per league and persist in original order',
       (tester) async {
     final follows = SportsFollows.load(storage);
     await follows.follow('eng.1', '2');
@@ -194,7 +194,7 @@ void main() {
   });
 
   testWidgets(
-      'favourites outside current standings recover from the league directory without inventing a rank',
+      'favorites outside current standings recover from the league directory without inventing a rank',
       (tester) async {
     final follows = SportsFollows.load(storage);
     await follows.follow('eng.1', '2');
@@ -224,7 +224,7 @@ void main() {
   });
 
   testWidgets(
-      'failed legacy name recovery retries explicitly without removing saved favourites',
+      'failed legacy name recovery retries explicitly without removing saved favorites',
       (tester) async {
     final follows = SportsFollows.load(storage);
     await follows.follow('eng.1', '1');
@@ -259,11 +259,11 @@ void main() {
     const Size(844, 390),
     const Size(960, 540)
   ]) {
-    testWidgets('favourites and details fit enlarged text at $size',
+    testWidgets('favorites and details fit enlarged text at $size',
         (tester) async {
       prefs.isTelevision = size.width >= 960;
       final follows = SportsFollows.load(storage);
-      await follows.follow('eng.1', '1', name: 'A long favourite club name');
+      await follows.follow('eng.1', '1', name: 'A long favorite club name');
       final details = Details();
       addTearDown(details.close);
       await open(
@@ -272,7 +272,7 @@ void main() {
               follows: follows, favorites: true, detailsService: details),
           size: size,
           scale: 1.6);
-      await tester.tap(find.text('A long favourite club name'));
+      await tester.tap(find.text('A long favorite club name'));
       await tester.pumpAndSettle();
       expect(find.byType(SportsDetailsPanel), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -280,7 +280,7 @@ void main() {
   }
 
   testWidgets(
-      'remote favourites show details on left after settling, never the add league pane',
+      'remote favorites show details on left after settling, never the add league pane',
       (tester) async {
     final follows = SportsFollows.load(storage);
     for (final id in ['1', '2']) {
@@ -316,7 +316,7 @@ void main() {
   });
 
   testWidgets(
-      'slow favourite details coalesce remote movement to the latest team',
+      'slow favorite details coalesce remote movement to the latest team',
       (tester) async {
     final follows = SportsFollows.load(storage);
     for (final id in ['1', '2', '3']) {
@@ -346,7 +346,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('favourite selection retains search, list and scroll position',
+  testWidgets('favorite selection retains search, list and scroll position',
       (tester) async {
     final follows = SportsFollows.load(storage);
     for (var i = 1; i <= 200; i++) {
@@ -378,7 +378,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('rapid remote scrolling stays in favourites while details load',
+  testWidgets('rapid remote scrolling stays in favorites while details load',
       (tester) async {
     final follows = SportsFollows.load(storage);
     for (var i = 1; i <= 200; i++) {
@@ -418,7 +418,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('closing favourites with pending details queues no more work',
+  testWidgets('closing favorites with pending details queues no more work',
       (tester) async {
     final follows = SportsFollows.load(storage);
     for (final id in ['1', '2']) {
@@ -442,7 +442,7 @@ void main() {
   });
 
   testWidgets(
-      'removing a loading favourite and undo preserves identity and order',
+      'removing a loading favorite and undo preserves identity and order',
       (tester) async {
     final follows = SportsFollows.load(storage);
     for (final id in ['1', '2']) {
@@ -456,7 +456,7 @@ void main() {
             follows: follows, favorites: true, detailsService: details));
     await tester.tap(find.byKey(const ValueKey('eng.1|1')));
     await tester.pump();
-    await tester.tap(find.byTooltip('Remove favourite').first);
+    await tester.tap(find.byTooltip('Remove favorite').first);
     await tester.pump(const Duration(milliseconds: 300));
     details.first.complete(details.result);
     await tester.pumpAndSettle();
@@ -478,7 +478,7 @@ void main() {
   });
 
   testWidgets(
-      'TV favourites overlay has enough width for details and preserves the underlying screen',
+      'TV favorites overlay has enough width for details and preserves the underlying screen',
       (tester) async {
     final follows = SportsFollows.load(storage);
     await follows.follow('eng.1', '1', name: 'Saved Club');
@@ -498,8 +498,8 @@ void main() {
                             favorites: true,
                             panel: true,
                             detailsService: details)),
-                    child: const Text('Open favourites')))));
-    await tester.tap(find.text('Open favourites'));
+                    child: const Text('Open favorites')))));
+    await tester.tap(find.text('Open favorites'));
     await tester.pumpAndSettle();
     expect(
         tester
@@ -518,7 +518,7 @@ void main() {
         FocusManager.instance.primaryFocus?.context
             ?.findAncestorWidgetOfExactType<IconButton>()
             ?.tooltip,
-        'Remove favourite');
+        'Remove favorite');
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
     expect(find.text('Undo').hitTestable(), findsOneWidget,
@@ -529,12 +529,12 @@ void main() {
     expect(find.text('Saved Club'), findsWidgets);
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
-    expect(find.text('Open favourites'), findsOneWidget);
+    expect(find.text('Open favorites'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-      'phone favourite selection opens that team and keeps the list on return',
+      'phone favorite selection opens that team and keeps the list on return',
       (tester) async {
     prefs.isTelevision = false;
     final follows = SportsFollows.load(storage);

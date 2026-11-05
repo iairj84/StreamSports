@@ -68,7 +68,7 @@ void main() {
     expect(parse(poll(gender: 'women'), gender: 'women').sourceName,
         'IWSOC Coaches Poll');
   });
-  test('ambiguous team names never become guessed favourite identities', () {
+  test('ambiguous team names never become guessed favorite identities', () {
     final original = teams(ambiguous: true);
     expect(identical(parse(poll(), directory: original), original), isTrue);
   });

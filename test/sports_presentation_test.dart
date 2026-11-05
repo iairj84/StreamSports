@@ -308,13 +308,13 @@ void main() {
         title: 'Tomorrow’s game',
         start: now.add(const Duration(days: 1)),
         stop: now.add(const Duration(days: 2)));
-    expect(channelNowText(epg, channel), 'No current programme data');
+    expect(channelNowText(epg, channel), 'No current program data');
     epg.programme = EpgProgram(
         channelId: 'mapped',
         title: 'Yesterday’s game',
         start: now.subtract(const Duration(days: 2)),
         stop: now.subtract(const Duration(days: 1)));
-    expect(channelNowText(epg, channel), 'No current programme data');
+    expect(channelNowText(epg, channel), 'No current program data');
     epg.dispose();
   });
 

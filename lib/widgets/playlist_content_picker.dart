@@ -20,7 +20,7 @@ Future<void> choosePlaylistContent(
                         TvSwitchListTile(
                             title: const Text('Live TV'),
                             subtitle:
-                                const Text('Channels and programme guide'),
+                                const Text('Channels and program guide'),
                             value: live,
                             onChanged: (v) => update(() => live = v)),
                         TvSwitchListTile(

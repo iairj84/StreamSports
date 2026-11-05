@@ -1,7 +1,7 @@
 import 'package:video_player_hdr/video_player_hdr.dart';
 import 'player_polish_test.dart' as player_fixture;
 import 'package:nox_iptv/widgets/main_navigation_rail.dart';
-import 'package:nox_iptv/models/sports_favourites_filter.dart';
+import 'package:nox_iptv/models/sports_favorites_filter.dart';
 import 'package:nox_iptv/widgets/sports_filter_picker.dart';
 import 'package:nox_iptv/widgets/sports_fixture_row.dart';
 import 'package:nox_iptv/utils/sports_channel_filter.dart';
@@ -610,11 +610,11 @@ class _Epg extends EpgService {
 }
 
 // Isolate replies use real time; pumpAndSettle alone advances only fake time.
-// Matching/layout fixtures explicitly exercise favourite feeds. Scope tests below
+// Matching/layout fixtures explicitly exercise favorite feeds. Scope tests below
 // start with no Events selection to verify the unfiltered production default.
 void setLayoutPreferences(Map<String, Object> values) {
   SharedPreferences.setMockInitialValues({
-    'sports_events_selection': <String>['', '', 'favourites'],
+    'sports_events_selection': <String>['', '', 'favorites'],
     ...values,
   });
 }
@@ -845,7 +845,7 @@ void main() {
     'covered',
     'dispose'
   ]) {
-    testWidgets('favourite feed work stops on $destination and resumes safely',
+    testWidgets('favorite feed work stops on $destination and resumes safely',
         (tester) async {
       tester.view.physicalSize = const Size(960, 540);
       tester.view.devicePixelRatio = 1;
@@ -882,7 +882,7 @@ void main() {
       } else if (destination == 'manager') {
         await tester.tap(find.byTooltip('Sports options'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Manage favourite leagues'));
+        await tester.tap(find.text('Manage favorite leagues'));
       } else if (destination == 'background') {
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       } else if (destination == 'covered') {
@@ -966,7 +966,7 @@ void main() {
       expect(tab.hasFocus, isTrue,
           reason: 'Events receives entry focus before the first scores arrive');
       if (overlay) {
-        await tester.tap(find.byKey(const ValueKey('events-favourites-only')));
+        await tester.tap(find.byKey(const ValueKey('events-favorites-only')));
         await tester.pumpAndSettle();
       } else {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -1067,15 +1067,15 @@ void main() {
         'All leagues');
     expect(
         tester
-            .widget<SportsFavouritesFilterButton>(
-                find.byKey(const ValueKey('events-favourites-only')))
+            .widget<SportsFavoritesFilterButton>(
+                find.byKey(const ValueKey('events-favorites-only')))
             .filter,
-        SportsFavouritesFilter.all);
-    await tapKey('events-favourites-only');
-    await tapKey('sports-favourites-favourites');
+        SportsFavoritesFilter.all);
+    await tapKey('events-favorites-only');
+    await tapKey('sports-favorites-favorites');
     final calls = scores.calls;
     await tapKey('sport-picker');
-    expect(find.text('Manage favourite leagues'), findsOneWidget);
+    expect(find.text('Manage favorite leagues'), findsOneWidget);
     await tapKey('basketball');
     await tapKey('league-picker');
     await captureSports(tester, const Size(390, 844), 'enabled-league-picker');
@@ -1090,7 +1090,7 @@ void main() {
     expect(
         panel.overviewLeagues!.map((l) => l.id), containsAll(['nba', 'nhl']));
     await tapKey('schedule-league');
-    expect(find.text('Manage favourite leagues'), findsOneWidget);
+    expect(find.text('Manage favorite leagues'), findsOneWidget);
     expect(find.byKey(const ValueKey('eng.1')), findsNothing);
     await tapKey('__all_sports__');
     expect(panel.browseState.sport, isNull);
@@ -1113,11 +1113,11 @@ void main() {
     await tapKey('sports-view-standings');
     final teamPanel =
         tester.widget<SportsTeamsScreen>(find.byType(SportsTeamsScreen));
-    expect(teamPanel.favouriteLeagueIds, containsAll(['nba', 'nhl']));
+    expect(teamPanel.favoriteLeagueIds, containsAll(['nba', 'nhl']));
     // Choosing a league in Standings carries through an intermediate tab.
     await tapKey('standings-sport');
     await tapKey('hockey');
-    expect(find.textContaining('Favourite league ·'), findsWidgets);
+    expect(find.textContaining('Favorite league ·'), findsWidgets);
     final leagueList = find.descendant(
         of: find.byType(Dialog), matching: find.byType(CompactChoiceList));
     final lastLeague =
@@ -1159,8 +1159,8 @@ void main() {
     final requestsBefore = standingsRequests;
     // Exploring a non-enabled league never silently enables a feed.
     await tapKey('sports-view-standings');
-    await tapKey('standings-favourites-only');
-    await tapKey('sports-favourites-all');
+    await tapKey('standings-favorites-only');
+    await tapKey('sports-favorites-all');
     await tapKey('standings-sport');
     await tapKey('soccer');
     expect(find.textContaining('Other league ·'), findsWidgets);
@@ -1186,7 +1186,7 @@ void main() {
     await tapKey('__manage_leagues__');
     expect(find.byType(SportsLeagueManagerScreen), findsOneWidget);
     await captureSports(
-        tester, const Size(390, 844), 'favourite-league-manager');
+        tester, const Size(390, 844), 'favorite-league-manager');
     await tapKey('close-leagues');
     expect(find.byType(SportsTeamsScreen), findsOneWidget);
     expect(standingsRequests, requestsBefore + 1);
@@ -1194,7 +1194,7 @@ void main() {
         reason:
             'Opening and cancelling league management does not reload scores or standings.');
     expect(storage.getSportsEventsSelection(),
-        ['basketball', 'nba', 'favourites']);
+        ['basketball', 'nba', 'favorites']);
     final application =
         tester.widget<MultiProvider>(find.byType(MultiProvider).first);
     await tester.pumpWidget(const SizedBox());
@@ -1208,10 +1208,10 @@ void main() {
         'NBA');
     expect(
         tester
-            .widget<SportsFavouritesFilterButton>(
-                find.byKey(const ValueKey('events-favourites-only')))
+            .widget<SportsFavoritesFilterButton>(
+                find.byKey(const ValueKey('events-favorites-only')))
             .filter,
-        SportsFavouritesFilter.favourites);
+        SportsFavoritesFilter.favorites);
     expect(playback.played, isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
@@ -1299,7 +1299,7 @@ void main() {
   });
 
   testWidgets(
-      'All is the Events default and other tabs cannot change its favourites filter',
+      'All is the Events default and other tabs cannot change its favorites filter',
       (tester) async {
     tester.view.physicalSize = const Size(960, 540);
     tester.view.devicePixelRatio = 1;
@@ -1350,9 +1350,9 @@ void main() {
     expect(scores.requestedLeagues.single, containsAll(['nhl', 'eng.1']));
     expect(scores.requestedLeagues.single, contains('nba'),
         reason:
-            'Events opens across all leagues, independent of saved favourites.');
-    await tapKey('events-favourites-only');
-    await tapKey('sports-favourites-favourites');
+            'Events opens across all leagues, independent of saved favorites.');
+    await tapKey('events-favorites-only');
+    await tapKey('sports-favorites-favorites');
     expect(find.byKey(const ValueKey('card-nhl:scope-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('card-nhl:scope-1')), findsOneWidget);
     // Choose the team league to inspect its two games without virtualized shelves.
@@ -1367,9 +1367,9 @@ void main() {
     await tapKey('eng.1');
     expect(find.byKey(const ValueKey('card-eng.1:scope-1')), findsOneWidget);
     expect(find.byKey(const ValueKey('card-eng.1:scope-0')), findsNothing);
-    await tapKey('events-favourites-only');
-    await captureSports(tester, const Size(960, 540), 'favourites-filter');
-    await tapKey('sports-favourites-all');
+    await tapKey('events-favorites-only');
+    await captureSports(tester, const Size(960, 540), 'favorites-filter');
+    await tapKey('sports-favorites-all');
     expect(find.byType(Dialog), findsNothing);
     expect(find.byKey(const ValueKey('card-eng.1:scope-0')), findsOneWidget);
     await tapKey('sport-picker');
@@ -1379,58 +1379,58 @@ void main() {
     expect(scores.requestedLeagues.last, containsAll(['nba', 'nhl', 'eng.1']),
         reason:
             'All really includes the wider catalogue, without needing to pick extra leagues.');
-    await tapKey('events-favourites-only');
-    await tapKey('sports-favourites-leagues');
+    await tapKey('events-favorites-only');
+    await tapKey('sports-favorites-leagues');
     expect(scores.requestedLeagues.last, contains('nhl'));
     expect(scores.requestedLeagues.last, isNot(contains('eng.1')));
     expect(scores.requestedLeagues.last, isNot(contains('nba')));
     expect(find.byKey(const ValueKey('card-nhl:scope-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('card-nhl:scope-1')), findsOneWidget);
-    await tapKey('events-favourites-only');
-    await tapKey('sports-favourites-teams');
+    await tapKey('events-favorites-only');
+    await tapKey('sports-favorites-teams');
     expect(scores.requestedLeagues.last, ['eng.1']);
-    await captureSports(tester, const Size(960, 540), 'favourites-teams');
+    await captureSports(tester, const Size(960, 540), 'favorites-teams');
     expect(find.byKey(const ValueKey('card-eng.1:scope-1')), findsOneWidget);
     expect(find.byKey(const ValueKey('card-eng.1:scope-0')), findsNothing);
-    await tapKey('events-favourites-only');
-    await tapKey('sports-favourites-all');
+    await tapKey('events-favorites-only');
+    await tapKey('sports-favorites-all');
     await tapKey('sports-view-schedule');
     expect(
         tester
             .widget<SportsSchedulePanel>(find.byType(SportsSchedulePanel))
             .browseState
-            .onlyFavourites,
+            .onlyFavorites,
         false);
-    await tapKey('schedule-favourites-only');
-    await tapKey('sports-favourites-teams');
+    await tapKey('schedule-favorites-only');
+    await tapKey('sports-favorites-teams');
     await tapKey('sports-view-events');
     expect(
         tester
-            .widget<SportsFavouritesFilterButton>(
-                find.byKey(const ValueKey('events-favourites-only')))
+            .widget<SportsFavoritesFilterButton>(
+                find.byKey(const ValueKey('events-favorites-only')))
             .filter,
-        SportsFavouritesFilter.all);
+        SportsFavoritesFilter.all);
     expect(scores.requestedLeagues.last, contains('nba'));
     expect(storage.getSportsLeagues(), savedLeagues);
     await tapKey('sports-view-standings');
     expect(
         tester
             .widget<SportsTeamsScreen>(find.byType(SportsTeamsScreen))
-            .favouritesFilter,
-        SportsFavouritesFilter.teams);
+            .favoritesFilter,
+        SportsFavoritesFilter.teams);
     await tapKey('sports-view-events');
-    await tapKey('events-favourites-only');
-    await tapKey('sports-favourites-leagues');
+    await tapKey('events-favorites-only');
+    await tapKey('sports-favorites-leagues');
     await tapKey('sports-view-standings');
-    await tapKey('standings-favourites-only');
-    await tapKey('sports-favourites-all');
+    await tapKey('standings-favorites-only');
+    await tapKey('sports-favorites-all');
     await tapKey('sports-view-events');
     expect(
         tester
-            .widget<SportsFavouritesFilterButton>(
-                find.byKey(const ValueKey('events-favourites-only')))
+            .widget<SportsFavoritesFilterButton>(
+                find.byKey(const ValueKey('events-favorites-only')))
             .filter,
-        SportsFavouritesFilter.leagues);
+        SportsFavoritesFilter.leagues);
     expect(storage.getSportsLeagues(), savedLeagues);
     expect(playback.played, isEmpty);
     expect(tester.takeException(), isNull);
@@ -1811,7 +1811,7 @@ void main() {
     prefs.dispose();
   });
 
-  for (final entry in ['Favourites', 'History']) {
+  for (final entry in ['Favorites', 'History']) {
     testWidgets('TV category navigation after $entry has no scroll animation',
         (tester) async {
       tester.view.physicalSize = const Size(960, 540);
@@ -2571,7 +2571,7 @@ void main() {
               'view-replays',
               'sport-picker',
               'league-picker',
-              'events-favourites-only',
+              'events-favorites-only',
               'day',
               'options'
             ];
@@ -2607,7 +2607,7 @@ void main() {
             await tester.pump();
             for (final id in [
               ...toolbar.take(7),
-              'events-favourites-only',
+              'events-favorites-only',
               'event-filters',
               'day',
               'options'
@@ -2618,7 +2618,7 @@ void main() {
             }
             for (final id in [
               ...toolbar.take(7),
-              'events-favourites-only',
+              'events-favorites-only',
               'event-filters',
               'day',
               'options'
@@ -3094,9 +3094,9 @@ void main() {
               ?.id,
           'eng.1');
       expect(storage.getSportsBrowseSelection(), ['soccer', 'eng.1']);
-      await tester.tap(find.byKey(const ValueKey('standings-favourites-only')));
+      await tester.tap(find.byKey(const ValueKey('standings-favorites-only')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('sports-favourites-all')));
+      await tester.tap(find.byKey(const ValueKey('sports-favorites-all')));
       await flush();
 
       expect(tester.element(find.byType(VideoPlayerPane)), same(player));
@@ -3202,7 +3202,7 @@ void main() {
       await flush();
       await tester.tap(find.byTooltip('Sports options'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Manage favourite leagues'));
+      await tester.tap(find.text('Manage favorite leagues'));
       await tester.pumpAndSettle();
       expect(find.byType(SportsLeagueManagerScreen), findsOneWidget);
       expect(tester.element(find.byType(VideoPlayerPane)), same(player));
@@ -3216,7 +3216,7 @@ void main() {
           reason: 'Back returns to Events');
       await tester.tap(find.byTooltip('Sports options'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Manage favourite leagues'));
+      await tester.tap(find.text('Manage favorite leagues'));
       await tester.pumpAndSettle();
       final overlayPolls = scores.calls;
       await tester.pump(const Duration(seconds: 31));
@@ -4216,23 +4216,23 @@ void main() {
       expect(card, findsOneWidget);
       await flush();
       for (final filter in [
-        SportsFavouritesFilter.favourites,
-        SportsFavouritesFilter.leagues,
-        SportsFavouritesFilter.teams,
-        SportsFavouritesFilter.all
+        SportsFavoritesFilter.favorites,
+        SportsFavoritesFilter.leagues,
+        SportsFavoritesFilter.teams,
+        SportsFavoritesFilter.all
       ]) {
         tester
-            .widget<SportsFavouritesFilterButton>(
-                find.byKey(const ValueKey('events-favourites-only')))
+            .widget<SportsFavoritesFilterButton>(
+                find.byKey(const ValueKey('events-favorites-only')))
             .onChanged(filter);
         await tester.pump();
         expect(
             card,
-            filter == SportsFavouritesFilter.teams
+            filter == SportsFavoritesFilter.teams
                 ? findsNothing
                 : findsOneWidget,
             reason:
-                'Favourite filtering preserves existing matches without a worker round trip');
+                'Favorite filtering preserves existing matches without a worker round trip');
         await flush();
         expect(epg.requests, hasLength(1));
       }
@@ -4436,7 +4436,7 @@ void main() {
               of: anchorFinder, matching: find.byType(SportsEventMatchStatus)),
           findsNothing,
           reason:
-              'Usable channels keep their programme details during a recheck');
+              'Usable channels keep their program details during a recheck');
       expect(
           find.descendant(
               of: anchorFinder, matching: find.byType(ChannelNowLabel)),
@@ -5492,7 +5492,7 @@ void main() {
               // Secondary controls remain available in the options menu.
               await tester.tap(find.byIcon(Icons.more_horiz));
               await tester.pump(const Duration(milliseconds: 200));
-              expect(find.text('Manage favourite leagues'), findsOneWidget);
+              expect(find.text('Manage favorite leagues'), findsOneWidget);
               expect(find.text('My Teams'), findsNothing);
               expect(find.text('Standings').hitTestable(), findsOneWidget);
               await tester.sendKeyEvent(LogicalKeyboardKey.escape);

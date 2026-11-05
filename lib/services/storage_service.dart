@@ -19,7 +19,7 @@ class StorageService {
   Directory? _cacheDir;
 
   /// Retain the saved namespace from older installs so removing profile management
-  /// never hides existing favourites, history or resume positions.
+  /// never hides existing favorites, history or resume positions.
   String _activeViewerId = AppConstants.mainViewerId;
 
   /// Release tag the viewer asked the updater to stop offering.
@@ -376,7 +376,7 @@ class StorageService {
   Future<void> setShowResumePill(bool value) =>
       _prefs.setBool(AppConstants.keyShowResumePill, value);
 
-  /// Favourite league ids in display order, using the original enabled-league
+  /// Favorite league ids in display order, using the original enabled-league
   /// preference key; null = never chosen (the
   /// screen falls back to its own default set).
   List<String>? getSportsLeagues() =>
@@ -419,7 +419,7 @@ class StorageService {
   Future<void> setSportsAddedLeagues(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keySportsAddedLeagues), ids);
 
-  /// The opening league id (null = none), using the legacy favourite key. See
+  /// The opening league id (null = none), using the legacy favorite key. See
   /// [AppConstants.keySportsFavoriteLeague].
   String? getSportsFavoriteLeague() =>
       _prefs.getString(_vk(AppConstants.keySportsFavoriteLeague));
@@ -720,7 +720,7 @@ class StorageService {
       _prefs.remove(_vk(AppConstants.keyRecentSearches));
 
   // --- EPG cache -------------------------------------------------------------
-  // The programme data itself lives in `EpgDatabase`. Only the last-updated
+  // The program data itself lives in `EpgDatabase`. Only the last-updated
   // timestamp stays here.
 
   DateTime? getEpgLastUpdated() {

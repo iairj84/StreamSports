@@ -13,7 +13,7 @@ class SportsFixtureRow extends StatelessWidget {
       required this.time,
       required this.hideScores,
       required this.use24h,
-      this.favourite = false,
+      this.favorite = false,
       this.showLeague = false,
       this.showSport = false,
       this.channelName,
@@ -22,7 +22,7 @@ class SportsFixtureRow extends StatelessWidget {
   final SportsGame game;
   final String time;
   final bool hideScores, use24h, showLeague, showSport;
-  final bool favourite;
+  final bool favorite;
   final String? channelName;
   final bool possibleChannel;
   final VoidCallback? onDetails;
@@ -191,9 +191,9 @@ class SportsFixtureRow extends StatelessWidget {
                   ])),
           ])),
       const SizedBox(width: 6),
-      if (favourite)
+      if (favorite)
         Tooltip(
-            message: 'Favourite team',
+            message: 'Favorite team',
             child: Icon(Icons.star, size: 15, color: colors.primary)),
       if (onDetails != null)
         ExcludeFocus(
@@ -207,7 +207,7 @@ class SportsFixtureRow extends StatelessWidget {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                 icon: Icon(Icons.info_outline,
                     size: 17, color: colors.onSurfaceVariant)))
-      else if (!favourite)
+      else if (!favorite)
         Icon(Icons.chevron_right, size: 15, color: colors.onSurfaceVariant),
     ]);
   }

@@ -89,7 +89,7 @@ class SettingsMenuScreen extends StatelessWidget {
                       link(
                           Icons.playlist_play,
                           'Playlists & guide',
-                          'Channels, categories and programme listings',
+                          'Channels, categories and program listings',
                           const PlaylistManagerScreen()),
                     ]),
                     SettingsSection(title: tr('Movies & series'), children: [
@@ -192,7 +192,7 @@ class _AppInfoScreenState extends State<AppInfoScreen> {
           Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                  tr('Based on VesperTV by NoXqc and contributors. Modified and distributed under GPL-3.0, without warranty. Channel content comes from your playlists. Programme listings and sports coverage depend on the available sources.'),
+                  tr('Based on VesperTV by NoXqc and contributors. Modified and distributed under GPL-3.0, without warranty. Channel content comes from your playlists. Program listings and sports coverage depend on the available sources.'),
                   style: Theme.of(context).textTheme.bodySmall)),
         ]),
       ]));

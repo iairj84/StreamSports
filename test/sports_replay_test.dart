@@ -1040,7 +1040,7 @@ void main() {
     expect(guide.scans, 2);
   });
 
-  test('a programme starting in a guide gap expires the shared result exactly',
+  test('a program starting in a guide gap expires the shared result exactly',
       () async {
     final starts = now.add(const Duration(seconds: 45));
     guide.programmes = [

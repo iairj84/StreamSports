@@ -108,12 +108,12 @@ class ChannelMatch {
   final int score;
   final List<String> supportingBroadcasts;
 
-  /// Guide programme title / network name that produced the match.
+  /// Guide program title / network name that produced the match.
   final String? detail;
   final EpgProgram? programme;
 
   /// Ordering weight for the *kind* of evidence, independent of [score].
-  /// An event named by the channel itself outranks a programme in the guide,
+  /// An event named by the channel itself outranks a program in the guide,
   /// and a channel whose own category names the league is a known feed that
   /// outranks guide text as well. [score] only orders matches within a rank.
   int get evidenceRank => switch (reason) {
@@ -741,7 +741,7 @@ class SportsChannelMatcher {
   List<Channel> _channels = const [];
   List<String> _names = const [];
   // Name-only facts, filled lazily and replaced with every channel index.
-  // Dates, game state and current programme evidence are checked separately.
+  // Dates, game state and current program evidence are checked separately.
   Uint8List _channelNameFlags = Uint8List(0);
   static const _nameChecked = 1, _nameIdle = 2, _nameReplay = 4;
   Map<String, List<int>> _tokenIndex = {};
@@ -1074,7 +1074,7 @@ class SportsChannelMatcher {
     }
   }
 
-  /// Name phrases a channel or programme title may use for [t] — nickname
+  /// Name phrases a channel or program title may use for [t] — nickname
   /// and full name. City names alone are skipped (two New York teams).
   /// [shortCodes] admits two-letter abbreviations. An event label that pairs
   /// both teams ("B01: 7pm KC @ BUF") identifies the matchup as surely with a
@@ -1426,7 +1426,7 @@ class SportsChannelMatcher {
     return date == null || _dateFitsEvent(date, game);
   }
 
-  /// Only exact, current programme evidence may supersede a stale dynamic
+  /// Only exact, current program evidence may supersede a stale dynamic
   /// slot's display name. Headers/non-live IDs remain excluded; an idle or
   /// recorded current guide never qualifies. Name/coverage matching is unchanged.
   bool _exactGuideEligible(int i, SportsGame game, EpgProgram p) {
@@ -2103,7 +2103,7 @@ class SportsChannelMatcher {
     }
     terms.addAll(compactCodes);
     // Both exact and coverage scoring require stop > the game's reference.
-    // Query by overlap from that boundary: a programme that started hours ago
+    // Query by overlap from that boundary: a program that started hours ago
     // is still included if it runs across the reference. Keep the full upper
     // window for delayed tennis, fight cards and all-day events.
     var earliest = _guideReference(games.first, now);
@@ -3410,9 +3410,9 @@ class SportsChannelMatcher {
           : eventCoverage
               ? 'Related event coverage'
               : currentRelated
-                  ? 'Other coverage · check the current programme'
+                  ? 'Other coverage · check the current program'
                   : related(p.nextText)
-                      ? 'Related programme coming up'
+                      ? 'Related program coming up'
                       : 'Sport-related channel · current match unverified';
       if (inactive ||
           idleProgramme ||
@@ -3753,7 +3753,7 @@ int _soccerAgeGroup(SportsGame game) => _soccerAges[
 
 /// Channel labels may name both sides by code alone ("B01: 7pm ATL @ WAS"),
 /// so [allowUnqualifiedCodes] accepts a code matchup that has the connector but
-/// no competition word. Guide text leaves it off: a programme title that only
+/// no competition word. Guide text leaves it off: a program title that only
 /// mentions two codes stays ambiguous until the fixture provides the league —
 /// [qualification] is that league evidence when it comes from the feed itself
 /// (a channel grouped under "Hockey" airing "7pm UTA @ MTL").
@@ -4443,7 +4443,7 @@ class _MatchTerms {
               _multiTennis.hasMatch(text) ||
               tennisTerms
                   .any((term) => !event.contains(term) && text.contains(term)));
-      // "Center Court Live" is a programme brand, not a court assignment.
+      // "Center Court Live" is a program brand, not a court assignment.
       // A programme dedicated to this tournament is a better suggestion than
       // a round-up switching between several venues, even with the same round.
       final brandedCourt = _tennisCourtBrand.hasMatch(text);

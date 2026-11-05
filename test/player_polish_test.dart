@@ -112,7 +112,7 @@ class Controller extends VideoPlayerHdrController {
   bool isAudioTrackSupportAvailable() => tracksAvailable;
 }
 
-Channel channel(int i, {bool favourite = false}) => Channel(
+Channel channel(int i, {bool favorite = false}) => Channel(
     id: 'p::$i',
     rawId: '$i',
     playlistId: 'p',
@@ -123,13 +123,13 @@ Channel channel(int i, {bool favourite = false}) => Channel(
             : 'Sports channel $i',
     group: i < 5 ? 'UK Sports' : 'Other sports',
     url: 'https://example.invalid/never-play',
-    isFavorite: favourite);
+    isFavorite: favorite);
 
 class Playlist extends PlaylistManager {
   Playlist(StorageService storage) : super(storage, CatalogDatabase());
   @override
   final channels = [
-    for (var i = 0; i < 80; i++) channel(i, favourite: i == 1 || i == 6)
+    for (var i = 0; i < 80; i++) channel(i, favorite: i == 1 || i == 6)
   ];
   int loads = 0;
   @override
@@ -526,7 +526,7 @@ void main() {
   });
 
   playerTestWidgets(
-      'channel browser searches now titles, filters favourites/group and never starts sports work',
+      'channel browser searches now titles, filters favorites/group and never starts sports work',
       (tester) async {
     var requests = 0;
     await http.runWithClient(() async {
@@ -538,7 +538,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Current'), findsOneWidget);
       expect(playlist.loads, 0);
-      await tester.tap(find.text('Favourites'));
+      await tester.tap(find.text('Favorites'));
       await tester.pumpAndSettle();
       expect(find.text('Tennis Channel HD'), findsOneWidget);
       expect(find.text('Sports channel 6'), findsOneWidget);

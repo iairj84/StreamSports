@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'sports_team_vocabulary.dart';
 
 /// Local broadcast vocabulary, not a general translation engine. Only evidence
-/// text is canonicalised; programme titles shown to viewers stay unchanged.
+/// text is canonicalised; program titles shown to viewers stay unchanged.
 /// Long phrases win so table tennis/field hockey keep their sport identity.
 const _words = <String, List<String>>{
   'table tennis': [

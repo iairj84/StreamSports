@@ -566,7 +566,7 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
             SportsChoice(
                 sport,
                 sport.isEmpty ? 'All sports' : sportLabel(sport),
-                '${sport.isEmpty ? counts.values.fold(0, (a, b) => a + b) : counts[sport]} programmes on air',
+                '${sport.isEmpty ? counts.values.fold(0, (a, b) => a + b) : counts[sport]} programs on air',
                 icon: sport.isEmpty ? Icons.sports : sportIcon(sport))
         ]);
     if (choice == null || !mounted) return;
@@ -1405,7 +1405,7 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
                           const SizedBox(height: 8),
                           Text(
                               _loading
-                                  ? 'Looking for programmes airing now. Listings appear as the guide is checked.'
+                                  ? 'Looking for programs airing now. Listings appear as the guide is checked.'
                                   : _searchTerms.isNotEmpty
                                       ? 'Try a team, event, league or channel name, or clear the filters.'
                                       : _range != ReplayDateRange.all

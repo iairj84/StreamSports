@@ -46,7 +46,7 @@ class PlaylistManagerScreen extends StatelessWidget {
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  SettingsSection(title: tr('Programme listings'), children: [
+                  SettingsSection(title: tr('Program listings'), children: [
                     TvMenuTile(
                         icon: Icons.calendar_month_outlined,
                         title: tr('TV guide'),
@@ -150,7 +150,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
       builder: (context) => AlertDialog(
         title: Text(tr('Delete playlist?')),
         content: Text(
-          tr('This removes "{name}"\'s login and cached catalog from this device. Its favourite channels stay in your shared Favorites list, but will no longer play unless you add this playlist back.',
+          tr('This removes "{name}"\'s login and cached catalog from this device. Its favorite channels stay in your shared Favorites list, but will no longer play unless you add this playlist back.',
               {'name': profile.name}),
         ),
         // Plain TextButton/FilledButton left which one has D-pad focus

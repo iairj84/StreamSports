@@ -1448,7 +1448,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                   TvSwitchListTile(
                                       title: const Text('Live TV'),
                                       subtitle: const Text(
-                                          'Channels and programme guide'),
+                                          'Channels and program guide'),
                                       value: _includeLive,
                                       onChanged: _saving
                                           ? null

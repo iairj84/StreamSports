@@ -13,7 +13,7 @@ import 'sports_channel_matcher.dart';
 class SkyTennisScheduleService {
   SkyTennisScheduleService(this.client, {DateTime Function()? clock})
       : clock = clock ?? DateTime.now;
-  static const source = 'Sky programme schedule';
+  static const source = 'Sky program schedule';
   static const _cacheKey = 'sports_sky_linear_v1';
   static const ttl = Duration(minutes: 10);
   static const channels = {

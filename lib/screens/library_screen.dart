@@ -906,7 +906,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         selected: _shelf == shelf,
                         child: Text(switch (shelf) {
                           LibraryShelf.categories => 'Browse',
-                          LibraryShelf.favorites => 'Favourites',
+                          LibraryShelf.favorites => 'Favorites',
                           LibraryShelf.continueWatching => 'Continue'
                         })),
                   )))
@@ -1029,7 +1029,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                             _categoryTree.label(_group!)
                                           ].join(' › '))
                                     : _shelf == LibraryShelf.favorites
-                                        ? 'Favourites'
+                                        ? 'Favorites'
                                         : 'Continue watching',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis)),
@@ -1041,7 +1041,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                       _shelf == LibraryShelf.favorites
-                          ? 'Your favourites'
+                          ? 'Your favorites'
                           : 'Continue watching',
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600)))),
@@ -1205,7 +1205,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                           : _shelf == LibraryShelf.categories
                                               ? 'This category is empty. Choose another category.'
                                               : _shelf == LibraryShelf.favorites
-                                                  ? 'Save favourites from a title’s details, or hold a poster.'
+                                                  ? 'Save favorites from a title’s details, or hold a poster.'
                                                   : 'Titles you start watching will appear here.',
                                   textAlign: TextAlign.center)))
                       : LayoutBuilder(builder: (context, constraints) {

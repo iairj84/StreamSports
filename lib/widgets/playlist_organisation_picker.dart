@@ -33,7 +33,7 @@ class PlaylistOrganisationPicker extends StatelessWidget {
           Text(
               value == 'provider'
                   ? 'Original Live TV, Movies and Series categories. You can change this later.'
-                  : 'Tidy Live TV groups and organised Movies and Series folders. Original streams, guide links and favourites stay unchanged.',
+                  : 'Tidy Live TV groups and organised Movies and Series folders. Original streams, guide links and favorites stay unchanged.',
               style: Theme.of(context).textTheme.bodySmall),
         ],
       );

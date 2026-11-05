@@ -301,7 +301,7 @@ Future<List<SportsGame>> _discoverGuideEvents(SportsChannelMatcher m,
         _guideOldYear.allMatches(title).any((v) => int.parse(v[0]!) < now.year);
     if (oldYear) continue;
     // Usually a channel-name placeholder. Poker can use its show name here;
-    // require a substantive programme description and a finite ordinary slot.
+    // require a substantive program description and a finite ordinary slot.
     if (indices.any((i) =>
             sportsNormalize(m._channels[i].name) == sportsNormalize(title)) &&
         !(poker &&
@@ -465,7 +465,7 @@ List<ChannelMatch> _exactGuideMatches(
               ? f1FeedLabel(role)
               : game.state == GameState.pre
                   ? 'Upcoming coverage · channel guide'
-                  : 'Airing this programme · channel guide');
+                  : 'Airing this program · channel guide');
     }
   }
   final picked = picks.channelIdFor(game);

@@ -20,7 +20,7 @@ class LibraryPage {
 class CatalogDatabase {
   Database? _db;
 
-  /// Stamp favourites from the active viewer's current id sets when reading rows. A persisted
+  /// Stamp favorites from the active viewer's current id sets when reading rows. A persisted
   /// single is_favorite bit cannot represent multiple viewers; use it only when no lookup is
   /// installed.
   bool Function(String channelId)? isVodFavorite;

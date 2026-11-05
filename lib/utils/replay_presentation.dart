@@ -55,7 +55,7 @@ final _rules = <String, List<(RegExp, String)>>{
 };
 RegExp _rx(String value) => RegExp('\\b(?:$value)\\b', caseSensitive: false);
 
-// Badges require an explicit competition in the programme title. These are
+// Badges require an explicit competition in the program title. These are
 // deliberately narrower than editorial ranking (e.g. Wimbledon is not ATP,
 // and the PGA Championship is not a PGA Tour programme).
 final _badgeLeagues = <String, List<(RegExp, String)>>{

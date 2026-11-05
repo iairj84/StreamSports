@@ -940,8 +940,8 @@ Set<String> _sportsIn(String text) {
   return sports;
 }
 
-// Dedicated channel brands can disambiguate generic programme titles, but a
-// broad sports category cannot establish which sport a programme covers.
+// Dedicated channel brands can disambiguate generic program titles, but a
+// broad sports category cannot establish which sport a program covers.
 final _soccerChannel = RegExp(
     r'\b(?:sky sports football|lfc\s*tv|mutv|chelsea tv|barca tv)\b',
     caseSensitive: false);
@@ -1057,7 +1057,7 @@ DateTime? _validDate(int year, int month, int day) {
   return d.year == year && d.month == month && d.day == day ? d : null;
 }
 
-/// Only dates referring to this programme, not arbitrary dates mentioned in
+/// Only dates referring to this program, not arbitrary dates mentioned in
 /// a team's history. A 36-hour margin admits yesterday's completed coverage
 /// after midday UTC, without treating an overnight live match as a replay.
 String? _historicalEvidence(EpgProgram p, String title, String description) {
@@ -1089,7 +1089,7 @@ String? _historicalEvidence(EpgProgram p, String title, String description) {
   return null;
 }
 
-/// Evaluate the current programme itself across every visible live channel.
+/// Evaluate the current program itself across every visible live channel.
 /// Missing LIVE alone is never sufficient: inferred entries also need a sport
 /// and a recognisable match/session, and remain visibly marked as likely.
 ReplayClassification? _classifySportsReplay(EpgProgram programme,

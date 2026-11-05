@@ -14,7 +14,7 @@ Channel channel(String name, String epg) => Channel(
     url: 'https://example.test/live');
 
 void main() {
-  test('matches channel names and only current programme titles/descriptions',
+  test('matches channel names and only current program titles/descriptions',
       () async {
     final now = DateTime(2026, 10, 21, 20);
     final channels = [
@@ -119,7 +119,7 @@ void main() {
         reads, greaterThan(0)); // Broader/replaced query scans original input.
   });
 
-  test('narrowing expires at current programme and gap boundaries', () async {
+  test('narrowing expires at current program and gap boundaries', () async {
     final rows = [channel('Network', 'network')];
     final session = LiveGuideSearchSession();
     final start = DateTime(2026, 10, 24, 12);

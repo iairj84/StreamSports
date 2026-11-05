@@ -5,7 +5,7 @@ import '../models/sports.dart';
 import 'sports_standings_service.dart';
 
 /// ESPN's field-hockey team collection is empty, while its season scoreboard
-/// supplies the same team identities used by live events and favourites.
+/// supplies the same team identities used by live events and favorites.
 LeagueStandings parseFieldHockeyTeams((Uint8List, int) input) {
   final (bytes, year) = input;
   final root = jsonDecode(utf8.decode(bytes));

@@ -13,7 +13,7 @@ String channelNowText(EpgService epg, Channel channel,
   if (programme == null ||
       programme.start.isAfter(now) ||
       !programme.stop.isAfter(now)) {
-    return 'No current programme data';
+    return 'No current program data';
   }
   final time = DateFormat.Hm();
   final slot =

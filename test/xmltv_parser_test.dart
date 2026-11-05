@@ -77,7 +77,7 @@ void main() {
   test('keeps rows when a feed has no channel directory and its ids are names',
       () async {
     // Plenty of small guides skip <channel> entirely; the id itself is then
-    // the only thing that can tie a programme to a playlist channel.
+    // the only thing that can tie a program to a playlist channel.
     final rows = <EpgRow>[];
     await parseXmltvInBackground(
       Stream.value(utf8.encode(

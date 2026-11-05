@@ -122,7 +122,7 @@ class PlaybackService extends ChangeNotifier {
   Channel? previousChannel;
 
   /// The live list the user last picked a channel from (TvHomeScreen's
-  /// Live list / Timeline guide, Favourites included) — what the player's
+  /// Live list / Timeline guide, Favorites included) — what the player's
   /// CH+/CH- step through. Plain field, no notify; PlayerScreen falls back
   /// to the channel's own group when the playing channel isn't in it.
   List<Channel>? zapList;
@@ -283,7 +283,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   /// Reload saved history under the existing preference namespace and
-  /// refresh favourites after storage changes.
+  /// refresh favorites after storage changes.
   Future<void> reloadForViewer() async {
     await init();
     for (final c in _recentlyPlayed) {

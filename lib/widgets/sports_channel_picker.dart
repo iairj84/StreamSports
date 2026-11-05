@@ -1427,7 +1427,7 @@ class _SportsChannelListState extends State<SportsChannelList> {
       last = last == null ? row : math.max(last, row);
     }
     // Adjacent remote steps use local geometry, not a whole-list average
-    // distorted by long programme descriptions hundreds of rows away.
+    // distorted by long program descriptions hundreds of rows away.
     final nearby = first != null &&
         last != null &&
         index >= first - (last - first + 1) &&
@@ -1963,7 +1963,7 @@ class SportsChannelRow extends StatelessWidget {
       else
         Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Text('Now · No programme information',
+            child: Text('Now · No program information',
                 style: TextStyle(
                     fontSize: 11,
                     height: 1.25,

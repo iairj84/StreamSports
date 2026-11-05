@@ -616,7 +616,7 @@ final _pokerNight = RegExp(r'^poker night(?:\s|$)', caseSensitive: false);
 
 /// Dedicated poker guides sometimes use the show/channel name as the title.
 /// A finite slot with a substantive table/episode description is still useful;
-/// an always-on advertisement is not a programme.
+/// an always-on advertisement is not a program.
 bool hasSpecificPokerProgramme(String description) =>
     description.trim().length >= 24 &&
     _pokerProgramme.hasMatch(description) &&

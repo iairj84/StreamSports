@@ -26,7 +26,7 @@ Future<UpdatePromptChoice?> showUpdatePrompt(
                 {'new': release.label, 'current': currentLabel})),
             const SizedBox(height: 12),
             Text(
-                tr('The update downloads inside the app and installs over this one. Playlists, favourites and guide data stay as they are.'),
+                tr('The update downloads inside the app and installs over this one. Playlists, favorites and guide data stay as they are.'),
                 style: Theme.of(dialogContext).textTheme.bodySmall),
             if (release.sizeLabel.isNotEmpty) ...[
               const SizedBox(height: 8),

@@ -1,4 +1,4 @@
-import 'package:nox_iptv/models/sports_favourites_filter.dart';
+import 'package:nox_iptv/models/sports_favorites_filter.dart';
 import 'package:nox_iptv/utils/sports_channel_filter.dart';
 import 'package:nox_iptv/widgets/sports_event_controls.dart';
 import 'package:nox_iptv/utils/sports_time_filter.dart';
@@ -26,7 +26,7 @@ void main() {
         addTearDown(prefs.dispose);
         final focus = FocusNode();
         addTearDown(focus.dispose);
-        var filter = SportsFavouritesFilter.favourites;
+        var filter = SportsFavoritesFilter.favorites;
         await tester.pumpWidget(ChangeNotifierProvider.value(
             value: prefs,
             child: MaterialApp(
@@ -37,11 +37,11 @@ void main() {
                 home: Scaffold(
                     body: StatefulBuilder(
                         builder: (context, update) => Center(
-                            child: SportsFavouritesFilterButton(
+                            child: SportsFavoritesFilterButton(
                                 focusNode: focus,
                                 filter: filter,
-                                favouriteLeagueCount: 2,
-                                favouriteTeamCount: 3,
+                                favoriteLeagueCount: 2,
+                                favoriteTeamCount: 3,
                                 onChanged: (value) =>
                                     update(() => filter = value))))))));
         expect(find.text('Show'), findsOneWidget);
@@ -51,10 +51,10 @@ void main() {
           await tester.pump();
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         } else {
-          await tester.tap(find.byType(SportsFavouritesFilterButton));
+          await tester.tap(find.byType(SportsFavoritesFilterButton));
         }
         await tester.pumpAndSettle();
-        expect(filter, SportsFavouritesFilter.favourites,
+        expect(filter, SportsFavoritesFilter.favorites,
             reason: 'Opening the menu does not change results');
         expect(
             find.text('2 saved · includes the whole league'), findsOneWidget);
@@ -64,17 +64,17 @@ void main() {
         expect(
             tester
                 .widget<ListTile>(
-                    find.byKey(const ValueKey('sports-favourites-favourites')))
+                    find.byKey(const ValueKey('sports-favorites-favorites')))
                 .selected,
             true);
         if (tv) {
           await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         } else {
-          await tester.tap(find.byKey(const ValueKey('sports-favourites-all')));
+          await tester.tap(find.byKey(const ValueKey('sports-favorites-all')));
         }
         await tester.pumpAndSettle();
-        expect(filter, SportsFavouritesFilter.all);
+        expect(filter, SportsFavoritesFilter.all);
         expect(find.byType(Dialog), findsNothing);
         if (tv) {
           expect(focus.hasFocus, true,
@@ -82,13 +82,13 @@ void main() {
         }
         // Every scope is a single, mutually exclusive choice, with no save step.
         for (final next in [
-          SportsFavouritesFilter.leagues,
-          SportsFavouritesFilter.teams,
-          SportsFavouritesFilter.favourites
+          SportsFavoritesFilter.leagues,
+          SportsFavoritesFilter.teams,
+          SportsFavoritesFilter.favorites
         ]) {
-          await tester.tap(find.byType(SportsFavouritesFilterButton));
+          await tester.tap(find.byType(SportsFavoritesFilterButton));
           await tester.pumpAndSettle();
-          final choice = find.byKey(ValueKey('sports-favourites-${next.name}'));
+          final choice = find.byKey(ValueKey('sports-favorites-${next.name}'));
           await tester.ensureVisible(choice);
           await tester.tap(choice);
           await tester.pumpAndSettle();
@@ -97,11 +97,11 @@ void main() {
               findsOneWidget);
           expect(find.byType(Dialog), findsNothing);
         }
-        await tester.tap(find.byType(SportsFavouritesFilterButton));
+        await tester.tap(find.byType(SportsFavoritesFilterButton));
         await tester.pumpAndSettle();
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
-        expect(filter, SportsFavouritesFilter.favourites,
+        expect(filter, SportsFavoritesFilter.favorites,
             reason: 'Cancelling preserves the current choice');
         expect(tester.takeException(), isNull);
         expect(storage.getSportsLeagues(), ['nhl']);
@@ -119,15 +119,15 @@ void main() {
         storage,
         prefs,
         Center(
-            child: SportsFavouritesFilterButton(
-          filter: SportsFavouritesFilter.teams,
-          favouriteLeagueCount: 0,
-          favouriteTeamCount: 0,
+            child: SportsFavoritesFilterButton(
+          filter: SportsFavoritesFilter.teams,
+          favoriteLeagueCount: 0,
+          favoriteTeamCount: 0,
           onChanged: (_) => changes++,
         ))));
     final activate = tester
         .widget<TextButton>(find.descendant(
-            of: find.byType(SportsFavouritesFilterButton),
+            of: find.byType(SportsFavoritesFilterButton),
             matching: find.byType(TextButton)))
         .onPressed!;
     for (var n = 0; n < 12; n++) {
@@ -135,9 +135,9 @@ void main() {
     }
     await tester.pumpAndSettle();
     expect(find.byType(SimpleDialog), findsOneWidget);
-    expect(find.text('No favourite teams or athletes yet'), findsOneWidget);
-    expect(find.text('No favourite leagues yet'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('sports-favourites-teams')));
+    expect(find.text('No favorite teams or athletes yet'), findsOneWidget);
+    expect(find.text('No favorite leagues yet'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sports-favorites-teams')));
     await tester.pumpAndSettle();
     expect(changes, 0, reason: 'Reselecting the active scope is a no-op');
     expect(find.byType(SimpleDialog), findsNothing);
@@ -172,13 +172,13 @@ void main() {
                                   selected: '',
                                   options: [
                                     const SportsFilterOption('',
-                                        'All favourite leagues', Icons.public),
+                                        'All favorite leagues', Icons.public),
                                     const SportsFilterOption(
                                         '__manage_leagues__',
-                                        'Manage favourite leagues',
+                                        'Manage favorite leagues',
                                         Icons.tune,
                                         description:
-                                            '100 favourites · Events & Schedule'),
+                                            '100 favorites · Events & Schedule'),
                                     for (var i = 0; i < 100; i++)
                                       SportsFilterOption(
                                           '$i', 'League $i', Icons.sports,
@@ -266,7 +266,7 @@ void main() {
                       selected: '125',
                       options: [
                         const SportsFilterOption('__manage_leagues__',
-                            'Manage favourite leagues', Icons.tune),
+                            'Manage favorite leagues', Icons.tune),
                         for (var i = 0; i < 500; i++)
                           SportsFilterOption('$i', 'League $i', Icons.sports,
                               group: i.isEven ? 'Soccer' : 'Basketball'),

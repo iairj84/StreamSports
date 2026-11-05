@@ -141,7 +141,7 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
         builder: (dialogContext) => AlertDialog(
               title: Text(tr('Clear guide listings?')),
               content: Text(tr(
-                  'Downloaded programme listings will be removed. Your playlists, favourites and saved guide assignments stay saved.')),
+                  'Downloaded program listings will be removed. Your playlists, favorites and saved guide assignments stay saved.')),
               actions: [
                 TextButton(
                     autofocus: true,
@@ -163,7 +163,7 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
   String _guideStatusLabel(({int? stored, DateTime finishedAt})? status) {
     if (status == null) return tr('Not downloaded yet');
     if (status.stored == null) return tr('Last update failed');
-    return tr('{n} programmes · {p}', {
+    return tr('{n} programs · {p}', {
       'n': '${status.stored}',
       'p': TimeFormat.dateTime(status.finishedAt),
     });
@@ -327,7 +327,7 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen> {
                 onPressed: busy ? null : _clearGuide,
                 label: Text(tr('Clear guide listings'))),
             const SizedBox(height: 8),
-            Text(tr('Removes downloaded programme listings only. Refresh the guide to download them again.'),
+            Text(tr('Removes downloaded program listings only. Refresh the guide to download them again.'),
                 style: TextStyle(
                     fontSize: 12,
                     height: 1.4,

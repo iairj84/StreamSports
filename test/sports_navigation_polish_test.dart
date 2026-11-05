@@ -8,7 +8,7 @@ import 'package:nox_iptv/services/sports_service.dart';
 import 'package:nox_iptv/widgets/sports_panel.dart';
 import 'package:nox_iptv/widgets/sports_header_controls.dart';
 import 'package:nox_iptv/widgets/sports_filter_picker.dart';
-import 'package:nox_iptv/widgets/sports_favourite_tile.dart';
+import 'package:nox_iptv/widgets/sports_favorite_tile.dart';
 import 'package:nox_iptv/widgets/compact_choice_list.dart';
 import 'sports_panel_test.dart' as harness;
 import 'sports_details_panel_test.dart' show Details;
@@ -32,7 +32,7 @@ Finder label(String value) =>
 void main() {
   for (final size in [const Size(390, 844), const Size(844, 390)]) {
     testWidgets(
-        'favourites search keeps its input connection through keyboard resize $size',
+        'favorites search keeps its input connection through keyboard resize $size',
         (tester) async {
       harness.viewport(tester, size);
       final (storage, prefs) = await harness.preferences(false);
@@ -112,7 +112,7 @@ void main() {
     const Size(960, 540)
   ]) {
     testWidgets(
-        'side favourites stays compact and browsing does not request details at $size',
+        'side favorites stays compact and browsing does not request details at $size',
         (tester) async {
       harness.viewport(tester, size);
       final (storage, prefs) = await harness.preferences(size.width == 960);
@@ -150,13 +150,13 @@ void main() {
         expect(surface.center.dx, closeTo(size.width / 2, .1));
         expect(surface.width, greaterThan(size.width * .9));
       }
-      expect(find.byType(SportsFavouriteTile).evaluate().length, lessThan(25));
+      expect(find.byType(SportsFavoriteTile).evaluate().length, lessThan(25));
       final listSearch = tester.widget<TextField>(find.byType(TextField));
-      expect(listSearch.decoration!.hintText, 'Search favourites');
+      expect(listSearch.decoration!.hintText, 'Search favorites');
       await enter(tester, find.byType(TextField), 'Club 199');
       await tester.pumpAndSettle();
       expect(label('Club 199'), findsOneWidget);
-      expect(find.byType(SportsFavouriteTile), findsOneWidget);
+      expect(find.byType(SportsFavoriteTile), findsOneWidget);
       await tester.tap(find.byTooltip('Clear search'));
       await tester.pumpAndSettle();
       final rowFocus = FocusManager.instance.rootScope.traversalDescendants
@@ -173,7 +173,7 @@ void main() {
       }
       expect(details.calls, 0);
       expect(standings.loads, 0);
-      expect(find.byType(SportsFavouriteTile).evaluate().length, lessThan(25));
+      expect(find.byType(SportsFavoriteTile).evaluate().length, lessThan(25));
       final close = tester
           .widget<IconButton>(find.byWidgetPredicate(
               (widget) => widget is IconButton && widget.tooltip == 'Close'))

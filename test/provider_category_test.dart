@@ -110,7 +110,7 @@ void main() {
         '[UK] General UHD',
         'France | News',
         'FR: Kids',
-        'Unknown curated favourites',
+        'Unknown curated favorites',
       ])
         M3uGroup(title: name, playlistId: 'p', channels: _UnreadableChannels()),
     ];

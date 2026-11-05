@@ -642,7 +642,7 @@ void main() {
     expect(find.text('NOW'), findsNothing);
     expect(find.text('NEXT'), findsNothing);
     expect(find.text('EARLIER'), findsOneWidget);
-    expect(find.text('Now · No programme information'), findsOneWidget);
+    expect(find.text('Now · No program information'), findsOneWidget);
     expect(find.textContaining('left'), findsNothing);
     for (final entry in {
       MatchReason.pick: 'Your pick',
@@ -746,7 +746,7 @@ void main() {
     guide.dispose();
   });
 
-  testWidgets('broadcast labels do not duplicate the current programme',
+  testWidgets('broadcast labels do not duplicate the current program',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(960, 540));
     addTearDown(() => tester.binding.setSurfaceSize(null));

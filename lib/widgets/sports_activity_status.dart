@@ -290,7 +290,7 @@ class SportsEventMatchStatus extends StatelessWidget {
                         : 'Looking for a channel',
                     SportsWorkStage.verifying => 'Finishing channel check',
                     _ => hasCandidates
-                        ? 'Checking programme details'
+                        ? 'Checking program details'
                         : 'Waiting for guide',
                   };
             final step =
@@ -323,7 +323,7 @@ class SportsEventMatchStatus extends StatelessWidget {
 }
 
 /// Shared, fixed-size chrome for live events, replays and highlights.
-/// Pull/status updates rebuild only this line, never the programme list.
+/// Pull/status updates rebuild only this line, never the program list.
 class SportsActivityLine extends StatelessWidget {
   const SportsActivityLine(
       {super.key,

@@ -72,7 +72,7 @@ class _HoldToActivateState extends State<HoldToActivate> {
   /// A hold needs the remote's own auto-repeat as proof, not just the
   /// timer: on a busy Fire Stick (a stream starting) a quick click's key-up
   /// reached the app over [holdDuration] late, so the first click on the TV
-  /// Favourites row opened "Clear favourites?". A real
+  /// Favorites row opened "Clear favorites?". A real
   /// hold always sends repeats (Android after ~0.5 s, Windows keyboards
   /// too); a late key-up after a click never has any.
   bool _repeatSeen = false;

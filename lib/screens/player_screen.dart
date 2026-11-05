@@ -518,7 +518,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// A remote's CH+/CH- (or Page Up/Down) keys: CH- = next channel (the
   /// one below in the list), CH+ = previous (above), matching the guide.
   /// Steps through the list the channel was picked from
-  /// ([PlaybackService.zapList], e.g. Favourites), else the channel's own
+  /// ([PlaybackService.zapList], e.g. Favorites), else the channel's own
   /// group; wraps at either end. Live only; a remote without these keys
   /// (Fire Stick) never sends them. Reveals the top bar so the new
   /// channel's name + now/next show.
@@ -529,7 +529,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // A playlist can list the same channel twice (same id, e.g. a tvg-id
     // used as the id): find the exact entry playing, and step past any
     // copy with the same id — play() no-ops on it, which used to leave
-    // CH+/- stuck on a duplicate (Favourites).
+    // CH+/- stuck on a duplicate (Favorites).
     int indexIn(List<Channel> l) {
       final exact = l.indexWhere((c) => identical(c, current));
       return exact >= 0 ? exact : l.indexWhere((c) => c.id == current.id);

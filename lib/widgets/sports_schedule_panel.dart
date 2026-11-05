@@ -1,4 +1,4 @@
-import '../models/sports_favourites_filter.dart';
+import '../models/sports_favorites_filter.dart';
 import '../utils/time_format.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -31,8 +31,8 @@ class SportsScheduleBrowseState {
   String? sport, leagueId;
   bool initialized = false;
   bool groupBySport = false;
-  SportsFavouritesFilter favouritesFilter = SportsFavouritesFilter.all;
-  bool get onlyFavourites => favouritesFilter.isFiltered;
+  SportsFavoritesFilter favoritesFilter = SportsFavoritesFilter.all;
+  bool get onlyFavorites => favoritesFilter.isFiltered;
   bool showCompleted = false;
   int calendarDays = 0;
   final summaries = <DateTime, SportsScheduleSummary>{};
@@ -69,15 +69,15 @@ class SportsSchedulePanel extends StatefulWidget {
       this.follows,
       this.initialLeague,
       this.overviewLeagues,
-      this.favouriteLeagueIds,
-      this.favouritesFilter,
+      this.favoriteLeagueIds,
+      this.favoritesFilter,
       this.onGameDetails,
       this.channelMatchForGame,
       this.onWatchGame,
       this.onLeagueChanged,
       this.onScopeChanged,
       this.onManageLeagues,
-      this.onFavouritesChanged,
+      this.onFavoritesChanged,
       this.hideScores = false,
       this.keyboardOpen,
       this.clock});
@@ -90,8 +90,8 @@ class SportsSchedulePanel extends StatefulWidget {
 
   /// Enabled competitions only; null retains the single-league detail browser.
   final List<SportsLeague>? overviewLeagues;
-  final Set<String>? favouriteLeagueIds;
-  final SportsFavouritesFilter? favouritesFilter;
+  final Set<String>? favoriteLeagueIds;
+  final SportsFavoritesFilter? favoritesFilter;
   final ValueChanged<SportsGame>? onGameDetails;
 
   /// Read already-computed Events results. This must never initiate matching.
@@ -101,7 +101,7 @@ class SportsSchedulePanel extends StatefulWidget {
   final ValueChanged<SportsLeague>? onLeagueChanged;
   final void Function(String? sport, String? league)? onScopeChanged;
   final Future<void> Function()? onManageLeagues;
-  final ValueChanged<SportsFavouritesFilter>? onFavouritesChanged;
+  final ValueChanged<SportsFavoritesFilter>? onFavoritesChanged;
   final bool hideScores;
   final bool? keyboardOpen;
   final DateTime Function()? clock;
@@ -316,15 +316,15 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     _filterGames();
   }
 
-  String? get _emptyFavouriteSelection =>
-      _browse.favouritesFilter.emptySelectionMessage(
-          hasLeagues: widget.favouriteLeagueIds?.isNotEmpty == true,
+  String? get _emptyFavoriteSelection =>
+      _browse.favoritesFilter.emptySelectionMessage(
+          hasLeagues: widget.favoriteLeagueIds?.isNotEmpty == true,
           hasTeams: widget.follows?.isEmpty == false);
 
-  bool _isFavourite(SportsGame game) =>
-      (_browse.favouritesFilter.includesLeagues &&
-          widget.favouriteLeagueIds?.contains(game.league.id) == true) ||
-      (_browse.favouritesFilter.includesTeams &&
+  bool _isFavorite(SportsGame game) =>
+      (_browse.favoritesFilter.includesLeagues &&
+          widget.favoriteLeagueIds?.contains(game.league.id) == true) ||
+      (_browse.favoritesFilter.includesTeams &&
           widget.follows?.involves(game) == true);
 
   void _filterGames() {
@@ -338,8 +338,8 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
       _browse.selectedDay,
       query,
       _browse.groupBySport,
-      _browse.favouritesFilter,
-      widget.favouriteLeagueIds,
+      _browse.favoritesFilter,
+      widget.favoriteLeagueIds,
       _browse.showCompleted,
       widget.follows,
       widget.follows?.revision
@@ -350,7 +350,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
       return;
     }
     _dayCounts = {};
-    // Keep one ordered index. Favourites and search change membership only,
+    // Keep one ordered index. Favorites and search change membership only,
     // so repeated filtering does not sort the same fixture snapshot again.
     final orderKey = (_indexed, _timeOrder);
     if (_browse._orderKey != orderKey) {
@@ -388,7 +388,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
         (!_overview ||
             _browse.sport == null ||
             row.game.league.espnPath.split('/').first == _browse.sport) &&
-        (!_browse.onlyFavourites || _isFavourite(row.game)) &&
+        (!_browse.onlyFavorites || _isFavorite(row.game)) &&
         (query.isEmpty || row.text.contains(query)));
     _visibleGames = [];
     for (final row in scoped) {
@@ -438,8 +438,8 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   bool get _overview => widget.overviewLeagues != null && _league == null;
   List<SportsLeague> get _overviewLeagues {
     final leagues = widget.overviewLeagues ?? const <SportsLeague>[];
-    return widget.favouriteLeagueIds != null &&
-            !_browse.onlyFavourites &&
+    return widget.favoriteLeagueIds != null &&
+            !_browse.onlyFavorites &&
             _browse.sport != null
         ? leagues
             .where((l) => l.espnPath.startsWith('${_browse.sport}/'))
@@ -476,8 +476,8 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   @override
   void initState() {
     super.initState();
-    _browse.favouritesFilter =
-        widget.favouritesFilter ?? _browse.favouritesFilter;
+    _browse.favoritesFilter =
+        widget.favoritesFilter ?? _browse.favoritesFilter;
     _followsRevision = widget.follows?.revision ?? 0;
     _browse.from ??= _today;
     if (!_browse.initialized && widget.overviewLeagues != null) {
@@ -532,11 +532,11 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   @override
   void didUpdateWidget(SportsSchedulePanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final modeChanged = oldWidget.favouritesFilter != widget.favouritesFilter;
-    final localModeChanged = widget.favouritesFilter != null &&
-        _browse.favouritesFilter != widget.favouritesFilter;
-    if (widget.favouritesFilter != null) {
-      _browse.favouritesFilter = widget.favouritesFilter!;
+    final modeChanged = oldWidget.favoritesFilter != widget.favoritesFilter;
+    final localModeChanged = widget.favoritesFilter != null &&
+        _browse.favoritesFilter != widget.favoritesFilter;
+    if (widget.favoritesFilter != null) {
+      _browse.favoritesFilter = widget.favoritesFilter!;
     }
     if (!listEquals(oldWidget.overviewLeagues, widget.overviewLeagues)) {
       final leagues = widget.overviewLeagues;
@@ -586,11 +586,11 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     }
     final revision = widget.follows?.revision ?? 0;
     if (localModeChanged ||
-        oldWidget.favouriteLeagueIds != widget.favouriteLeagueIds ||
+        oldWidget.favoriteLeagueIds != widget.favoriteLeagueIds ||
         oldWidget.follows != widget.follows ||
         revision != _followsRevision) {
       _followsRevision = revision;
-      _refreshFavouriteProjection();
+      _refreshFavoriteProjection();
     }
   }
 
@@ -703,16 +703,16 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
         itemLabel: 'sports',
         description: widget.overviewLeagues == null
             ? null
-            : _browse.onlyFavourites
-                ? _browse.favouritesFilter.description
+            : _browse.onlyFavorites
+                ? _browse.favoritesFilter.description
                 : 'All leagues · narrow by sport',
         selected: _browse.sport ?? '',
         options: [
           ...sportsSportOptions(widget.overviewLeagues ?? _leagues, const {},
-              showCounts: false, favouriteOnly: _browse.onlyFavourites),
+              showCounts: false, favoriteOnly: _browse.onlyFavorites),
           if (widget.onManageLeagues != null)
             sportsManageLeaguesOption(
-                widget.favouriteLeagueIds?.length ?? _overviewLeagues.length),
+                widget.favoriteLeagueIds?.length ?? _overviewLeagues.length),
         ],
         showSortingControls: false);
     if (!mounted || selected == null) return;
@@ -750,8 +750,8 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
         itemLabel: 'leagues',
         description: widget.overviewLeagues == null
             ? null
-            : _browse.onlyFavourites
-                ? _browse.favouritesFilter.description
+            : _browse.onlyFavorites
+                ? _browse.favoritesFilter.description
                 : 'All available leagues',
         selected: _browse.leagueId ?? '__all__',
         showSortingControls: false,
@@ -772,7 +772,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                 description: 'Clear the sport and league filters'),
           if (widget.onManageLeagues != null)
             sportsManageLeaguesOption(
-                widget.favouriteLeagueIds?.length ?? _overviewLeagues.length),
+                widget.favoriteLeagueIds?.length ?? _overviewLeagues.length),
           for (final league in widget.overviewLeagues ?? _leagues)
             if (sport == null || league.espnPath.split('/').first == sport)
               SportsFilterOption(league.id, league.name,
@@ -816,19 +816,19 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     await _load();
   }
 
-  void _setFavouritesFilter(SportsFavouritesFilter value) {
-    if (_browse.favouritesFilter == value) return;
+  void _setFavoritesFilter(SportsFavoritesFilter value) {
+    if (_browse.favoritesFilter == value) return;
     setState(() {
-      _browse.favouritesFilter = value;
+      _browse.favoritesFilter = value;
       _resultsTouched = false;
       _browse.offset = 0;
-      _refreshFavouriteProjection();
+      _refreshFavoriteProjection();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
-    widget.onFavouritesChanged?.call(value);
+    widget.onFavoritesChanged?.call(value);
   }
 
-  void _refreshFavouriteProjection() {
+  void _refreshFavoriteProjection() {
     // A week request belongs to the scope that started it. Do not publish a
     // late response or continue its queue after that scope changes.
     _summaryRequest++;
@@ -842,7 +842,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   }
 
   String get _summaryScope =>
-      '${_overview ? _overviewLeagues.map((l) => l.id).join(',') : _browse.leagueId ?? ''}|${_browse.onlyFavourites ? '${_browse.favouritesFilter.name}:${widget.follows?.revision}:${widget.favouriteLeagueIds?.join(',')}' : 'all'}';
+      '${_overview ? _overviewLeagues.map((l) => l.id).join(',') : _browse.leagueId ?? ''}|${_browse.onlyFavorites ? '${_browse.favoritesFilter.name}:${widget.follows?.revision}:${widget.favoriteLeagueIds?.join(',')}' : 'all'}';
 
   void _rememberSummaries(
       List<SportsGame> games, DateTime from, int days, bool incomplete,
@@ -853,7 +853,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     }
     final counts = <DateTime, Map<String, int>>{};
     for (final game in games) {
-      if (_browse.onlyFavourites && !_isFavourite(game)) continue;
+      if (_browse.onlyFavorites && !_isFavorite(game)) continue;
       final day = sportsCalendarDay(game.start.toLocal());
       final sports = counts.putIfAbsent(day, () => {});
       sports.update(game.league.espnPath.split('/').first, (n) => n + 1,
@@ -962,7 +962,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
         if (!active()) return;
         incomplete |= result.incomplete;
         for (final game in result.games) {
-          if (_browse.onlyFavourites && !_isFavourite(game)) continue;
+          if (_browse.onlyFavorites && !_isFavorite(game)) continue;
           final day = sportsCalendarDay(game.start.toLocal());
           if (day.isBefore(start) || day.isAfter(days.last)) continue;
           final bySport = counts.putIfAbsent(day, () => {});
@@ -1270,7 +1270,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                   time: _scheduleTime(game, _clockFormat),
                   hideScores: widget.hideScores,
                   use24h: use24h,
-                  favourite: widget.follows?.involves(game) ?? false,
+                  favorite: widget.follows?.involves(game) ?? false,
                   showLeague: _overview && !_browse.groupBySport,
                   showSport: _overview &&
                       _browse.sport == null &&
@@ -1285,12 +1285,12 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     return widget.layoutBuilder(
         filters,
         widget.follows != null
-            ? SportsFavouritesFilterButton(
-                key: const ValueKey('schedule-favourites-only'),
-                filter: _browse.favouritesFilter,
-                favouriteLeagueCount: widget.favouriteLeagueIds?.length ?? 0,
-                favouriteTeamCount: widget.follows?.teams.length ?? 0,
-                onChanged: _setFavouritesFilter)
+            ? SportsFavoritesFilterButton(
+                key: const ValueKey('schedule-favorites-only'),
+                filter: _browse.favoritesFilter,
+                favoriteLeagueCount: widget.favoriteLeagueIds?.length ?? 0,
+                favoriteTeamCount: widget.follows?.teams.length ?? 0,
+                onChanged: _setFavoritesFilter)
             : const SizedBox.shrink(),
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (!typing)
@@ -1409,7 +1409,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                               : _calendar
                                   ? '${_browse.calendarDays == 30 ? DateFormat.yMMMM().format(_from) : '${DateFormat('d MMM').format(_calendarStart)} – ${DateFormat('d MMM').format(sportsCalendarDay(_calendarStart, 6))}'} · open a day'
                                   : _loading
-                                      ? 'Updating ${_overview ? 'favourite leagues' : league!.source}…'
+                                      ? 'Updating ${_overview ? 'favorite leagues' : league!.source}…'
                                       : _overview
                                           ? '${DateFormat('d MMM').format(_from)} · ${_visibleGames.length} fixtures · local time'
                                           : '${_visibleGames.length} fixtures · local time · ${league!.source}${!supportsSportsScoreboard(league) ? ' · Calendar only' : ''}',
@@ -1543,7 +1543,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                                                     ? 'Loading schedule…'
                                                     : _incomplete
                                                         ? 'Schedule unavailable for this window'
-                                                        : _emptyFavouriteSelection ??
+                                                        : _emptyFavoriteSelection ??
                                                             (_games.isNotEmpty
                                                                 ? 'No fixtures match these filters'
                                                                 : 'No fixtures published for these dates'),
@@ -1559,10 +1559,10 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                                                       context),
                                                   onPressed: _incomplete
                                                       ? _load
-                                                      : _emptyFavouriteSelection !=
+                                                      : _emptyFavoriteSelection !=
                                                               null
-                                                          ? () => _setFavouritesFilter(
-                                                              SportsFavouritesFilter
+                                                          ? () => _setFavoritesFilter(
+                                                              SportsFavoritesFilter
                                                                   .all)
                                                           : _games.isNotEmpty
                                                               ? () {
@@ -1570,12 +1570,12 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                                                                       .clear();
                                                                   _browse.showCompleted =
                                                                       true;
-                                                                  _browse.favouritesFilter =
-                                                                      SportsFavouritesFilter
+                                                                  _browse.favoritesFilter =
+                                                                      SportsFavoritesFilter
                                                                           .all;
                                                                   widget
-                                                                      .onFavouritesChanged
-                                                                      ?.call(SportsFavouritesFilter
+                                                                      .onFavoritesChanged
+                                                                      ?.call(SportsFavoritesFilter
                                                                           .all);
                                                                   _filter(
                                                                       query:
@@ -1597,7 +1597,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                                                   label: Text(_incomplete
                                                       ? 'Try again'
                                                       : _games.isNotEmpty ||
-                                                              _emptyFavouriteSelection !=
+                                                              _emptyFavoriteSelection !=
                                                                   null
                                                           ? 'Show all fixtures'
                                                           : 'Check the next ${_browse.days} days')),

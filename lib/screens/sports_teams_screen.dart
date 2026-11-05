@@ -1,4 +1,4 @@
-import '../models/sports_favourites_filter.dart';
+import '../models/sports_favorites_filter.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
@@ -20,7 +20,7 @@ import '../utils/guarded_dialog.dart';
 import '../widgets/sports_details_panel.dart';
 import '../widgets/sports_filter_picker.dart';
 import '../widgets/standings_team_tile.dart';
-import '../widgets/sports_favourite_tile.dart';
+import '../widgets/sports_favorite_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
 
 final sportsStandingsLeagues = [...kSportsLeagues, ...kSportsLeagueBank]
@@ -81,9 +81,9 @@ class SportsTeamsScreen extends StatefulWidget {
       this.keyboardOpen,
       this.onTeamDetails,
       this.onLeagueChanged,
-      this.favouriteLeagueIds,
-      this.favouritesFilter,
-      this.onFavouritesChanged,
+      this.favoriteLeagueIds,
+      this.favoritesFilter,
+      this.onFavoritesChanged,
       this.onManageLeagues,
       this.onFocusToolbar});
   final SportsFollows follows;
@@ -93,9 +93,9 @@ class SportsTeamsScreen extends StatefulWidget {
 
   /// Optional Hub context. Other standings remain browsable without enabling
   /// additional Events or Schedule feeds.
-  final Set<String>? favouriteLeagueIds;
-  final SportsFavouritesFilter? favouritesFilter;
-  final ValueChanged<SportsFavouritesFilter>? onFavouritesChanged;
+  final Set<String>? favoriteLeagueIds;
+  final SportsFavoritesFilter? favoritesFilter;
+  final ValueChanged<SportsFavoritesFilter>? onFavoritesChanged;
   final Future<void> Function()? onManageLeagues;
   final SportsStandingsService? service;
   final SportsDetailsService? detailsService;
@@ -114,7 +114,7 @@ class SportsTeamsScreen extends StatefulWidget {
 typedef _BrowsePosition = ({
   String query,
   String? group,
-  SportsFavouritesFilter favouritesFilter,
+  SportsFavoritesFilter favoritesFilter,
   double offset
 });
 
@@ -137,84 +137,84 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
       sportsStandingsLeagues.first;
   LeagueStandings? _data;
   bool _loading = false, _navigating = false;
-  SportsFavouritesFilter _favouritesFilter = SportsFavouritesFilter.all;
-  bool get _onlyFavourites => _favouritesFilter.isFiltered;
+  SportsFavoritesFilter _favoritesFilter = SportsFavoritesFilter.all;
+  bool get _onlyFavorites => _favoritesFilter.isFiltered;
   bool _openingLeague = false;
   int _followsRevision = 0;
-  Timer? _favouriteFocusTimer;
-  final _favouriteSelection = ValueNotifier<FollowedTeam?>(null);
-  final _favouriteDetailsRevision = ValueNotifier<int>(0);
-  late final _favouriteChanges =
-      Listenable.merge([_favouriteSelection, _favouriteDetailsRevision]);
-  FollowedTeam? get _selectedFavourite => _favouriteSelection.value;
-  FollowedTeam? _pendingFavourite;
-  final _favouriteRows = <String, StandingTeam>{};
-  bool _resolvingFavourites = false, _favouriteDetailsLoading = false;
-  FollowedTeam? _detailsFavourite;
-  SportsDetails? _favouriteDetails;
+  Timer? _favoriteFocusTimer;
+  final _favoriteSelection = ValueNotifier<FollowedTeam?>(null);
+  final _favoriteDetailsRevision = ValueNotifier<int>(0);
+  late final _favoriteChanges =
+      Listenable.merge([_favoriteSelection, _favoriteDetailsRevision]);
+  FollowedTeam? get _selectedFavorite => _favoriteSelection.value;
+  FollowedTeam? _pendingFavorite;
+  final _favoriteRows = <String, StandingTeam>{};
+  bool _resolvingFavorites = false, _favoriteDetailsLoading = false;
+  FollowedTeam? _detailsFavorite;
+  SportsDetails? _favoriteDetails;
   late final _detailsService =
       widget.detailsService ?? SportsDetailsService.instance;
 
-  void _selectFavourite(FollowedTeam entry) {
-    _favouriteSelection.value = entry;
-    unawaited(_loadFavouriteDetails());
+  void _selectFavorite(FollowedTeam entry) {
+    _favoriteSelection.value = entry;
+    unawaited(_loadFavoriteDetails());
   }
 
   // Rapid remote movement keeps only the latest target behind one request.
   // Removed/closed selections cannot update the visible pane or enqueue work.
-  Future<void> _loadFavouriteDetails() async {
-    if (_favouriteDetailsLoading) return;
-    _favouriteDetailsLoading = true;
+  Future<void> _loadFavoriteDetails() async {
+    if (_favoriteDetailsLoading) return;
+    _favoriteDetailsLoading = true;
     try {
       while (mounted) {
-        final entry = _selectedFavourite;
+        final entry = _selectedFavorite;
         if (entry == null ||
-            entry == _detailsFavourite ||
+            entry == _detailsFavorite ||
             !widget.follows.isFollowed(entry.leagueId, entry.teamId)) {
           return;
         }
         final league = sportsLeagueById(entry.leagueId);
         if (league == null) return;
-        if (league.source != 'ESPN' && !_favouriteRows.containsKey(entry.key)) {
+        if (league.source != 'ESPN' && !_favoriteRows.containsKey(entry.key)) {
           final standings =
               await _service.load(league, rememberSelection: false);
           if (!mounted) return;
           final rows = standings.tables.expand((t) => t.rows);
           for (final row in rows) {
             if (widget.follows.isFollowed(league.id, row.team.id)) {
-              _favouriteRows[FollowedTeam(league.id, row.team.id).key] = row;
+              _favoriteRows[FollowedTeam(league.id, row.team.id).key] = row;
             }
           }
           await widget.follows
               .rememberTeams(league.id, rows.map((r) => r.team))
               .catchError((Object _) {});
           if (!mounted) return;
-          if (entry != _selectedFavourite) continue;
+          if (entry != _selectedFavorite) continue;
         }
         final data =
-            await _detailsService.team(league, _favouriteRow(entry).team);
+            await _detailsService.team(league, _favoriteRow(entry).team);
         if (!mounted) return;
-        await _rememberFavouriteName(entry, data);
+        await _rememberFavoriteName(entry, data);
         if (!mounted) return;
-        if (entry == _selectedFavourite) {
-          _detailsFavourite = entry;
-          _favouriteDetails = data;
-          _favouriteDetailsRevision.value++;
+        if (entry == _selectedFavorite) {
+          _detailsFavorite = entry;
+          _favoriteDetails = data;
+          _favoriteDetailsRevision.value++;
           return;
         }
       }
     } finally {
-      _favouriteDetailsLoading = false;
+      _favoriteDetailsLoading = false;
     }
   }
 
-  Future<void> _rememberFavouriteName(
+  Future<void> _rememberFavoriteName(
       FollowedTeam entry, SportsDetails data) async {
     if (widget.follows.nameOf(entry) != null ||
         data.failed ||
         data.unsupported ||
         data.title.isEmpty ||
-        data.title == _favouriteRow(entry).team.name) {
+        data.title == _favoriteRow(entry).team.name) {
       return;
     }
     await widget.follows.rememberTeams(entry.leagueId, [
@@ -230,9 +230,9 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
 
   // Older follows stored IDs only. Resolve one league at a time while this
   // screen is open, and persist identities without altering follow order.
-  Future<void> _resolveFavourites({bool refresh = false}) async {
-    if (_resolvingFavourites) return;
-    _resolvingFavourites = true;
+  Future<void> _resolveFavorites({bool refresh = false}) async {
+    if (_resolvingFavorites) return;
+    _resolvingFavorites = true;
     try {
       final leagues = widget.follows.teams
           .where((t) => widget.follows.nameOf(t) == null)
@@ -248,7 +248,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
         final rows = data.tables.expand((t) => t.rows);
         for (final row in rows) {
           if (widget.follows.isFollowed(id, row.team.id)) {
-            _favouriteRows[FollowedTeam(id, row.team.id).key] = row;
+            _favoriteRows[FollowedTeam(id, row.team.id).key] = row;
           }
         }
         await widget.follows.rememberTeams(id, rows.map((r) => r.team));
@@ -268,7 +268,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
           final directoryRows = directory.tables.expand((t) => t.rows);
           for (final row in directoryRows) {
             if (widget.follows.isFollowed(id, row.team.id)) {
-              _favouriteRows.putIfAbsent(
+              _favoriteRows.putIfAbsent(
                   FollowedTeam(id, row.team.id).key, () => row);
             }
           }
@@ -278,14 +278,14 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
         }
       }
     } catch (error) {
-      debugPrint('Favourite identity refresh failed: ${error.runtimeType}');
+      debugPrint('Favorite identity refresh failed: ${error.runtimeType}');
     } finally {
-      if (mounted) setState(() => _resolvingFavourites = false);
+      if (mounted) setState(() => _resolvingFavorites = false);
     }
   }
 
-  StandingTeam _favouriteRow(FollowedTeam entry) =>
-      _favouriteRows[entry.key] ??
+  StandingTeam _favoriteRow(FollowedTeam entry) =>
+      _favoriteRows[entry.key] ??
       StandingTeam(
           SportsTeam(
               id: entry.teamId,
@@ -296,35 +296,35 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
           const {},
           null);
 
-  void _focusFavourite(FollowedTeam entry) {
-    _favouriteFocusTimer?.cancel();
-    if (_selectedFavourite == entry) return;
-    _pendingFavourite = entry;
-    _favouriteFocusTimer = Timer(const Duration(milliseconds: 250), () {
+  void _focusFavorite(FollowedTeam entry) {
+    _favoriteFocusTimer?.cancel();
+    if (_selectedFavorite == entry) return;
+    _pendingFavorite = entry;
+    _favoriteFocusTimer = Timer(const Duration(milliseconds: 250), () {
       if (mounted &&
           ModalRoute.of(context)?.isCurrent != false &&
           widget.follows.isFollowed(entry.leagueId, entry.teamId)) {
-        _selectFavourite(entry);
+        _selectFavorite(entry);
       }
     });
   }
 
-  void _openFavourite(FollowedTeam entry, {required bool wide}) {
-    _favouriteFocusTimer?.cancel();
+  void _openFavorite(FollowedTeam entry, {required bool wide}) {
+    _favoriteFocusTimer?.cancel();
     final league = sportsLeagueById(entry.leagueId);
     if (league == null) return;
     if (wide) {
-      _selectFavourite(entry);
+      _selectFavorite(entry);
     } else {
-      showSportsTeamDetails(context, league, _favouriteRow(entry),
+      showSportsTeamDetails(context, league, _favoriteRow(entry),
           service: widget.detailsService, onLoaded: (data) {
-        unawaited(_rememberFavouriteName(entry, data));
+        unawaited(_rememberFavoriteName(entry, data));
       });
     }
   }
 
   int _generation = 0, _matches = 0;
-  String? _group, _favouriteSport;
+  String? _group, _favoriteSport;
   String? _driversGroup, _constructorsGroup;
   String _allGroupsLabel = 'All groups', _chooseGroupLabel = 'Choose group';
   final _statsByGroup = <String, Set<String>>{};
@@ -373,16 +373,16 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
     _scrollOffset = widget.favorites ? 0 : _positions[_league.id]?.offset ?? 0;
     _scroll = ScrollController(initialScrollOffset: _scrollOffset);
     _scroll.addListener(() => _scrollOffset = _scroll.offset);
-    if (widget.favorites) unawaited(_resolveFavourites());
+    if (widget.favorites) unawaited(_resolveFavorites());
     if (!widget.favorites) {
       final saved = _positions[_league.id];
       if (saved != null) {
         _search.text = saved.query;
         _query = saved.query.trim().toLowerCase();
         _group = saved.group;
-        _favouritesFilter = saved.favouritesFilter;
+        _favoritesFilter = saved.favoritesFilter;
       }
-      _favouritesFilter = widget.favouritesFilter ?? _favouritesFilter;
+      _favoritesFilter = widget.favoritesFilter ?? _favoritesFilter;
       unawaited(_load(restoreOffset: saved?.offset));
     }
   }
@@ -390,10 +390,10 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
   @override
   void didUpdateWidget(SportsTeamsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if ((widget.favouritesFilter != null &&
-            _favouritesFilter != widget.favouritesFilter) ||
-        oldWidget.favouriteLeagueIds != widget.favouriteLeagueIds) {
-      _favouritesFilter = widget.favouritesFilter ?? _favouritesFilter;
+    if ((widget.favoritesFilter != null &&
+            _favoritesFilter != widget.favoritesFilter) ||
+        oldWidget.favoriteLeagueIds != widget.favoriteLeagueIds) {
+      _favoritesFilter = widget.favoritesFilter ?? _favoritesFilter;
       _filter();
     }
     if (oldWidget.follows != widget.follows ||
@@ -410,13 +410,13 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
       _positions[_league.id] = (
         query: _search.text,
         group: _group,
-        favouritesFilter: _favouritesFilter,
+        favoritesFilter: _favoritesFilter,
         offset: _scrollOffset
       );
     }
-    _favouriteFocusTimer?.cancel();
-    _favouriteSelection.dispose();
-    _favouriteDetailsRevision.dispose();
+    _favoriteFocusTimer?.cancel();
+    _favoriteSelection.dispose();
+    _favoriteDetailsRevision.dispose();
     _search.dispose();
     if (widget.searchFocusNode == null) _searchFocus.dispose();
     if (widget.entryFocusNode == null) _leagueFocus.dispose();
@@ -501,10 +501,10 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
       final matches = table.rows.where((r) {
         final label = _searchLabels[r] ?? '';
         return terms.every(label.contains) &&
-            (!_onlyFavourites ||
-                (_favouritesFilter.includesLeagues &&
-                    widget.favouriteLeagueIds?.contains(_league.id) == true) ||
-                (_favouritesFilter.includesTeams &&
+            (!_onlyFavorites ||
+                (_favoritesFilter.includesLeagues &&
+                    widget.favoriteLeagueIds?.contains(_league.id) == true) ||
+                (_favoritesFilter.includesTeams &&
                     widget.follows.isFollowed(_league.id, r.team.id)));
       }).toList();
       if (matches.isEmpty) continue;
@@ -534,50 +534,50 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
       _query = '';
       _search.clear();
       _group = _racingGroups ? (_group ?? _driversGroup) : null;
-      _favouritesFilter = SportsFavouritesFilter.all;
-      _favouriteSport = null;
+      _favoritesFilter = SportsFavoritesFilter.all;
+      _favoriteSport = null;
     });
-    widget.onFavouritesChanged?.call(SportsFavouritesFilter.all);
+    widget.onFavoritesChanged?.call(SportsFavoritesFilter.all);
   }
 
-  bool _leagueHasFavourites(SportsLeague league) =>
-      (_favouritesFilter.includesLeagues &&
-          widget.favouriteLeagueIds?.contains(league.id) == true) ||
-      (_favouritesFilter.includesTeams &&
+  bool _leagueHasFavorites(SportsLeague league) =>
+      (_favoritesFilter.includesLeagues &&
+          widget.favoriteLeagueIds?.contains(league.id) == true) ||
+      (_favoritesFilter.includesTeams &&
           widget.follows.teams.any((team) => team.leagueId == league.id));
 
   Future<SportsLeague?> _chooseLeague({String? sport}) async {
-    final favouritesOnly = _onlyFavourites &&
-        widget.favouriteLeagueIds != null &&
+    final favoritesOnly = _onlyFavorites &&
+        widget.favoriteLeagueIds != null &&
         !widget.favorites;
     final id = await showSportsFilterPicker(context,
         title: sport == null ? 'Choose league' : '${sportLabel(sport)} leagues',
         itemLabel: 'leagues',
-        description: favouritesOnly
-            ? 'Leagues containing your favourites'
-            : widget.favouriteLeagueIds == null
+        description: favoritesOnly
+            ? 'Leagues containing your favorites'
+            : widget.favoriteLeagueIds == null
                 ? null
                 : 'All available leagues',
         selected:
             widget.favorites ? (widget.initialLeague?.id ?? '') : _league.id,
-        initialGroup: widget.favorites && _favouriteSport != null
-            ? sportLabel(_favouriteSport!)
+        initialGroup: widget.favorites && _favoriteSport != null
+            ? sportLabel(_favoriteSport!)
             : null,
         topFirst: true,
         showSortingControls: sport == null,
         options: [
           if (widget.onManageLeagues != null)
-            sportsManageLeaguesOption(widget.favouriteLeagueIds?.length ?? 0),
+            sportsManageLeaguesOption(widget.favoriteLeagueIds?.length ?? 0),
           for (final l in sportsStandingsLeagues)
             if ((sport == null || _sport(l) == sport) &&
-                (!favouritesOnly || _leagueHasFavourites(l)))
+                (!favoritesOnly || _leagueHasFavorites(l)))
               SportsFilterOption(l.id, l.name, sportIcon(_sport(l)),
                   logoUrl: l.logoUrl,
                   searchTerms: '${l.shortName} ${l.region ?? ''}',
                   group: sport == null ? sportLabel(_sport(l)) : null,
-                  description: widget.favouriteLeagueIds == null
+                  description: widget.favoriteLeagueIds == null
                       ? leagueDescription(l)
-                      : '${widget.favouriteLeagueIds!.contains(l.id) ? 'Favourite league' : widget.follows.teams.any((team) => team.leagueId == l.id) ? 'Favourite teams or athletes' : 'Other league'} · ${leagueDescription(l)}',
+                      : '${widget.favoriteLeagueIds!.contains(l.id) ? 'Favorite league' : widget.follows.teams.any((team) => team.leagueId == l.id) ? 'Favorite teams or athletes' : 'Other league'} · ${leagueDescription(l)}',
                   priority: leagueDisplayPriority(l))
         ]);
     if (mounted && id == '__manage_leagues__') {
@@ -600,13 +600,13 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
             options: [
               if (widget.onManageLeagues != null)
                 sportsManageLeaguesOption(
-                    widget.favouriteLeagueIds?.length ?? 0),
+                    widget.favoriteLeagueIds?.length ?? 0),
               for (final s in _sports)
-                if (!_onlyFavourites ||
-                    widget.favouriteLeagueIds == null ||
+                if (!_onlyFavorites ||
+                    widget.favoriteLeagueIds == null ||
                     widget.favorites ||
                     sportsStandingsLeagues
-                        .any((l) => _sport(l) == s && _leagueHasFavourites(l)))
+                        .any((l) => _sport(l) == s && _leagueHasFavorites(l)))
                   SportsFilterOption(s, sportLabel(s), sportIcon(s))
             ]);
         if (!mounted || sport == null) return;
@@ -625,7 +625,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
         _positions[_league.id] = (
           query: _search.text,
           group: _group,
-          favouritesFilter: _favouritesFilter,
+          favoritesFilter: _favoritesFilter,
           offset: _scroll.hasClients ? _scroll.offset : 0
         );
         while (_positions.length > 12) {
@@ -641,9 +641,9 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
           _search.text = previous?.query ?? '';
           _query = _search.text.trim().toLowerCase();
           _group = previous?.group;
-          _favouritesFilter = widget.favouritesFilter ??
-              previous?.favouritesFilter ??
-              SportsFavouritesFilter.all;
+          _favoritesFilter = widget.favoritesFilter ??
+              previous?.favoritesFilter ??
+              SportsFavoritesFilter.all;
         });
         if (_scroll.hasClients) _scroll.jumpTo(0);
         unawaited(_load(restoreOffset: previous?.offset));
@@ -666,7 +666,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
               service: _service));
       if (mounted) {
         setState(() {});
-        unawaited(_resolveFavourites());
+        unawaited(_resolveFavorites());
       }
     } finally {
       _openingLeague = false;
@@ -688,22 +688,22 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
     }
   }
 
-  Future<void> _pickFavouriteSport() async {
+  Future<void> _pickFavoriteSport() async {
     final sports = {
       for (final t in widget.follows.teams)
         if (sportsLeagueById(t.leagueId) case final league?) _sport(league)
     };
     final selected = await showSportsFilterPicker(context,
-        title: 'Filter favourites',
+        title: 'Filter favorites',
         itemLabel: 'sports',
-        selected: _favouriteSport ?? '',
+        selected: _favoriteSport ?? '',
         options: [
           const SportsFilterOption('', 'All sports', Icons.sports),
           for (final sport in _sports.where(sports.contains))
             SportsFilterOption(sport, sportLabel(sport), sportIcon(sport)),
         ]);
     if (mounted && selected != null) {
-      _changeFilter(() => _favouriteSport = selected.isEmpty ? null : selected);
+      _changeFilter(() => _favoriteSport = selected.isEmpty ? null : selected);
     }
   }
 
@@ -721,7 +721,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
         // Move before removing the focused row; keep the user's current focus
         // if they navigated elsewhere while the save was in flight.
         if (mounted &&
-            (widget.favorites || _onlyFavourites) &&
+            (widget.favorites || _onlyFavorites) &&
             focused?.hasFocus == true) {
           focused!.nextFocus();
         }
@@ -762,7 +762,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
 
   void _saveError() =>
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Could not save favourite. Please try again.')));
+          content: Text('Could not save favorite. Please try again.')));
 
   bool get _television => context.read<AppPreferences?>()?.isTelevision == true;
 
@@ -830,13 +830,13 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                         : null,
                     hintText: inline
                         ? widget.favorites
-                            ? 'Search favourites'
+                            ? 'Search favorites'
                             : 'Search $_entryName'
                         : null,
                     labelText: inline
                         ? null
                         : widget.favorites
-                            ? 'Search favourites'
+                            ? 'Search favorites'
                             : 'Search $_entryName',
                     prefixIcon: Icon(Icons.search, size: compact ? 18 : 24),
                     suffixIcon: _search.text.isEmpty
@@ -886,8 +886,8 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
           '${widget.follows.nameOf(t) ?? t.teamId} ${league?.name ?? ''} ${league?.shortName ?? ''}'
               .toLowerCase();
       return terms.every(label.contains) &&
-          (_favouriteSport == null ||
-              league != null && _sport(league) == _favouriteSport);
+          (_favoriteSport == null ||
+              league != null && _sport(league) == _favoriteSport);
     }).toList();
     final indices = {for (var i = 0; i < teams.length; i++) teams[i].key: i};
     return Column(children: [
@@ -907,29 +907,29 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                       autofocus: _television,
                       onPressed: _pick,
                       icon: const Icon(Icons.add, size: 17),
-                      label: const Text('Add favourite',
+                      label: const Text('Add favorite',
                           style: TextStyle(fontSize: 11.5)))),
               const SizedBox(width: 6),
               Expanded(
                   child: SportsFilterButton(
-                      key: const ValueKey('favourites-sport'),
+                      key: const ValueKey('favorites-sport'),
                       caption: 'Sport',
-                      value: sportsPickerSportLabel(context, _favouriteSport),
-                      selected: _favouriteSport != null,
-                      onTap: _pickFavouriteSport)),
+                      value: sportsPickerSportLabel(context, _favoriteSport),
+                      selected: _favoriteSport != null,
+                      onTap: _pickFavoriteSport)),
               if (widget.follows.teams
                   .any((t) => widget.follows.nameOf(t) == null))
                 IconButton(
-                    tooltip: _resolvingFavourites
+                    tooltip: _resolvingFavorites
                         ? 'Loading team names'
                         : 'Retry team names',
-                    onPressed: _resolvingFavourites
+                    onPressed: _resolvingFavorites
                         ? null
                         : () {
                             setState(() {});
-                            unawaited(_resolveFavourites(refresh: true));
+                            unawaited(_resolveFavorites(refresh: true));
                           },
-                    icon: _resolvingFavourites
+                    icon: _resolvingFavorites
                         ? const SizedBox(
                             width: 16,
                             height: 16,
@@ -937,7 +937,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                         : const Icon(Icons.refresh, size: 18)),
             ])),
       Padding(
-          key: const ValueKey('favourites-search-slot'),
+          key: const ValueKey('favorites-search-slot'),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: _searchField(compact: true, inline: true)),
       if (!_keyboardOpen)
@@ -964,7 +964,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
               ? _empty(
                   widget.follows.isEmpty
                       ? 'Add a team or athlete to follow them in Sports.'
-                      : 'No favourites match these filters.',
+                      : 'No favorites match these filters.',
                   clear: !widget.follows.isEmpty)
               : ListView.builder(
                   scrollCacheExtent: const ScrollCacheExtent.pixels(100),
@@ -980,23 +980,23 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                     final name =
                         widget.follows.nameOf(entry) ?? 'Team ${entry.teamId}';
                     final logo = widget.follows.logoOf(entry);
-                    return SportsFavouriteTile(
+                    return SportsFavoriteTile(
                       key: ObjectKey(entry),
                       entry: entry,
                       striped: index.isOdd,
                       name: name,
                       league: league?.name ?? entry.leagueId,
                       logo: logo,
-                      selection: _favouriteSelection,
+                      selection: _favoriteSelection,
                       onFocusChange: (focused) {
-                        if (wide && focused) _focusFavourite(entry);
-                        if (!focused && _pendingFavourite == entry) {
-                          _favouriteFocusTimer?.cancel();
+                        if (wide && focused) _focusFavorite(entry);
+                        if (!focused && _pendingFavorite == entry) {
+                          _favoriteFocusTimer?.cancel();
                         }
                       },
                       onTap: league == null
                           ? null
-                          : () => _openFavourite(entry, wide: wide),
+                          : () => _openFavorite(entry, wide: wide),
                       onRemove: () => _toggle(
                           entry.leagueId,
                           SportsTeam(
@@ -1036,10 +1036,10 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                 onTap: _pick)),
       ]);
 
-  void _setFavouritesFilter(SportsFavouritesFilter value) {
-    if (_favouritesFilter == value) return;
-    _changeFilter(() => _favouritesFilter = value);
-    widget.onFavouritesChanged?.call(value);
+  void _setFavoritesFilter(SportsFavoritesFilter value) {
+    if (_favoritesFilter == value) return;
+    _changeFilter(() => _favoritesFilter = value);
+    widget.onFavoritesChanged?.call(value);
   }
 
   Widget _compactControls(double width, {required bool hasGroups}) {
@@ -1048,12 +1048,12 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
         width >= 500 && MediaQuery.textScalerOf(context).scale(14) <= 18;
     final data = _data;
     final status = data == null ? 'Loading standings…' : _status(data);
-    final favourite = SportsFavouritesFilterButton(
-        key: const ValueKey('standings-favourites-only'),
-        filter: _favouritesFilter,
-        favouriteLeagueCount: widget.favouriteLeagueIds?.length ?? 0,
-        favouriteTeamCount: widget.follows.teams.length,
-        onChanged: _setFavouritesFilter);
+    final favorite = SportsFavoritesFilterButton(
+        key: const ValueKey('standings-favorites-only'),
+        filter: _favoritesFilter,
+        favoriteLeagueCount: widget.favoriteLeagueIds?.length ?? 0,
+        favoriteTeamCount: widget.follows.teams.length,
+        onChanged: _setFavoritesFilter);
     final group = TextButton.icon(
         key: const ValueKey('standings-group'),
         style: TextButton.styleFrom(
@@ -1096,7 +1096,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                   width: _racingGroups ? 188 : 150,
                   child: _racingGroups ? _racingSelector() : group),
             ],
-            if (!_keyboardOpen) favourite,
+            if (!_keyboardOpen) favorite,
           ]),
           if (!singleRow && !_keyboardOpen && (_racingGroups || hasGroups))
             _racingGroups
@@ -1182,18 +1182,18 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                       : data?.failed == true
                           ? 'This league could not be loaded. You can retry or choose another league.'
                           : _query.isNotEmpty ||
-                                  _onlyFavourites ||
+                                  _onlyFavorites ||
                                   _group != null
-                              ? _favouritesFilter.emptySelectionMessage(
+                              ? _favoritesFilter.emptySelectionMessage(
                                       hasLeagues: widget
-                                              .favouriteLeagueIds?.isNotEmpty ==
+                                              .favoriteLeagueIds?.isNotEmpty ==
                                           true,
                                       hasTeams: !widget.follows.isEmpty) ??
                                   'No matches. Try another group or clear the filters.'
                               : 'No standings are available for this league.',
                   clear: !_loading &&
                       data?.failed != true &&
-                      (_query.isNotEmpty || _onlyFavourites || _group != null))
+                      (_query.isNotEmpty || _onlyFavorites || _group != null))
               : LayoutBuilder(builder: (context, constraints) {
                   final columnWidth = 46 *
                       (MediaQuery.textScalerOf(context).scale(14) / 14)
@@ -1340,7 +1340,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                   ? EdgeInsets.zero
                   : null,
               iconSize: 20,
-              tooltip: 'Favourite teams & athletes',
+              tooltip: 'Favorite teams & athletes',
               icon: const Icon(Icons.star_border),
               onPressed: () async {
                 if (_navigating) return;
@@ -1377,19 +1377,19 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
             icon: const Icon(Icons.refresh)),
       ];
 
-  Widget _favouriteDetailPane() {
-    final selected = _selectedFavourite;
+  Widget _favoriteDetailPane() {
+    final selected = _selectedFavorite;
     final league =
         selected == null ? null : sportsLeagueById(selected.leagueId);
     if (selected == null ||
         league == null ||
         !widget.follows.isFollowed(selected.leagueId, selected.teamId)) {
       return const Center(
-          child: Text('Select a favourite to see team details.',
+          child: Text('Select a favorite to see team details.',
               textAlign: TextAlign.center, style: TextStyle(fontSize: 12)));
     }
-    final row = _favouriteRow(selected);
-    if (_detailsFavourite != selected) {
+    final row = _favoriteRow(selected);
+    if (_detailsFavorite != selected) {
       return Padding(
           padding: const EdgeInsets.all(12),
           child:
@@ -1406,9 +1406,9 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
           ]));
     }
     return SportsDetailsPanel(
-        key: ValueKey('favourite-details:${selected.key}'),
+        key: ValueKey('favorite-details:${selected.key}'),
         embedded: true,
-        initialData: _favouriteDetails,
+        initialData: _favoriteDetails,
         league: league,
         team: row.team,
         standing: row,
@@ -1429,8 +1429,8 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                   flex: 5,
                   child: RepaintBoundary(
                       child: ListenableBuilder(
-                          listenable: _favouriteChanges,
-                          builder: (context, _) => _favouriteDetailPane()))),
+                          listenable: _favoriteChanges,
+                          builder: (context, _) => _favoriteDetailPane()))),
               const VerticalDivider(width: 1),
               Expanded(flex: 4, child: list),
             ]);
@@ -1471,7 +1471,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
               Expanded(
                   child: SportsPopupHeader(
                       title: widget.favorites
-                          ? 'Favourite teams & athletes'
+                          ? 'Favorite teams & athletes'
                           : 'Standings',
                       description: widget.favorites
                           ? 'Teams and athletes you follow'
@@ -1487,7 +1487,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
       ]);
     }
     return SettingsScaffold(
-        title: widget.favorites ? 'Favourite teams & athletes' : 'Standings',
+        title: widget.favorites ? 'Favorite teams & athletes' : 'Standings',
         actions: widget.favorites ? null : _actions(),
         body: content);
   }
