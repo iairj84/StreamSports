@@ -21,6 +21,7 @@ class PlaylistProfile {
     this.portalPassword,
     this.m3uUrl,
     this.epgUrl,
+    this.epgUrls = const [],
     this.xtreamServer,
     this.xtreamUsername,
     this.xtreamPassword,
@@ -71,10 +72,24 @@ class PlaylistProfile {
   final String? portalUsername;
   final String? portalPassword;
   final String? m3uUrl;
+
+  /// The playlist's first guide URL. Additional feeds live in [epgUrls].
   final String? epgUrl;
+
+  /// Extra XMLTV guides for this playlist, refreshed alongside [epgUrl].
+  /// Providers commonly publish more than one guide (per region, or one per
+  /// channel group), and one feed failing must never hide the others.
+  final List<String> epgUrls;
   final String? xtreamServer;
   final String? xtreamUsername;
   final String? xtreamPassword;
+
+  /// Every guide URL this playlist refreshes: [epgUrl] first, then
+  /// [epgUrls], with blanks and duplicates removed.
+  List<String> get allEpgUrls => <String>{
+        if (epgUrl != null && epgUrl!.isNotEmpty) epgUrl!,
+        ...epgUrls.where((url) => url.isNotEmpty),
+      }.toList();
 
   bool enabled;
 
@@ -186,6 +201,7 @@ class PlaylistProfile {
     String? portalPassword,
     String? m3uUrl,
     String? epgUrl,
+    List<String>? epgUrls,
     String? xtreamServer,
     String? xtreamUsername,
     String? xtreamPassword,
@@ -228,6 +244,7 @@ class PlaylistProfile {
         portalPassword: portalPassword ?? this.portalPassword,
         m3uUrl: m3uUrl ?? this.m3uUrl,
         epgUrl: epgUrl ?? this.epgUrl,
+        epgUrls: epgUrls ?? List<String>.from(this.epgUrls),
         xtreamServer: xtreamServer ?? this.xtreamServer,
         xtreamUsername: xtreamUsername ?? this.xtreamUsername,
         xtreamPassword: xtreamPassword ?? this.xtreamPassword,
@@ -267,6 +284,7 @@ class PlaylistProfile {
         'portalPassword': portalPassword,
         'm3uUrl': m3uUrl,
         'epgUrl': epgUrl,
+        'epgUrls': epgUrls,
         'xtreamServer': xtreamServer,
         'xtreamUsername': xtreamUsername,
         'xtreamPassword': xtreamPassword,
@@ -304,6 +322,11 @@ class PlaylistProfile {
         portalPassword: json['portalPassword'] as String?,
         m3uUrl: json['m3uUrl'] as String?,
         epgUrl: json['epgUrl'] as String?,
+        epgUrls: (json['epgUrls'] as List?)
+                ?.whereType<String>()
+                .where((url) => url.isNotEmpty)
+                .toList() ??
+            const <String>[],
         xtreamServer: json['xtreamServer'] as String?,
         xtreamUsername: json['xtreamUsername'] as String?,
         xtreamPassword: json['xtreamPassword'] as String?,

@@ -87,7 +87,8 @@ void main() {
 
   for (final background in [false, true]) {
     test(
-        'professional codes require matchup and league; background=$background',
+        'professional codes need a matchup label, not a league word; '
+        'background=$background',
         () async {
       final matcher = background
           ? SportsChannelMatcher.background(guide, clock: () => now)
@@ -101,8 +102,13 @@ void main() {
       ]);
       final rows = (await matcher
           .matchDay([game], picks))[SportsChannelPicks.eventKey(game)]!;
-      expect(
-          rows.where((m) => m.isConfident).map((m) => m.channel.id), ['p::1']);
+      // A channel label that pairs the two codes with a matchup connector is
+      // enough on its own: providers put games on per-event slots named like
+      // "B01: 7pm ATL @ WAS", so the league word is often missing. A different
+      // explicitly named sport is still a conflict, and prose without the
+      // connector is not a matchup.
+      expect(rows.where((m) => m.isConfident).map((m) => m.channel.id),
+          unorderedEquals(['p::1', 'p::3']));
     });
   }
 

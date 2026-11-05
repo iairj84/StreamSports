@@ -900,7 +900,7 @@ class PlaylistManager extends ChangeNotifier {
         for (final session in _enabledSessionsSorted)
           if (session.profile.isStalker &&
               session.profile.includeLive &&
-              (session.profile.epgUrl?.isEmpty ?? true))
+              session.profile.allEpgUrls.isEmpty)
             (
               id: session.profile.id,
               load: () async {
@@ -912,16 +912,26 @@ class PlaylistManager extends ChangeNotifier {
             ),
       ];
 
-  /// Feed selection shared by automatic refresh and guide settings.
-  List<EpgSource> epgSources() => [
-        for (final profile in profiles.where((p) => p.enabled && p.includeLive))
-          if (profile.epgUrl?.isNotEmpty ?? false)
-            EpgSource(
-              url: profile.epgUrl!,
-              knownChannelIds: knownChannelIdsFor(profile.id),
-              headers: profile.requestHeaders,
-            ),
-      ];
+  /// Feed selection shared by automatic refresh and guide settings. A
+  /// playlist can configure several guides (see [PlaylistProfile.allEpgUrls]);
+  /// each becomes its own source, so a slow or broken feed leaves the others'
+  /// stored programmes untouched.
+  List<EpgSource> epgSources() {
+    final sources = <EpgSource>[];
+    for (final profile in profiles.where((p) => p.enabled && p.includeLive)) {
+      final urls = profile.allEpgUrls;
+      if (urls.isEmpty) continue;
+      final knownChannelIds = knownChannelIdsFor(profile.id);
+      for (final url in urls) {
+        sources.add(EpgSource(
+          url: url,
+          knownChannelIds: knownChannelIds,
+          headers: profile.requestHeaders,
+        ));
+      }
+    }
+    return sources;
+  }
 
   Set<String> supplementaryGuideSelection() {
     final saved = _storage.getSupplementaryGuideSelection();

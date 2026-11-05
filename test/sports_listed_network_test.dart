@@ -100,6 +100,9 @@ void main() {
     ('Golf Chnl', 'Golf Channel'),
     ('USA Net', 'USA Network'),
     ('NBA TV', 'NBATV'),
+    ('NFL Net', 'NFL Network'),
+    ('NHL Net', 'NHL Network'),
+    ('MLB Net', 'MLB Network'),
   ]) {
     test('${pair.$1} preserves both exact broadcaster spellings and metadata',
         () async {
@@ -213,6 +216,29 @@ void main() {
           [entry.value]);
     }
   });
+  test('league-network abbreviations match an unqualified provider name',
+      () async {
+    await matcher.prepare([
+      Channel(
+          id: 'nfl',
+          rawId: 'nfl',
+          playlistId: 'test',
+          name: 'NFL Network',
+          group: 'Sports',
+          url: 'https://example.invalid/nfl'),
+      Channel(
+          id: 'nhl',
+          rawId: 'nhl',
+          playlistId: 'test',
+          name: 'NHL Network HD',
+          group: 'Sports',
+          url: 'https://example.invalid/nhl'),
+    ]);
+    expect((await match(game('NFL Net'))).map((m) => m.channel.name),
+        ['NFL Network']);
+    expect((await match(game('NHL Net'))).map((m) => m.channel.name),
+        ['NHL Network HD']);
+  });
   test('an unscoped US shorthand cannot add a different regional service',
       () async {
     await matcher.prepare([
@@ -275,5 +301,96 @@ void main() {
         (await match(game('ACCN', online: true, country: 'United States')))
             .map((m) => m.channel.name),
         ['US: ACC Network']);
+  });
+
+  test('provider event slots match both team codes without a league word',
+      () async {
+    SportsGame fixture(SportsLeague league) => SportsGame(
+          id: 'slot',
+          league: league,
+          start: now,
+          state: GameState.live,
+          statusText: '',
+          home: const SportsTeam(
+              id: 'w',
+              name: 'Washington Wizards',
+              shortName: 'Wizards',
+              abbreviation: 'WAS'),
+          away: const SportsTeam(
+              id: 'a',
+              name: 'Atlanta Hawks',
+              shortName: 'Hawks',
+              abbreviation: 'ATL'),
+        );
+    Channel slot(String name, String group) => Channel(
+        id: name,
+        rawId: name,
+        playlistId: 'test',
+        name: name,
+        group: group,
+        url: 'https://example.invalid/slot');
+    const expected = {
+      'B01: 7pm ATL @ WAS',
+      'B02: 7pm ATL @ WAS',
+      'B03: 7pm ATL @ WAS',
+      'B04: 7pm ATL @ WAS',
+    };
+    await matcher.prepare([
+      slot('B01: 7pm ATL @ WAS', 'NBA'),
+      slot('B02: 7pm ATL @ WAS', 'Basketball'),
+      slot('B03: 7pm ATL @ WAS', 'NFL'),
+      slot('B04: 7pm ATL @ WAS', 'Sports'),
+      slot('B05: ATL and WAS', 'NBA'),
+    ]);
+    for (final league in ['nba', 'nfl']) {
+      // Both codes plus "@" identify the matchup. The category is not
+      // consulted, because the same code pair running in two sports at once is
+      // implausible and the rare wrong pick can be corrected by hand. A label
+      // without a matchup connector (B05) still contributes nothing.
+      expect(
+          (await match(fixture(sportsLeagueById(league)!)))
+              .map((m) => m.channel.name)
+              .toSet(),
+          expected,
+          reason: league);
+    }
+  });
+
+  test('event slot labels match two-letter team codes too', () async {
+    await matcher.prepare([
+      Channel(
+          id: 'kc',
+          rawId: 'kc',
+          playlistId: 'test',
+          name: 'B01: 7pm KC @ BUF',
+          group: 'NFL',
+          url: 'https://example.invalid/kc'),
+      Channel(
+          id: 'prose',
+          rawId: 'prose',
+          playlistId: 'test',
+          name: 'B02: KC and BUF',
+          group: 'NFL',
+          url: 'https://example.invalid/prose'),
+    ]);
+    final matches = await match(SportsGame(
+      id: 'kc-buf',
+      league: sportsLeagueById('nfl')!,
+      start: now,
+      state: GameState.live,
+      statusText: '',
+      home: const SportsTeam(
+          id: 'buf',
+          name: 'Buffalo Bills',
+          shortName: 'Bills',
+          abbreviation: 'BUF'),
+      away: const SportsTeam(
+          id: 'kc',
+          name: 'Kansas City Chiefs',
+          shortName: 'Chiefs',
+          abbreviation: 'KC'),
+    ));
+    expect(matches.map((m) => m.channel.name), ['B01: 7pm KC @ BUF']);
+    expect(matches.single.reason, MatchReason.name);
   });
 }

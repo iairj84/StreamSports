@@ -478,7 +478,7 @@ class StalkerPortalService extends CatalogApi {
       group: '',
       type: 'itv',
       base: _endpoint!.toString(),
-      externalGuide: profile.epgUrl?.isNotEmpty == true
+      externalGuide: profile.allEpgUrls.isNotEmpty
     ));
   }
 

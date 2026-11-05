@@ -61,6 +61,11 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
   late TextEditingController _nameController;
   late TextEditingController _m3uController;
   late TextEditingController _epgController;
+
+  /// Guide URL derived from the *saved* Xtream credentials. The form shows it
+  /// as the first guide line; saving re-derives it from any edited credentials
+  /// instead of keeping a stale link. Null for other modes or incomplete data.
+  String? _existingAutoEpg;
   late TextEditingController _xtreamServerController;
   late TextEditingController _xtreamUsernameController;
   late TextEditingController _xtreamPasswordController;
@@ -206,14 +211,11 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         .any((k) => _portalControllers[k]!.text.isNotEmpty);
     _nameController = TextEditingController(text: existing?.name ?? '');
     _m3uController = TextEditingController(text: existing?.m3uUrl ?? '');
-    // For an Xtream profile, epgUrl is usually just the auto-derived
-    // xmltv.php link (see _save) rather than something the user actually
-    // typed in — pre-filling this field with that would make a later
-    // credential edit (server/username/password) silently keep the *old*
-    // auto-derived URL instead of re-deriving it, since a non-empty field
-    // here is taken as a deliberate override. Only genuinely-custom EPG
-    // URLs (saved because they didn't match what today's credentials
-    // would derive) get pre-filled.
+    // For an Xtream profile, epgUrl is usually the auto-derived xmltv.php
+    // link (see _save). It is shown as the first guide line so the field
+    // lists every guide actually in use; saving compares it with the saved
+    // value and re-derives it from edited credentials, so a stale link is
+    // never kept as an accidental override.
     String? existingAutoEpg;
     if (existing != null && existing.mode == 'xtream') {
       try {
@@ -225,10 +227,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         // Keep an incomplete saved profile editable so its address can be fixed.
       }
     }
+    _existingAutoEpg = existingAutoEpg;
     _epgController = TextEditingController(
-        text: existing?.epgUrl == existingAutoEpg
-            ? ''
-            : (existing?.epgUrl ?? ''));
+        text: (existing?.allEpgUrls ?? const <String>[]).join('\n'));
     _xtreamServerController =
         TextEditingController(text: existing?.xtreamServer ?? '');
     _xtreamUsernameController =
@@ -572,18 +573,40 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
               controller: _epgController,
               focusNode: _epgFocus,
               readOnly: readOnly,
-              keyboardType: TextInputType.url,
+              minLines: 1,
+              maxLines: 3,
+              keyboardType: TextInputType.multiline,
               decoration: const InputDecoration(
                   labelText: 'Custom EPG (XMLTV) URL — optional',
-                  helperText: 'Uses the portal guide when left blank.',
+                  helperText:
+                      'Uses the portal guide when left blank. One URL per line for multiple guides.',
                   border: OutlineInputBorder(),
-                  isDense: true),
-              onSubmitted: (_) => _addButtonFocus.requestFocus())),
+                  isDense: true))),
     ];
   }
 
   String? _saveError;
   final _saveStatusKey = GlobalKey();
+
+  /// Guide URLs from the EPG field, one per line. Blanks and repeated URLs are
+  /// dropped; malformed entries fail before anything is saved so the field can
+  /// be corrected instead of silently withholding listings.
+  List<String> _enteredEpgUrls() {
+    final urls = <String>{};
+    for (final line in _epgController.text.split(RegExp(r'[\r\n]+'))) {
+      final value = line.trim();
+      if (value.isEmpty) continue;
+      final uri = Uri.tryParse(value);
+      if (uri == null ||
+          !const ['http', 'https'].contains(uri.scheme) ||
+          uri.host.isEmpty) {
+        throw const FormatException(
+            'Enter a valid http:// or https:// XMLTV URL.');
+      }
+      urls.add(uri.toString());
+    }
+    return urls.toList();
+  }
 
   void _showSaveFeedback(String message) {
     ScaffoldMessenger.of(context)
@@ -607,6 +630,14 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(tr('Playlist name is required.'))),
       );
+      return;
+    }
+    List<String> enteredEpgUrls = const [];
+    try {
+      enteredEpgUrls = _enteredEpgUrls();
+    } on FormatException catch (e) {
+      _showSaveFeedback(e.message);
+      _epgFocus.requestFocus();
       return;
     }
     var restoreSaveFocus = _addButtonFocus.hasFocus;
@@ -663,7 +694,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         if (!_includeLive && !_includeMovies && !_includeSeries) {
           throw const PortalException('Select at least one content type.');
         }
-        epgUrl = _includeLive ? _epgController.text.trim() : '';
+        epgUrl = _includeLive && enteredEpgUrls.isNotEmpty
+            ? enteredEpgUrls.first
+            : '';
         profile = PlaylistProfile(
             id: playlistId,
             name: name,
@@ -677,6 +710,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
             portalDeviceId2: _portalControllers['portalDeviceId2']!.text.trim(),
             portalSignature: _portalControllers['portalSignature']!.text.trim(),
             epgUrl: epgUrl,
+            epgUrls:
+                _includeLive ? enteredEpgUrls.skip(1).toList() : const <String>[],
             categoryLayout: _categoryLayout,
             includeLive: _includeLive,
             includeMovies: _includeMovies,
@@ -712,19 +747,32 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
 
         // Use player_api.php for Xtream content; some servers disable get.php exports. An
         // optional XMLTV override replaces the derived guide URL, with entries matched by
-        // epg_channel_id.
-        final customEpgUrl = _epgController.text.trim();
+        // epg_channel_id. A first line that is still the previously derived xmltv.php
+        // link is re-derived from the edited credentials rather than saved as a stale
+        // override; any other first line is a deliberate replacement.
+        var customEpgUrls = enteredEpgUrls;
         if (!_includeLive && !_includeMovies && !_includeSeries) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Select at least one content type.')));
           return;
         }
+        final derivedEpgUrl = _includeLive
+            ? XtreamHelper.buildEpgUrl(
+                server: server, username: username, password: password)
+            : '';
+        final savedAutoEpg = _existingAutoEpg;
+        if (derivedEpgUrl.isNotEmpty &&
+            savedAutoEpg != null &&
+            customEpgUrls.isNotEmpty &&
+            customEpgUrls.first == savedAutoEpg &&
+            derivedEpgUrl != savedAutoEpg) {
+          customEpgUrls = [derivedEpgUrl, ...customEpgUrls.skip(1)];
+        }
         epgUrl = !_includeLive
             ? ''
-            : customEpgUrl.isNotEmpty
-                ? customEpgUrl
-                : XtreamHelper.buildEpgUrl(
-                    server: server, username: username, password: password);
+            : customEpgUrls.isNotEmpty
+                ? customEpgUrls.first
+                : derivedEpgUrl;
         profile = PlaylistProfile(
           id: playlistId,
           categoryLayout: _categoryLayout,
@@ -737,6 +785,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
           xtreamUsername: username,
           xtreamPassword: password,
           epgUrl: epgUrl,
+          epgUrls:
+              _includeLive ? customEpgUrls.skip(1).toList() : const <String>[],
           enabled: _editingProfile?.enabled ?? true,
           sortOrder: _editingProfile?.sortOrder ?? playlist.profiles.length,
           syncFrequencyDays: _editingProfile?.syncFrequencyDays ??
@@ -745,7 +795,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         );
       } else {
         final m3uUrl = _m3uController.text.trim();
-        epgUrl = _epgController.text.trim();
+        epgUrl = enteredEpgUrls.isEmpty ? '' : enteredEpgUrls.first;
         if (m3uUrl.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(tr('M3U playlist URL is required.'))),
@@ -759,6 +809,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
           mode: 'm3u',
           m3uUrl: m3uUrl,
           epgUrl: epgUrl,
+          epgUrls: enteredEpgUrls.skip(1).toList(),
           enabled: _editingProfile?.enabled ?? true,
           sortOrder: _editingProfile?.sortOrder ?? playlist.profiles.length,
           syncFrequencyDays: _editingProfile?.syncFrequencyDays ??
@@ -801,15 +852,19 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
       }
 
       if (!mounted) return;
-      if (profile.isStalker && profile.includeLive && epgUrl.isEmpty) {
+      if (profile.isStalker &&
+          profile.includeLive &&
+          profile.allEpgUrls.isEmpty) {
         unawaited(epg.refreshPortal(playlistId));
       }
-      if (epgUrl.isNotEmpty) {
-        // Start the initial guide fetch without blocking navigation. Periodic updates handle
-        // later refreshes; a slow or failed XMLTV response must not strand the completed
-        // form.
-        unawaited(epg.refresh(epgUrl,
-            knownChannelIds: playlist.knownChannelIdsFor(playlistId),
+      // Start every configured guide without blocking navigation. Periodic
+      // updates handle later refreshes, and a slow or failed XMLTV response
+      // must not strand the completed form. Each URL keeps its own rows, so
+      // one broken feed cannot empty another's listings.
+      final knownChannelIds = playlist.knownChannelIdsFor(playlistId);
+      for (final url in profile.allEpgUrls) {
+        unawaited(epg.refresh(url,
+            knownChannelIds: knownChannelIds,
             headers: profile.requestHeaders));
       }
 
@@ -1087,14 +1142,16 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                       controller: _epgController,
                                       focusNode: _epgFocus,
                                       readOnly: readOnly,
+                                      minLines: 1,
+                                      maxLines: 3,
                                       decoration: InputDecoration(
                                         labelText: tr('EPG (XMLTV) URL'),
+                                        helperText: tr(
+                                            'One URL per line — every guide is refreshed'),
                                         border: const OutlineInputBorder(),
                                       ),
-                                      keyboardType: TextInputType.url,
-                                      textInputAction: TextInputAction.done,
-                                      onSubmitted: (_) =>
-                                          _addButtonFocus.requestFocus(),
+                                      keyboardType: TextInputType.multiline,
+                                      textInputAction: TextInputAction.newline,
                                     ),
                                   ),
                                 ] else if (_mode == 'smart' &&
@@ -1249,20 +1306,22 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                       controller: _epgController,
                                       focusNode: _epgFocus,
                                       readOnly: readOnly,
+                                      minLines: 1,
+                                      maxLines: 3,
                                       decoration: InputDecoration(
                                         labelText: tr(
                                             'Custom EPG (XMLTV) URL — optional'),
+                                        helperText: tr(
+                                            'One URL per line — every guide is refreshed'),
                                         border: const OutlineInputBorder(),
                                       ),
-                                      keyboardType: TextInputType.url,
-                                      textInputAction: TextInputAction.done,
-                                      onSubmitted: (_) =>
-                                          _addButtonFocus.requestFocus(),
+                                      keyboardType: TextInputType.multiline,
+                                      textInputAction: TextInputAction.newline,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    tr('Leave blank to use the panel\'s own xmltv.php. Set this if your provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.'),
+                                    tr('Leave blank to use the panel\'s own xmltv.php. Enter one URL per line when your provider publishes several guides. Set this if the provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.'),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),
@@ -1335,20 +1394,22 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                       controller: _epgController,
                                       focusNode: _epgFocus,
                                       readOnly: readOnly,
+                                      minLines: 1,
+                                      maxLines: 3,
                                       decoration: InputDecoration(
                                         labelText: tr(
                                             'Custom EPG (XMLTV) URL — optional'),
+                                        helperText: tr(
+                                            'One URL per line — every guide is refreshed'),
                                         border: const OutlineInputBorder(),
                                       ),
-                                      keyboardType: TextInputType.url,
-                                      textInputAction: TextInputAction.done,
-                                      onSubmitted: (_) =>
-                                          _addButtonFocus.requestFocus(),
+                                      keyboardType: TextInputType.multiline,
+                                      textInputAction: TextInputAction.newline,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    tr('Leave blank to use the panel\'s own xmltv.php. Set this if your provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.'),
+                                    tr('Leave blank to use the panel\'s own xmltv.php. Enter one URL per line when your provider publishes several guides. Set this if the provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.'),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),

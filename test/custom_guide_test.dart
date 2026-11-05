@@ -58,6 +58,37 @@ void main() {
         isNull);
   });
 
+  test('a playlist keeps every configured guide URL in a stable order', () {
+    final profile = PlaylistProfile(
+        id: 'multi',
+        name: 'Multi',
+        mode: 'm3u',
+        m3uUrl: 'https://example.test/list.m3u',
+        epgUrl: 'https://example.test/main.xml',
+        epgUrls: const [
+          'https://example.test/extra.xml',
+          'https://example.test/main.xml',
+          ''
+        ],
+        sortOrder: 0,
+        createdAt: DateTime(2026));
+    expect(profile.allEpgUrls, [
+      'https://example.test/main.xml',
+      'https://example.test/extra.xml'
+    ]);
+    final restored = PlaylistProfile.fromJson(profile.toJson());
+    expect(restored.allEpgUrls, profile.allEpgUrls);
+    expect(
+        PlaylistProfile(
+                id: 'one',
+                name: 'One',
+                mode: 'm3u',
+                sortOrder: 0,
+                createdAt: DateTime(2026))
+            .allEpgUrls,
+        isEmpty);
+  });
+
   test(
       'custom guides fill exact-ID gaps, retain manual and primary listings, and stop when disabled',
       () async {

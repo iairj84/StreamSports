@@ -1053,17 +1053,23 @@ class SportsChannelMatcher {
 
   /// Name phrases a channel or programme title may use for [t] — nickname
   /// and full name. City names alone are skipped (two New York teams).
+  /// [shortCodes] admits two-letter abbreviations. An event label that pairs
+  /// both teams ("B01: 7pm KC @ BUF") identifies the matchup as surely with a
+  /// short code as a long one; guide titles keep the longer minimum so a stray
+  /// word such as "No" cannot stand in for a team.
   static List<String> _teamPhrases(SportsTeam t,
-      {bool college = false, bool soccer = false}) {
+      {bool college = false, bool soccer = false, bool shortCodes = false}) {
+    final codeMin = shortCodes ? 2 : 3;
     final out = <String>{};
     for (final s in [
       t.shortName,
       t.name,
       if (college) t.location ?? '',
-      if (t.abbreviation.trim().length >= 3) t.abbreviation,
+      if (t.abbreviation.trim().length >= codeMin) t.abbreviation,
     ]) {
       final n = sportsClubIdentity(sportsNormalize(s));
-      if (n.trim().length >= (college || s == t.abbreviation ? 3 : 4)) {
+      if (n.trim().length >=
+          (s == t.abbreviation ? codeMin : (college ? 3 : 4))) {
         out.add(n);
       }
     }
@@ -1133,14 +1139,15 @@ class SportsChannelMatcher {
   /// fighters (tennis: players), by full or last name — event channels say
   /// "Allen vs Duncan".
   /// Golf/racing: the event alone ("singapore grand prix").
-  static List<List<String>> _nameGroups(SportsGame g) {
+  static List<List<String>> _nameGroups(SportsGame g,
+      {bool shortCodes = false}) {
     switch (g.league.kind) {
       case SportsKind.team:
         final college = _isCollege(g.league);
-        final first =
-            _teamPhrases(g.home, college: college, soccer: g.league.soccer);
-        final second =
-            _teamPhrases(g.away, college: college, soccer: g.league.soccer);
+        final first = _teamPhrases(g.home,
+            college: college, soccer: g.league.soccer, shortCodes: shortCodes);
+        final second = _teamPhrases(g.away,
+            college: college, soccer: g.league.soccer, shortCodes: shortCodes);
         final shared = first.toSet().intersection(second.toSet());
         return [
           first.where((p) => !shared.contains(p)).toList(),
@@ -2447,8 +2454,10 @@ class SportsChannelMatcher {
       }
       final context = contexts[g]!;
       final groups = context.nameGroups;
+      // Labels pair both teams, so two-letter codes are admitted here only.
+      final labelGroups = _nameGroups(g, shortCodes: true);
       Set<int>? named;
-      for (final group in groups) {
+      for (final group in labelGroups) {
         final hits = candidates(group);
         named = named == null ? hits : named.intersection(hits);
         if (named.isEmpty) break;
@@ -2458,7 +2467,8 @@ class SportsChannelMatcher {
         channelEvidence(i);
         if (!_eligible(i, g) ||
             context.conflicts(g, _names[i]) ||
-            !_opponentsFit(g, groups, _names[i])) {
+            !_opponentsFit(g, labelGroups, _names[i],
+                allowUnqualifiedCodes: true)) {
           continue;
         }
         if (g.league.kind == SportsKind.tennis &&
@@ -3221,12 +3231,13 @@ class SportsChannelMatcher {
     }
     // Also discover narrowly named event feeds even if they lack a sport tag.
     final broad = candidates.toSet();
+    final slotGroups = _nameGroups(game, shortCodes: true);
     final selected = <int>{
       ...broad,
       ..._channelsNaming([
         ...terms.event,
         ...terms.league,
-        ..._nameGroups(game).expand((g) => g)
+        ...slotGroups.expand((g) => g)
       ])
     };
     final found = {
@@ -3254,8 +3265,9 @@ class SportsChannelMatcher {
       final currentRelated = related(p.text);
       final eventNow = terms.event.any(p.text.contains);
       final eventName = terms.event.any(name.contains);
-      final namedEvent =
-          nameGroups.isNotEmpty && _opponentsFit(game, nameGroups, name);
+      final namedEvent = slotGroups.isNotEmpty &&
+          _opponentsFit(game, slotGroups, name,
+              allowUnqualifiedCodes: true);
       if (!broad.contains(i) &&
           !eventName &&
           !namedEvent &&
@@ -3499,6 +3511,13 @@ final _networkAliases = {
     'SPORTSNET1': 'Sportsnet One',
     'SN360': 'Sportsnet360',
     'NHLN': 'NHL Network',
+    // ESPN abbreviates the league networks ("NFL Net") while providers spell
+    // them out ("US: NFL Network HD"). These are single global services, so
+    // normalizing the abbreviation here matches either spelling without the
+    // US-region requirement applied to genuinely ambiguous synonyms.
+    'NFL NET': 'NFL Network',
+    'NHL NET': 'NHL Network',
+    'MLB NET': 'MLB Network',
     'NESN BOSTON': 'NESN',
     'TVAS': 'TVA Sports',
     'TVAS2': 'TVA Sports 2',
@@ -3647,7 +3666,12 @@ int _soccerAgeGroup(SportsGame game) => _soccerAges[
         '') ??
     0;
 
-bool _opponentsFit(SportsGame game, List<List<String>> groups, String text) {
+/// Channel labels may name both sides by code alone ("B01: 7pm ATL @ WAS"),
+/// so [allowUnqualifiedCodes] accepts a code matchup that has the connector but
+/// no competition word. Guide text leaves it off: a programme title that only
+/// mentions two codes stays ambiguous until the fixture provides the league.
+bool _opponentsFit(SportsGame game, List<List<String>> groups, String text,
+    {bool allowUnqualifiedCodes = false}) {
   if (groups.isEmpty || !groups.every((g) => g.any(text.contains))) {
     return false;
   }
@@ -3675,7 +3699,9 @@ bool _opponentsFit(SportsGame game, List<List<String>> groups, String text) {
         game.league.shortName,
         ...game.league.seriesPhrases
       ].map(sportsNormalize);
-      if (!competition.any((p) => p.trim().length >= 3 && text.contains(p)) ||
+      final qualified =
+          competition.any((p) => p.trim().length >= 3 && text.contains(p));
+      if ((!allowUnqualifiedCodes && !qualified) ||
           !_teamSynopsisConnector.hasMatch(text)) {
         return false;
       }
