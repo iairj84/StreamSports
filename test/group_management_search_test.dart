@@ -269,7 +269,11 @@ void main() {
     await query(tester, 'Last');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pump();
-    Focus.of(tester.element(find.text('Last category'))).requestFocus();
+    tester
+        .widget<ListTile>(find.ancestor(
+            of: find.text('Last category'), matching: find.byType(ListTile)))
+        .focusNode!
+        .requestFocus();
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();

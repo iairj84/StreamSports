@@ -165,6 +165,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   bool _scoresOpen = false;
 
+  /// Focus for the scores panel: while it is open the remote belongs to it, so
+  /// Left/Right/Up/Down never leak through to the transport shortcuts.
+  final FocusNode _scoresFocus = FocusNode(debugLabel: 'player-scores');
+
   /// Centre opens the scores instead of the channel card: while watching,
   /// "what else is on" is the question worth answering, and the channel card
   /// is still a long press away.
@@ -174,8 +178,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
       return;
     }
     _hideTimer?.cancel();
-    setState(() => _scoresOpen = !_scoresOpen);
-    _rootFocus.requestFocus();
+    final open = !_scoresOpen;
+    setState(() => _scoresOpen = open);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (open) {
+        _scoresFocus.requestFocus();
+      } else {
+        _rootFocus.requestFocus();
+      }
+    });
   }
 
   /// Tune the matched channel for a game picked in the scores panel. Matching
@@ -966,6 +978,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                         : 24) +
                                     MediaQuery.paddingOf(context).bottom,
                                 child: PlayerScoresPanel(
+                                    focusNode: _scoresFocus,
                                     onClose: _toggleScores,
                                     onPlay: (game) =>
                                         unawaited(_playScoreGame(game)))),

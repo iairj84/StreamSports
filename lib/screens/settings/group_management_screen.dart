@@ -7,6 +7,7 @@ import '../../models/m3u_group.dart';
 import '../../services/playlist_manager.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/tv_text_field_gate.dart';
+import '../../widgets/hold_to_activate.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../l10n/l10n.dart';
 
@@ -215,6 +216,52 @@ class _GroupListState extends State<_GroupList>
   List<String> _terms = const [];
   late List<String> _labels;
 
+  /// Title currently held for moving. While set, Up/Down shift that row and OK
+  /// drops it — no need to walk back to an arrow button for every place.
+  String? _grabbed;
+  final _rowFocus = <String, FocusNode>{};
+  List<String> _visibleTitles = const [];
+
+  FocusNode _nodeFor(String title) =>
+      _rowFocus.putIfAbsent(title, () => FocusNode(debugLabel: 'group-$title'));
+
+  void _grab(String title) {
+    setState(() => _grabbed = title);
+    _nodeFor(title).requestFocus();
+  }
+
+  Future<void> _moveGrabbed(int delta) async {
+    final title = _grabbed;
+    if (title == null) return;
+    await widget.playlist.moveGroup(
+        widget.playlistId, widget.type, title, delta,
+        shown: _visibleTitles);
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nodeFor(title).requestFocus();
+    });
+  }
+
+  /// Grab mode owns Up/Down and the activation key; the list's own focus
+  /// traversal is untouched when nothing is grabbed.
+  KeyEventResult _onRowKey(FocusNode node, KeyEvent event) {
+    if (_grabbed == null) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowUp && event is! KeyUpEvent) {
+      unawaited(_moveGrabbed(-1));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown && event is! KeyUpEvent) {
+      unawaited(_moveGrabbed(1));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      setState(() => _grabbed = null);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -249,6 +296,9 @@ class _GroupListState extends State<_GroupList>
   @override
   void dispose() {
     _search.dispose();
+    for (final node in _rowFocus.values) {
+      node.dispose();
+    }
     _scroll.dispose();
     super.dispose();
   }
@@ -269,7 +319,8 @@ class _GroupListState extends State<_GroupList>
             for (var i = 0; i < widget.groups.length; i++)
               if (_terms.every(_labels[i].contains)) widget.groups[i],
           ];
-    final titles = groups.map((group) => group.title);
+    final titles = groups.map((group) => group.title).toList();
+    _visibleTitles = titles;
     final hidden = groups.where((group) => group.isHidden).length;
     return LayoutBuilder(builder: (context, constraints) {
       // Keep the field and results usable when a landscape keyboard leaves
@@ -350,6 +401,30 @@ class _GroupListState extends State<_GroupList>
                 ],
               ),
             ),
+          if (_grabbed != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+              child: Row(children: [
+                Icon(Icons.drag_handle,
+                    size: 16, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: Text(
+                        tr('Moving {name} — Up/Down to move, OK to drop',
+                            {'name': _grabbed!}),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.primary))),
+              ]),
+            )
+          else if (!compact)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+              child: Text(tr('Hold OK on a category to move it.'),
+                  style: Theme.of(context).textTheme.bodySmall),
+            ),
           Expanded(
             child: groups.isEmpty
                 ? Center(
@@ -366,71 +441,80 @@ class _GroupListState extends State<_GroupList>
                         const SingleActivator(LogicalKeyboardKey.arrowRight):
                             widget.onDone
                       },
-                    child: ListView.builder(
-                      controller: _scroll,
-                      itemCount: groups.length,
-                      itemBuilder: (context, index) {
-                        final group = groups[index];
-                        // Keep row identity across visibility changes; the icon alone
-                        // changes. Actions always address the original provider title.
-                        return ListTile(
-                          key: ValueKey(group.title),
-                          title: Text(group.title),
-                          // Order is saved immediately, like visibility. Buttons
-                          // stay visible so a remote can reach them with Left
-                          // from the row instead of hunting a menu.
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                key: ValueKey('group-up-${group.title}'),
-                                tooltip: tr('Move up'),
-                                visualDensity: VisualDensity.compact,
-                                icon: const Icon(Icons.arrow_upward, size: 18),
-                                onPressed: index == 0
-                                    ? null
-                                    : () => widget.onSave(() => widget.playlist
-                                        .moveGroup(widget.playlistId,
-                                            widget.type, group.title, -1,
-                                            shown: titles.toList())),
-                              ),
-                              IconButton(
-                                key: ValueKey('group-down-${group.title}'),
-                                tooltip: tr('Move down'),
-                                visualDensity: VisualDensity.compact,
-                                icon:
-                                    const Icon(Icons.arrow_downward, size: 18),
-                                onPressed: index == groups.length - 1
-                                    ? null
-                                    : () => widget.onSave(() => widget.playlist
-                                        .moveGroup(widget.playlistId,
-                                            widget.type, group.title, 1,
-                                            shown: titles.toList())),
-                              ),
-                              RepaintBoundary(
-                                key: ValueKey(group.isHidden),
-                                child: Icon(
-                                  group.isHidden
-                                      ? Icons.circle_outlined
-                                      : Icons.check_circle,
-                                  color: group.isHidden
-                                      ? interfaceColor(context, Colors.white54)
-                                      : Theme.of(context).colorScheme.primary,
+                    child: Focus(
+                        canRequestFocus: false,
+                        skipTraversal: true,
+                        onKeyEvent: _onRowKey,
+                        child: ListView.builder(
+                          controller: _scroll,
+                          itemCount: groups.length,
+                          itemBuilder: (context, index) {
+                            final group = groups[index];
+                            // Keep row identity across visibility changes; the icon alone
+                            // changes. Actions always address the original provider title.                        // Hold grabs the row, OK drops it — a long list needs
+                            // one hold, not a trip back to an arrow per place.
+                            void activate() {
+                              if (_grabbed != null) {
+                                setState(() => _grabbed = null);
+                                return;
+                              }
+                              widget
+                                  .onSave(() => widget.playlist.setGroupHidden(
+                                        widget.playlistId,
+                                        group.title,
+                                        !group.isHidden,
+                                        loadImmediately: !widget.deferLoading,
+                                        type: widget.type,
+                                      ));
+                            }
+
+                            return HoldToActivate(
+                              onHold: () => _grab(group.title),
+                              onTap: activate,
+                              child: ListTile(
+                                key: ValueKey(group.title),
+                                focusNode: _nodeFor(group.title),
+                                // Pointer taps never reach HoldToActivate's key
+                                // handler, so the row keeps its own tap target.
+                                onTap: activate,
+                                selected: _grabbed == group.title,
+                                selectedTileColor: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: .12),
+                                title: Text(group.title),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _grabbed == group.title
+                                          ? Icons.drag_handle
+                                          : Icons.reorder,
+                                      size: 18,
+                                      color: interfaceColor(
+                                          context, Colors.white38),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    RepaintBoundary(
+                                      key: ValueKey(group.isHidden),
+                                      child: Icon(
+                                        group.isHidden
+                                            ? Icons.circle_outlined
+                                            : Icons.check_circle,
+                                        color: group.isHidden
+                                            ? interfaceColor(
+                                                context, Colors.white54)
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                          onTap: () => widget
-                              .onSave(() => widget.playlist.setGroupHidden(
-                                    widget.playlistId,
-                                    group.title,
-                                    !group.isHidden,
-                                    loadImmediately: !widget.deferLoading,
-                                    type: widget.type,
-                                  )),
-                        );
-                      },
-                    )),
+                            );
+                          },
+                        ))),
           ),
         ],
       );

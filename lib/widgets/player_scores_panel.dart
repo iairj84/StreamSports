@@ -17,8 +17,11 @@ import 'sports_filter_picker.dart';
 /// tune the matched channel.
 class PlayerScoresPanel extends StatefulWidget {
   const PlayerScoresPanel(
-      {super.key, required this.onClose, required this.onPlay});
+      {super.key, this.focusNode, required this.onClose, required this.onPlay});
 
+  /// The player owns this node so it can hand the remote over on open and take
+  /// it back on close.
+  final FocusNode? focusNode;
   final VoidCallback onClose;
   final ValueChanged<SportsGame> onPlay;
 
@@ -170,7 +173,8 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
         if (!didPop) widget.onClose();
       },
       child: Focus(
-        autofocus: true,
+        focusNode: widget.focusNode,
+        autofocus: widget.focusNode == null,
         onKeyEvent: _keys,
         child: Container(
           key: const ValueKey('player-scores-panel'),
