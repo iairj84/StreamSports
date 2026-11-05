@@ -359,6 +359,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                 ? tr('Search everything... (press OK to type)')
                                 : tr('Search everything...'),
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             hintStyle: TextStyle(
                                 color: Theme.of(context)
                                     .appBarTheme

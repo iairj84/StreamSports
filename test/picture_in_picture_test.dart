@@ -156,6 +156,7 @@ void main() {
   test(
       'live preview supports Home PiP and background audio without a new player',
       () async {
+    pip.setAutoEnterOnLeave(true);
     final owner = Object();
     pip.attach(controller, allowBackgroundAudio: true, title: 'Tennis HD');
     expect(update()['mediaSession'], true);
@@ -194,13 +195,16 @@ void main() {
     await native('foreground');
     expect(controller.value.isPlaying, false);
   });
-  test('preview audio works with PiP denied and respects paused playback',
+  test('Home with PiP denied pauses instead of playing to a hidden app',
       () async {
     pip.attach(controller, allowBackgroundAudio: true);
     pip.setPreviewVisible(Object(), true);
     permitted = false;
     expect(await pip.enter(), false);
     await native('background', {'resume': true, 'screenOff': false});
+    expect(controller.value.isPlaying, false);
+    expect(update()['mediaSession'], false);
+    await native('foreground');
     expect(controller.value.isPlaying, true);
     await native('mediaAction', 'pause');
     await native('background', {'screenOff': true});

@@ -743,6 +743,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // tabs: content -> groups -> exit; legacy page 0 -> groups.
       if (_phonePage == 2) {
         if (_timelineFilterActive) _closeTimelineFilter();
+        if (_timelineGuideKey.currentState?.returnToNow() ?? false) return;
         setState(() => _phonePage = 1);
       } else if (_phonePage == 0) {
         setState(() => _phonePage = 1);
@@ -759,6 +760,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     if (_timelineKeyboardScope.hasFocus ||
         _timelineSearchOptionNodes.any((node) => node.hasFocus)) {
       _closeTimelineFilter(toGuide: true);
+      return;
+    }
+    // A guide scrolled away from the live slot returns to "now" before it
+    // leaves for the category column; only the next Back walks out.
+    if (_focusDepth == 2 &&
+        !_timelineFilterActive &&
+        (_timelineGuideKey.currentState?.returnToNow() ?? false)) {
       return;
     }
     final previousDepth = (_focusDepth - 1).clamp(0, 2);
@@ -2592,6 +2600,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   hintStyle:
                       TextStyle(color: interfaceColor(context, Colors.white54)),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                 ),
                 textInputAction: TextInputAction.search,
                 onSubmitted: (_) => _submitTimelineFilter(),
@@ -4479,6 +4489,33 @@ class _TimelineGuideState extends State<_TimelineGuide>
     }
   }
 
+  /// Back on the guide first returns to the live slot when the viewer has
+  /// scrolled away from it, instead of leaving for the category column
+  /// straight away. Returns true when that jump *was* the whole move.
+  bool returnToNow() {
+    final pos = laidOutScrollPosition(_gridHScroll);
+    if (pos == null) return false;
+    final now = DateTime.now();
+    final nowX = _xFor(_floorToSlot(now));
+    if ((pos.pixels - nowX).abs() < _pixelsPerMinute * 2) return false;
+    _jumpToNow();
+    final row = _focusedRowIndex;
+    // The jump culls rows, so land the cursor back on the live slot once the
+    // rebuilt blocks have registered — leaving it on a culled block would
+    // drop D-pad focus out of the grid entirely.
+    if (row != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final blocks = _rowBlocks[row];
+        final live = blocks == null
+            ? null
+            : _bestBlockFor(blocks, DateTime.now());
+        if (live != null) _focusBlock(live.node);
+      });
+    }
+    return true;
+  }
+
   void _startNowTimer() {
     _nowTimer?.cancel();
     if (!_visible) return;
@@ -5826,54 +5863,20 @@ class _TimelineRow extends StatelessWidget {
         .where((p) => seenSlots.add(
             '${p.start.millisecondsSinceEpoch}-${p.stop.millisecondsSinceEpoch}'))
         .toList();
-    if (inWindow.isEmpty) {
-      // A full-window placeholder keeps channels focusable and playable when no guide data is
-      // available.
-      final totalWidth =
-          windowEnd.difference(windowStart).inMinutes * pixelsPerMinute;
-      return SizedBox(
-        height: _guideRowHeight(context),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: _guideBlockGap(context)),
-          child: _ProgramBlock(
-            program: null,
-            placeholderLabel: isGuideSection(channel)
-                ? guideSectionTitle(channel)
-                : epgLoading
-                    ? tr('Loading EPG…')
-                    : tr('No program data available'),
-            isNow: false,
-            translucent: translucent,
-            onOpen: onOpen,
-            onShowOptions: onShowOptions,
-            blockLeft: 0,
-            blockWidth: totalWidth,
-            hScroll: hScroll,
-            onRegister: (node) =>
-                onRegisterBlock(rowIndex, windowStart, windowEnd, node),
-            onUnregister: (node) => onUnregisterBlock(rowIndex, node),
-            onFocusGained: () {
-              ensureRowVisible?.call(rowIndex);
-              onFocusChanged?.call(channel, null);
-              onFocusTracked?.call(rowIndex, null);
-            },
-          ),
-        ),
-      );
-    }
     final from = windowStart.add(
         Duration(milliseconds: (range.$1 / pixelsPerMinute * 60000).round()));
     final to = windowStart.add(
         Duration(milliseconds: (range.$2 / pixelsPerMinute * 60000).round()));
+    // A row with no guide data at all, or with nothing airing in the visible
+    // span, still needs something to land on. Both use a placeholder sized to
+    // the visible span: a window-wide one put its own centre — and its focus —
+    // hours off-screen once the guide covered a full day.
+    if (inWindow.isEmpty) return _gapRow(context, from, to);
     final visible = inWindow
         .where((p) =>
             (p.stop.isAfter(from) && p.start.isBefore(to)) || keepFocused(p))
         .toList();
-    // A guide gap must still offer a row to remote navigation.
-    if (visible.isEmpty) {
-      visible.add(inWindow.where((p) => p.stop.isAfter(from)).firstOrNull ??
-          inWindow.last);
-    }
+    if (visible.isEmpty) return _gapRow(context, from, to);
     double leftFor(EpgProgram p) => p.start.isBefore(windowStart)
         ? 0.0
         : p.start.difference(windowStart).inMinutes * pixelsPerMinute;
@@ -5923,6 +5926,52 @@ class _TimelineRow extends StatelessWidget {
                     )),
         ],
       ),
+    );
+  }
+
+  /// One focusable, playable placeholder covering the visible span — used
+  /// when a channel has no guide data at all and when nothing airs inside
+  /// the span currently on screen.
+  Widget _gapRow(BuildContext context, DateTime from, DateTime to) {
+    final start = from.isBefore(windowStart) ? windowStart : from;
+    final visibleEnd = to.isAfter(windowEnd) ? windowEnd : to;
+    final end = visibleEnd.isAfter(start)
+        ? visibleEnd
+        : start.add(const Duration(minutes: 30));
+    final left = start.difference(windowStart).inMinutes * pixelsPerMinute;
+    final width = end.difference(start).inMinutes * pixelsPerMinute;
+    return SizedBox(
+      height: _guideRowHeight(context),
+      child: Stack(children: [
+        Positioned(
+          left: left,
+          width: width,
+          top: _guideBlockGap(context),
+          bottom: _guideBlockGap(context),
+          child: _ProgramBlock(
+            program: null,
+            placeholderLabel: isGuideSection(channel)
+                ? guideSectionTitle(channel)
+                : epgLoading
+                    ? tr('Loading EPG…')
+                    : tr('No program data available'),
+            isNow: false,
+            translucent: translucent,
+            onOpen: onOpen,
+            onShowOptions: onShowOptions,
+            blockLeft: left,
+            blockWidth: width,
+            hScroll: hScroll,
+            onRegister: (node) => onRegisterBlock(rowIndex, start, end, node),
+            onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+            onFocusGained: () {
+              ensureRowVisible?.call(rowIndex);
+              onFocusChanged?.call(channel, null);
+              onFocusTracked?.call(rowIndex, null);
+            },
+          ),
+        ),
+      ]),
     );
   }
 }

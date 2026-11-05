@@ -93,7 +93,12 @@ class PictureInPictureService extends ChangeNotifier {
 
   bool get fullscreenVisible => _fullscreen;
 
-  bool get _backgroundAudio => _allowBackgroundAudio && !_dismissed;
+  /// True only while a PiP window — or screen-off playback — is what keeps
+  /// the stream alive. A live preview also sets [allowBackgroundAudio], but
+  /// with Home PiP switched off, leaving the app must stop the sound instead
+  /// of playing on to a hidden activity.
+  bool get _backgroundAudio =>
+      _allowBackgroundAudio && !_dismissed && (autoEnterOnLeave || active);
 
   void setFullscreenVisible(bool visible, {bool playerOpen = false}) {
     _fullscreen = visible;

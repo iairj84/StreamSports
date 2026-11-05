@@ -166,17 +166,17 @@ void main() {
       await settle(tester);
       expect(find.text('Waiting for stream…'), findsNothing);
       if (size.width >= 960) {
-        final surfaces = tester
-            .widgetList<VideoPlayerHdr>(find.byType(VideoPlayerHdr))
-            .toList();
+        // The audio indicator repaints the cell chrome, so compare the
+        // mounted video surfaces themselves rather than their widgets.
+        List<State> surfaces() => [
+              for (var i = 0; i < 2; i++)
+                tester.state(find.byType(VideoPlayerHdr).at(i))
+            ];
+        final mounted = surfaces();
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await settle(tester);
-        expect(
-            tester
-                .widgetList<VideoPlayerHdr>(find.byType(VideoPlayerHdr))
-                .toList(),
-            orderedEquals(surfaces));
-        expect(find.textContaining('Listen to this channel'), findsOneWidget);
+        expect(surfaces(), orderedEquals(mounted));
+        expect(find.textContaining('Watch fullscreen'), findsOneWidget);
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pump();
         expect(
@@ -246,7 +246,8 @@ void main() {
       }
       await tester.tap(find.byKey(const ValueKey('multiview-mute')));
       await settle(tester);
-      final videoState = tester.state(find.byType(VideoPlayerHdr).at(1));
+      final videoState = tester.state(
+          find.byType(VideoPlayerHdr).at(size.width >= 960 ? 0 : 1));
       await tester.tap(find.byKey(const ValueKey('multiview-cell-1')));
       await settle(tester);
       expect(tester.state(find.byType(VideoPlayerHdr)), same(videoState));

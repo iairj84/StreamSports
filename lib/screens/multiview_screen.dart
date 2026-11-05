@@ -18,7 +18,14 @@ import '../widgets/multiview_channel_picker.dart';
 import '../widgets/player_dialog.dart';
 import '../widgets/tv_menu_tile.dart';
 
-enum _MultiviewLayout { automatic, sideBySide, stacked, grid, spotlight }
+enum _MultiviewLayout {
+  automatic,
+  sideBySide,
+  stacked,
+  grid,
+  spotlight,
+  oneUp
+}
 
 /// An independent, bounded playback session. Opening/closing this route is the
 /// ownership boundary: the normal preview stops before any grid player opens.
@@ -102,6 +109,11 @@ class _MultiviewScreenState extends State<MultiviewScreen>
             area.height * height);
     return switch (_layout) {
       _MultiviewLayout.stacked => [cell(0, 0, 1, .5), cell(0, .5, 1, .5)],
+      // One larger screen on top, one smaller below.
+      _MultiviewLayout.oneUp => [
+        cell(0, 0, 1, 2 / 3),
+        cell(0, 2 / 3, 1, 1 / 3)
+      ],
       _MultiviewLayout.sideBySide => [cell(0, 0, .5, 1), cell(.5, 0, .5, 1)],
       _MultiviewLayout.automatic => area.height > area.width
           ? [cell(0, 0, 1, .5), cell(0, .5, 1, .5)]
@@ -439,6 +451,12 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                       'Two screens · top and bottom'
                     ),
                     (
+                      _MultiviewLayout.oneUp,
+                      Icons.view_day_outlined,
+                      'One big, one small',
+                      'Two screens · large picture on top'
+                    ),
+                    (
                       _MultiviewLayout.grid,
                       Icons.grid_view,
                       '4 screens',
@@ -550,6 +568,18 @@ class _MultiviewScreenState extends State<MultiviewScreen>
     return best;
   }
 
+  /// Moving onto a screen with Left/Right also gives it the sound, so the
+  /// cursor and the speaker never disagree and Select stays free to mean
+  /// fullscreen. Up/Down remain navigation-only, and mute wins.
+  void _followAudio(int i) {
+    if (_dialog || _leaving || _fullscreen != null || _session.muted) return;
+    final cell = _session.cells[i];
+    if (cell.channel == null || cell.controller?.value.isInitialized != true) {
+      return;
+    }
+    if (_session.active != i) unawaited(_session.selectAudio(i));
+  }
+
   KeyEventResult _key(int i, KeyEvent e, List<Rect> slots) {
     if (e is KeyUpEvent) return KeyEventResult.ignored;
     final k = e.logicalKey;
@@ -568,11 +598,17 @@ class _MultiviewScreenState extends State<MultiviewScreen>
     } else if (k == LogicalKeyboardKey.arrowLeft) {
       final next =
           _fullscreen == null ? _neighbor(i, const Offset(-1, 0), slots) : null;
-      if (next != null) _nodes[next].requestFocus();
+      if (next != null) {
+        _nodes[next].requestFocus();
+        _followAudio(next);
+      }
     } else if (k == LogicalKeyboardKey.arrowRight) {
       final next =
           _fullscreen == null ? _neighbor(i, const Offset(1, 0), slots) : null;
-      if (next != null) _nodes[next].requestFocus();
+      if (next != null) {
+        _nodes[next].requestFocus();
+        _followAudio(next);
+      }
     } else {
       return KeyEventResult.ignored;
     }
@@ -867,6 +903,8 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                               Icons.view_column_outlined,
                             _MultiviewLayout.stacked =>
                               Icons.view_agenda_outlined,
+                            _MultiviewLayout.oneUp =>
+                              Icons.view_day_outlined,
                             _MultiviewLayout.automatic =>
                               MediaQuery.sizeOf(context).height >
                                       MediaQuery.sizeOf(context).width
