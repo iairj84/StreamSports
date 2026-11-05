@@ -5913,6 +5913,12 @@ class _TimelineRow extends StatelessWidget {
                         blockLeft: leftFor(program),
                         blockWidth: widthFor(program),
                         hScroll: hScroll,
+                        // Only a block the viewer is actually looking at may
+                        // drag the timeline. A channel whose lone guide entry
+                        // sits in the future is kept mounted for focus, but
+                        // highlighting it must not send the whole guide there.
+                        revealOnFocus:
+                            program.start.isBefore(to) && program.stop.isAfter(from),
                         onRegister: (node) => onRegisterBlock(
                             rowIndex, program.start, program.stop, node),
                         onUnregister: (node) =>
@@ -5989,9 +5995,16 @@ class _ProgramBlock extends StatefulWidget {
       this.placeholderLabel,
       this.onRegister,
       this.onUnregister,
+      this.revealOnFocus = true,
       this.translucent = false});
 
   final bool translucent;
+
+  /// Whether gaining focus may scroll the timeline to this block. False for a
+  /// block kept mounted outside the displayed span (a channel whose only
+  /// programme is later today), so highlighting that row leaves the guide where
+  /// the viewer put it.
+  final bool revealOnFocus;
 
   /// Null for a row with no EPG data at all — [placeholderLabel] is shown
   /// instead of a title, but this block is still focusable and selectable
@@ -6077,6 +6090,7 @@ class _ProgramBlockState extends State<_ProgramBlock> {
   /// blocks retain position and use sticky titles; directional handlers position the viewport
   /// explicitly.
   void _revealHorizontally() {
+    if (!widget.revealOnFocus) return;
     if (widget.hScroll.hasClients) {
       final pos = widget.hScroll.position;
       final viewLeft = pos.pixels;

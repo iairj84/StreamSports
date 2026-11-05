@@ -2729,7 +2729,8 @@ class SportsChannelMatcher {
                         !(_opponentsFit(g, groups, identity,
                                 qualification: feedContext) ||
                             _opponentsFit(g, codeGroups, identity,
-                                qualification: feedContext)))) ||
+                                qualification: feedContext,
+                                allowUnqualifiedCodes: true)))) ||
             context.conflicts(g, identity) ||
             (g.state != GameState.post && recorded(p))) {
           continue;
@@ -2920,7 +2921,8 @@ class SportsChannelMatcher {
                   !_opponentsFit(g, groups, title,
                       qualification: feedContext) &&
                   !_opponentsFit(g, _nameGroups(g, shortCodes: true), title,
-                      qualification: feedContext));
+                      qualification: feedContext,
+                      allowUnqualifiedCodes: true));
         }
 
         final programme = _epg.getCurrentProgram(match.channel.epgId);

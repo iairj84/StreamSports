@@ -95,16 +95,16 @@ void main() {
       start: DateTime.now().subtract(const Duration(minutes: 25)),
       stop: DateTime.now().add(const Duration(minutes: 95)));
 
-  test('a hockey feed grouped as Hockey resolves its compact NHL title',
-      () async {
+  test('a compact NHL title beats the league network channel', () async {
     guide.programmes = [
       programme('h01', '7pm UTA @ MTL'),
       programme('h02', '7pm BOS @ TOR'),
+      programme('nhl', 'NHL Hockey'),
     ];
     final result = await match(game(), [
-      _channel('h01', 'H01'),
-      _channel('h02', 'H02'),
-      _channel('center', 'NHL Center Ice'),
+      _channel('h01', 'H01', group: 'Sports'),
+      _channel('h02', 'H02', group: 'Sports'),
+      _channel('nhl', 'NHL Network', group: 'Sports'),
     ]);
     expect(result.first.channel.rawId, 'h01');
     expect(result.first.reason, MatchReason.guide);
@@ -112,16 +112,10 @@ void main() {
     expect(result.map((m) => m.channel.rawId), isNot(contains('h02')));
   });
 
-  test('two bare codes outside the sport stay ambiguous', () async {
-    guide.programmes = [
-      EpgProgram(
-          channelId: 'general',
-          title: '7pm UTA @ MTL',
-          start: DateTime.now().subtract(const Duration(minutes: 25)),
-          stop: DateTime.now().add(const Duration(minutes: 95))),
-    ];
-    final result = await match(
-        game(), [_channel('general', 'General Sports', group: 'Sports')]);
+  test('a title naming another matchup never matches', () async {
+    guide.programmes = [programme('left', '7pm BOS @ TOR')];
+    final result =
+        await match(game(), [_channel('left', 'General Sports')]);
     expect(result, isEmpty);
   });
 }
