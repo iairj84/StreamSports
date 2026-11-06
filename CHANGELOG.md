@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4 — 6 November 2026
+
+- Carry matched fixture titles into the Live TV guide for the whole session, not only while Sports is open. Guide titles now publish from the match session itself, so a catalogue restored from the Sports cache retitles its channels too.
+- Keep those rows current when the guide was hidden while matching finished, and show the fixture while fast-scrolling the guide.
+
 ## 0.2.3 — 6 November 2026
 
 - Show matched fixtures in the Live TV guide for sports event channels whose provider publishes no listings. A channel the Sports hub has already matched to a game now reads “Chelsea vs Arsenal” for that game’s slot instead of “No information”.

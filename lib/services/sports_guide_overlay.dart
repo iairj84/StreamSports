@@ -104,6 +104,8 @@ class SportsGuideOverlay extends ChangeNotifier {
         bindings.add(SportsGuideBinding(match.channel.epgId, game));
       }
     }
+    debugPrint('IPTV_GUIDE_OVERLAY events=${matches.length} '
+        'games=${gameByKey.length} bindings=${bindings.length}');
     publish(bindings, scope: scope, now: now);
   }
 

@@ -24,7 +24,6 @@ import '../widgets/sports_toolbar_navigation.dart';
 import '../utils/sports_time_filter.dart';
 import '../utils/sports_scroll_anchor.dart';
 import '../utils/sports_calendar.dart';
-import '../services/sports_guide_overlay.dart';
 import '../services/sports_match_session.dart';
 import '../services/sports_match_batch_plan.dart';
 import '../services/sports_browse_cache.dart';
@@ -1357,9 +1356,6 @@ class _SportsScreenState extends State<SportsScreen>
                 games: _games);
             _lastProgressSnapshot = now;
           }
-          SportsGuideOverlay.instance.publishMatches(
-              _games, _matchSession.matches,
-              key: _gameKey, scope: (_browseCacheKey, revision));
           setState(() {});
         }
       }
@@ -1402,9 +1398,6 @@ class _SportsScreenState extends State<SportsScreen>
                 SportsBrowseCache.shared.save(
                     _browseCacheKey, _matchSession, _guideGames, null, _now,
                     games: _games);
-                SportsGuideOverlay.instance.publishMatches(
-                    _games, _matchSession.matches,
-                    key: _gameKey, scope: (_browseCacheKey, revision));
                 setState(() {});
               }
             }

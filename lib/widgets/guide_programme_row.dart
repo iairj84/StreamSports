@@ -91,8 +91,9 @@ class _GuideProgrammeRowState extends State<GuideProgrammeRow> {
   }
 
   void _overlayChanged() {
+    // Not gated on isActive(): the guide may have been hidden while matching
+    // finished, and nothing else would re-read its rows on return.
     if (!widget.enabled ||
-        !widget.isActive() ||
         widget.fastBrowsing?.value == true ||
         widget.epg.hasPrograms(_id)) {
       return;

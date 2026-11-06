@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/sports.dart';
 import 'sports_channel_matcher.dart';
+import 'sports_guide_overlay.dart';
 import 'sports_match_inputs.dart';
 
 /// Presentation state for one day/catalogue. Only completed, current-input
@@ -270,6 +271,14 @@ class SportsMatchSession {
         game.state == GameState.post;
   }
 
+  /// Retitles the Live TV guide for channels this session has matched.
+  ///
+  /// Display only: the overlay is never read back as matching evidence, so a
+  /// title shown in the guide cannot confirm the channel that produced it.
+  void publishGuideOverlay() => SportsGuideOverlay.instance.publishMatches(
+      _games.values, matches,
+      key: SportsChannelPicks.eventKey, scope: _catalogue);
+
   bool _publish(Map<String, List<ChannelMatch>> next) {
     final done = {
       for (final id in identities.keys)
@@ -281,7 +290,10 @@ class SportsMatchSession {
             next.entries.any((e) => !identical(matches[e.key], e.value)));
     final checksChanged =
         checked.length != done.length || !checked.containsAll(done);
-    if (changed) matches = next;
+    if (changed) {
+      matches = next;
+      publishGuideOverlay();
+    }
     if (checksChanged) checked = done;
     return changed || checksChanged;
   }

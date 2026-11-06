@@ -33,6 +33,7 @@ import '../models/epg_program.dart';
 import '../models/m3u_group.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
+import '../services/sports_guide_overlay.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
@@ -4994,13 +4995,22 @@ class _TimelineGuideState extends State<_TimelineGuide>
                         )),
           ));
 
+  /// Cached rows for a fast-scrolling row, plus the display-only fixture the
+  /// Sports hub matched when the provider has no listings of its own.
+  List<EpgProgram> _guideRows(String channelId) {
+    final rows = widget.epg.peekPrograms(channelId);
+    return rows.isEmpty
+        ? (SportsGuideOverlay.instance.programmesFor(channelId) ?? rows)
+        : rows;
+  }
+
   Widget _buildFastGuideRow(int index) {
     final channel = widget.channels[index];
     final section = isGuideSection(channel);
     final program = section
         ? null
-        : programmeAt(widget.epg.peekPrograms(channel.epgId),
-            _referenceTime(_focusedProgram));
+        : programmeAt(
+            _guideRows(channel.epgId), _referenceTime(_focusedProgram));
     final label = section ? guideSectionTitle(channel) : program?.title ?? '';
     final left = _gridHScroll.hasClients ? _gridHScroll.offset : 0.0;
     final width = _gridHScroll.hasClients
