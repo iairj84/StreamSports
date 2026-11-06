@@ -210,11 +210,14 @@ class _SportsScreenState extends State<SportsScreen>
   late final _supplement =
       widget.supplement ?? SportsSupplementService.instance;
 
+  // Only leagues the viewer actually shows. Deriving headings from whatever
+  // league a loaded game happened to carry let a guide-discovered competition
+  // (BBL, KHL, …) sit on Sports without ever being selected or highlighted in
+  // the league list.
   List<SportsLeague> get _displayLeagues => {
         for (final league in _leagues) league.id: league,
         if (sportsLeagueById(_leagueFilter ?? '') case final league?)
           league.id: league,
-        for (final game in _games) game.league.id: game.league,
       }.values.toList();
 
   List<SportsGame> _guideGames = const [];
@@ -230,10 +233,13 @@ class _SportsScreenState extends State<SportsScreen>
       if (sportsCalendarDayOffset(_now, day) == 0 &&
           _guidePlaylistRevision ==
               context.read<PlaylistManager>().liveRevision)
+        // Guide coverage follows the same selection as every other feed. An
+        // unknown league id used to pass unconditionally, which surfaced
+        // competitions the viewer never chose; the guide leagues that are
+        // meant to be automatic are already in the shown list.
         ..._guideGames.where((g) =>
             g.end?.isAfter(_now) == true &&
-            (sportsLeagueById(g.league.id) == null ||
-                _eventLeagues.any((l) => l.id == g.league.id))),
+            _eventLeagues.any((l) => l.id == g.league.id)),
     ]);
   }
 
