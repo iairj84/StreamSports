@@ -11,6 +11,7 @@ import '../../widgets/tv_menu_tile.dart';
 import '../../l10n/l10n.dart';
 
 import 'general_settings_screen.dart';
+import 'remote_control_screen.dart';
 import 'app_update_screen.dart';
 import 'device_transfer_screen.dart';
 import 'playlist_manager_screen.dart';
@@ -111,6 +112,11 @@ class SettingsMenuScreen extends StatelessWidget {
                           'Themes',
                           'Six palettes · true black to light',
                           const ThemeScreen()),
+                      link(
+                          Icons.settings_remote,
+                          'Remote control',
+                          'What each button does, and remapping the spare ones',
+                          const RemoteControlScreen()),
                     ]),
                     if (includeTools && !prefs.hideMultiview)
                       SettingsSection(title: tr('Viewing tools'), children: [

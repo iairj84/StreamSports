@@ -36,6 +36,7 @@ import '../services/epg_service.dart';
 import '../services/sports_guide_overlay.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
+import '../services/remote_controls.dart';
 import '../services/storage_service.dart';
 import '../utils/time_format.dart';
 import '../utils/scroll_safety.dart';
@@ -831,6 +832,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         _tvTabFocusNode.requestFocus();
       }
     });
+    RemoteControls.instance.attach(context.read<StorageService>());
+    HardwareKeyboard.instance.addHandler(_onHardwareKey);
     _guideSearchRefresh = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted && _timelineFilterQuery.isNotEmpty && !_previewCovered) {
         setState(() {});
@@ -845,6 +848,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   @override
   void dispose() {
     _releasePreviewHint?.call();
+    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _guideFocus.dispose();
     _columnDepth.dispose();
     _sportsOpen.dispose();
@@ -1424,6 +1428,44 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         _previewFuture = null;
       }
     }
+  }
+
+  /// A button the viewer remapped in Settings > Remote control.
+  ///
+  /// Registered app-wide but acts only while this screen is on top, so a
+  /// player, dialog or settings page above it keeps every button it already
+  /// uses. Only bound buttons are consumed; everything else falls through to
+  /// focus navigation untouched.
+  bool _onHardwareKey(KeyEvent event) {
+    if (!mounted) return false;
+    final action = RemoteControls.instance.actionFor(event);
+    if (action == null) return false;
+    if (_route?.isCurrent == false) return false;
+    // A text field owns every button while it is listening for text.
+    final focusContext = FocusManager.instance.primaryFocus?.context;
+    if (focusContext != null &&
+        (focusContext.widget is EditableText ||
+            focusContext.findAncestorWidgetOfExactType<EditableText>() !=
+                null)) {
+      return false;
+    }
+    switch (action) {
+      case RemoteAction.live:
+        _onTabChanged('TV');
+      case RemoteAction.sports:
+        unawaited(_openSports());
+      case RemoteAction.search:
+        _openSearch();
+      case RemoteAction.multiview:
+        unawaited(_openMultiview());
+      case RemoteAction.movies:
+        _onTabChanged('Movies');
+      case RemoteAction.shows:
+        _onTabChanged('TV Shows');
+      case RemoteAction.settings:
+        unawaited(_openSettings());
+    }
+    return true;
   }
 
   /// Right, once there's no further column to move into, jumps straight to

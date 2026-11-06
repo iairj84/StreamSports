@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5 — 6 November 2026
+
+- Settings > Remote control: a plain-language guide to what every button does in Live TV, the guide, the player and menus, including the ones the TV itself consumes and the extra buttons most remotes send no default for.
+- Remap a spare button to Live TV, Sports, Search, Multiview, Movies, TV Shows or Settings. Nothing is remapped until you choose it, a button can only do one thing, and the buttons the app's navigation depends on are refused.
+
 ## 0.2.4 — 6 November 2026
 
 - Carry matched fixture titles into the Live TV guide for the whole session, not only while Sports is open. Guide titles now publish from the match session itself, so a catalogue restored from the Sports cache retitles its channels too.

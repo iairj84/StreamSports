@@ -54,6 +54,20 @@ class StorageService {
     await _prefs.setBool('multiview_fill', fill);
   }
 
+  /// Remote button remapping (Settings > Remote control): JSON
+  /// `{"<physical key id>": {"action": "<id>", "label": "Media Play / pause"}}`.
+  /// Null means nothing is remapped, which is the shipped default.
+  String? getRemoteControlBindings() =>
+      _prefs.getString('remote_control_bindings_v1');
+
+  Future<void> setRemoteControlBindings(String? json) async {
+    if (json == null || json.isEmpty) {
+      await _prefs.remove('remote_control_bindings_v1');
+      return;
+    }
+    await _prefs.setString('remote_control_bindings_v1', json);
+  }
+
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     // Apply the fork's starting layout once, including existing installs.
