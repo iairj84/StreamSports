@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 — 6 November 2026
+
+- Show matched fixtures in the Live TV guide for sports event channels whose provider publishes no listings. A channel the Sports hub has already matched to a game now reads “Chelsea vs Arsenal” for that game’s slot instead of “No information”.
+- Keep the generated titles display-only. They are never written to the guide database and never read back as matching evidence, so a wrong channel cannot confirm itself, and the provider’s own listings always win where they exist.
+
 ## 0.2.2 — 6 November 2026
 
 - Make **Schedule** follow the league list. It was listing every competition in the catalogue whatever had been hidden, so sports that were switched off still appeared in its sport and league pickers and in the fixtures it loaded. Schedule now uses the same shown leagues as Events and Standings.

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import '../models/epg_program.dart';
 import '../services/epg_service.dart';
+import '../services/sports_guide_overlay.dart';
 
 /// A database batch updates its channels, without rebuilding the whole guide.
 class GuideProgrammeRow extends StatefulWidget {
@@ -43,8 +44,16 @@ class _GuideProgrammeRowState extends State<GuideProgrammeRow> {
         : widget.fastBrowsing?.value == true
             ? widget.epg.peekPrograms(_id)
             : widget.epg.getPrograms(_id);
-    if (_child != null && !identical(rows, _rows)) _child = null;
-    _rows = rows;
+    _assign(rows);
+  }
+
+  /// Provider listings win; the overlay only fills a channel with no guide.
+  void _assign(List<EpgProgram> rows) {
+    final visible = rows.isEmpty && widget.enabled
+        ? (SportsGuideOverlay.instance.programmesFor(_id) ?? rows)
+        : rows;
+    if (_child != null && !identical(visible, _rows)) _child = null;
+    _rows = visible;
   }
 
   @override
@@ -52,6 +61,7 @@ class _GuideProgrammeRowState extends State<GuideProgrammeRow> {
     super.initState();
     _read();
     widget.epg.guideRowsLoaded.addListener(_changed);
+    SportsGuideOverlay.instance.addListener(_overlayChanged);
     widget.fastBrowsing?.addListener(_browsingChanged);
   }
 
@@ -80,6 +90,16 @@ class _GuideProgrammeRowState extends State<GuideProgrammeRow> {
     setState(_read);
   }
 
+  void _overlayChanged() {
+    if (!widget.enabled ||
+        !widget.isActive() ||
+        widget.fastBrowsing?.value == true ||
+        widget.epg.hasPrograms(_id)) {
+      return;
+    }
+    setState(_read);
+  }
+
   void _changed() {
     if (!widget.enabled ||
         !widget.isActive() ||
@@ -90,16 +110,14 @@ class _GuideProgrammeRowState extends State<GuideProgrammeRow> {
     if (changed != null && !changed.contains(_id)) return;
     final rows = widget.epg.getPrograms(_id);
     if (identical(rows, _rows)) return;
-    setState(() {
-      _rows = rows;
-      _child = null;
-    });
+    setState(() => _assign(rows));
   }
 
   @override
   void dispose() {
     widget.fastBrowsing?.removeListener(_browsingChanged);
     widget.epg.guideRowsLoaded.removeListener(_changed);
+    SportsGuideOverlay.instance.removeListener(_overlayChanged);
     super.dispose();
   }
 
