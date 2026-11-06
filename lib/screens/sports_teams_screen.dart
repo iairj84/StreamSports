@@ -81,7 +81,6 @@ class SportsTeamsScreen extends StatefulWidget {
       this.keyboardOpen,
       this.onTeamDetails,
       this.onLeagueChanged,
-      this.favoriteLeagueIds,
       this.favoritesFilter,
       this.onFavoritesChanged,
       this.onManageLeagues,
@@ -93,7 +92,6 @@ class SportsTeamsScreen extends StatefulWidget {
 
   /// Optional Hub context. Other standings remain browsable without enabling
   /// additional Events or Schedule feeds.
-  final Set<String>? favoriteLeagueIds;
   final SportsFavoritesFilter? favoritesFilter;
   final ValueChanged<SportsFavoritesFilter>? onFavoritesChanged;
   final Future<void> Function()? onManageLeagues;
@@ -390,9 +388,8 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
   @override
   void didUpdateWidget(SportsTeamsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if ((widget.favoritesFilter != null &&
-            _favoritesFilter != widget.favoritesFilter) ||
-        oldWidget.favoriteLeagueIds != widget.favoriteLeagueIds) {
+    if (widget.favoritesFilter != null &&
+        _favoritesFilter != widget.favoritesFilter) {
       _favoritesFilter = widget.favoritesFilter ?? _favoritesFilter;
       _filter();
     }
@@ -502,10 +499,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
         final label = _searchLabels[r] ?? '';
         return terms.every(label.contains) &&
             (!_onlyFavorites ||
-                (_favoritesFilter.includesLeagues &&
-                    widget.favoriteLeagueIds?.contains(_league.id) == true) ||
-                (_favoritesFilter.includesTeams &&
-                    widget.follows.isFollowed(_league.id, r.team.id)));
+                widget.follows.isFollowed(_league.id, r.team.id));
       }).toList();
       if (matches.isEmpty) continue;
       if (_group == null && (_data?.tables.length ?? 0) > 1) {
@@ -541,23 +535,15 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
   }
 
   bool _leagueHasFavorites(SportsLeague league) =>
-      (_favoritesFilter.includesLeagues &&
-          widget.favoriteLeagueIds?.contains(league.id) == true) ||
-      (_favoritesFilter.includesTeams &&
-          widget.follows.teams.any((team) => team.leagueId == league.id));
+      _favoritesFilter.isFiltered &&
+      widget.follows.teams.any((team) => team.leagueId == league.id);
 
   Future<SportsLeague?> _chooseLeague({String? sport}) async {
-    final favoritesOnly = _onlyFavorites &&
-        widget.favoriteLeagueIds != null &&
-        !widget.favorites;
+    final favoritesOnly = _onlyFavorites && !widget.favorites;
     final id = await showSportsFilterPicker(context,
         title: sport == null ? 'Choose league' : '${sportLabel(sport)} leagues',
         itemLabel: 'leagues',
-        description: favoritesOnly
-            ? 'Leagues containing your favorites'
-            : widget.favoriteLeagueIds == null
-                ? null
-                : 'All available leagues',
+        description: favoritesOnly ? 'Leagues containing your favorites' : null,
         selected:
             widget.favorites ? (widget.initialLeague?.id ?? '') : _league.id,
         initialGroup: widget.favorites && _favoriteSport != null
@@ -567,7 +553,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
         showSortingControls: sport == null,
         options: [
           if (widget.onManageLeagues != null)
-            sportsManageLeaguesOption(widget.favoriteLeagueIds?.length ?? 0),
+            sportsManageLeaguesOption(sportsStandingsLeagues.length),
           for (final l in sportsStandingsLeagues)
             if ((sport == null || _sport(l) == sport) &&
                 (!favoritesOnly || _leagueHasFavorites(l)))
@@ -575,9 +561,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                   logoUrl: l.logoUrl,
                   searchTerms: '${l.shortName} ${l.region ?? ''}',
                   group: sport == null ? sportLabel(_sport(l)) : null,
-                  description: widget.favoriteLeagueIds == null
-                      ? leagueDescription(l)
-                      : '${widget.favoriteLeagueIds!.contains(l.id) ? 'Favorite league' : widget.follows.teams.any((team) => team.leagueId == l.id) ? 'Favorite teams or athletes' : 'Other league'} · ${leagueDescription(l)}',
+                  description: leagueDescription(l),
                   priority: leagueDisplayPriority(l))
         ]);
     if (mounted && id == '__manage_leagues__') {
@@ -599,11 +583,9 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
             selected: sport ?? '',
             options: [
               if (widget.onManageLeagues != null)
-                sportsManageLeaguesOption(
-                    widget.favoriteLeagueIds?.length ?? 0),
+                sportsManageLeaguesOption(sportsStandingsLeagues.length),
               for (final s in _sports)
                 if (!_onlyFavorites ||
-                    widget.favoriteLeagueIds == null ||
                     widget.favorites ||
                     sportsStandingsLeagues
                         .any((l) => _sport(l) == s && _leagueHasFavorites(l)))
@@ -1051,7 +1033,6 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
     final favorite = SportsFavoritesFilterButton(
         key: const ValueKey('standings-favorites-only'),
         filter: _favoritesFilter,
-        favoriteLeagueCount: widget.favoriteLeagueIds?.length ?? 0,
         favoriteTeamCount: widget.follows.teams.length,
         onChanged: _setFavoritesFilter);
     final group = TextButton.icon(
@@ -1185,9 +1166,6 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                                   _onlyFavorites ||
                                   _group != null
                               ? _favoritesFilter.emptySelectionMessage(
-                                      hasLeagues: widget
-                                              .favoriteLeagueIds?.isNotEmpty ==
-                                          true,
                                       hasTeams: !widget.follows.isEmpty) ??
                                   'No matches. Try another group or clear the filters.'
                               : 'No standings are available for this league.',

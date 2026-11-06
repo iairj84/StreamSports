@@ -247,10 +247,6 @@ class AppConstants {
   /// Per viewer: the optional opening league, stored under its legacy key.
   static const String keySportsFavoriteLeague = 'vesper_sports_favorite_league';
 
-  /// Starred leagues, separate from the leagues included in Sports. Unset
-  /// means "every included league", so upgrades keep their previous filter.
-  static const String keySportsFavoriteLeagues =
-      'vesper_sports_favorite_leagues';
   static const String keyPaletteId = 'nox_palette_id';
 
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force

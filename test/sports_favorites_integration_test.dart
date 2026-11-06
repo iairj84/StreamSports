@@ -122,7 +122,6 @@ void main() {
     final follows = SportsFollows.load(storage);
     await follows.follow('eng.1', 'h', name: 'Home Club');
     final scores = DayScores();
-    var favoriteLeagues = <String>{};
     final browse = SportsScheduleBrowseState(), entry = FocusNode();
     addTearDown(entry.dispose);
     Widget app() => harness.app(
@@ -130,7 +129,6 @@ void main() {
         prefs,
         SportsSchedulePanel(
           follows: follows,
-          favoriteLeagueIds: favoriteLeagues,
           browseState: browse,
           entryFocus: entry,
           onFocusToolbar: () {},
@@ -170,17 +168,8 @@ void main() {
             .widgetList<SportsFixtureRow>(find.byType(SportsFixtureRow))
             .every((r) => r.favorite && r.game.league.id == 'eng.1'),
         true);
-    favoriteLeagues = {'nba'};
-    await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
-    expect(
-        tester
-            .widget<CompactChoiceList>(find.byType(CompactChoiceList))
-            .choices,
-        hasLength(1000),
-        reason: 'Favorite leagues and followed teams combine with OR');
     expect(scores.days, hasLength(1),
-        reason: 'Membership changes filter the existing snapshot');
+        reason: 'Scope changes filter the existing snapshot');
     Future<void> chooseScope(SportsFavoritesFilter filter) async {
       await tester.tap(find.byKey(const ValueKey('schedule-favorites-only')));
       await tester.pumpAndSettle();
@@ -189,24 +178,17 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    for (final (filter, league) in [
-      (SportsFavoritesFilter.leagues, 'nba'),
-      (SportsFavoritesFilter.teams, 'eng.1'),
-    ]) {
-      await chooseScope(filter);
-      expect(
-          tester
-              .widget<CompactChoiceList>(find.byType(CompactChoiceList))
-              .choices,
-          hasLength(500));
-      final rows =
-          tester.widgetList<SportsFixtureRow>(find.byType(SportsFixtureRow));
-      expect(rows, isNotEmpty);
-      expect(rows.every((row) => row.game.league.id == league), true);
-      expect(scores.days, hasLength(1));
-    }
     await chooseScope(SportsFavoritesFilter.favorites);
-    favoriteLeagues = {};
+    expect(
+        tester
+            .widget<CompactChoiceList>(find.byType(CompactChoiceList))
+            .choices,
+        hasLength(500));
+    final rows =
+        tester.widgetList<SportsFixtureRow>(find.byType(SportsFixtureRow));
+    expect(rows, isNotEmpty);
+    expect(rows.every((row) => row.game.league.id == 'eng.1'), true);
+    expect(scores.days, hasLength(1));
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
@@ -258,13 +240,11 @@ void main() {
       ])
     ]));
     addTearDown(service.close);
-    var favoriteLeagues = <String>{};
     Widget app() => harness.app(
         storage,
         prefs,
         SportsTeamsScreen(
             follows: follows,
-            favoriteLeagueIds: favoriteLeagues,
             service: service,
             initialLeague: sportsLeagueById('eng.1'),
             panel: true));
@@ -277,17 +257,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('One Club'), findsWidgets);
     expect(find.text('Two Club'), findsNothing);
-    favoriteLeagues = {'eng.1'};
-    await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
-    expect(find.text('One Club'), findsWidgets);
-    expect(find.text('Two Club'), findsWidgets,
-        reason: 'A favorite league includes its whole table');
-    expect(service.loads, 1);
     for (final filter in [
-      SportsFavoritesFilter.teams,
-      SportsFavoritesFilter.leagues,
-      SportsFavoritesFilter.favorites
+      SportsFavoritesFilter.all,
+      SportsFavoritesFilter.favorites,
     ]) {
       await tester.tap(find.byKey(const ValueKey('standings-favorites-only')));
       await tester.pumpAndSettle();
@@ -296,10 +268,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('One Club'), findsWidgets);
       expect(find.text('Two Club'),
-          filter == SportsFavoritesFilter.teams ? findsNothing : findsWidgets);
+          filter == SportsFavoritesFilter.all ? findsWidgets : findsNothing);
       expect(service.loads, 1, reason: 'Scope changes reuse the loaded table');
     }
-    favoriteLeagues = {};
     await tester.runAsync(() async {
       await follows.unfollow('eng.1', 'one');
       await follows.follow('eng.1', 'two');
@@ -328,7 +299,6 @@ void main() {
         prefs,
         SportsSchedulePanel(
           follows: follows,
-          favoriteLeagueIds: const {'nba'},
           browseState: browse,
           entryFocus: entry,
           onFocusToolbar: () {},
@@ -361,7 +331,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await choose(SportsFavoritesFilter.teams);
+    await choose(SportsFavoritesFilter.favorites);
     expect(counts(), {'soccer': 500},
         reason: 'Already-loaded calendar counts must not go blank');
     expect(scores.days, hasLength(1));
@@ -372,9 +342,9 @@ void main() {
     // Use bounded pumps while the week progress indicator is active.
     await tester.tap(find.byKey(const ValueKey('schedule-favorites-only')));
     await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('sports-favorites-leagues')));
+    await tester.tap(find.byKey(const ValueKey('sports-favorites-all')));
     await tester.pumpAndSettle();
-    expect(counts(), {'basketball': 500});
+    expect(counts(), {'basketball': 500, 'soccer': 500});
     scores.dayPending!.complete(
         (games: scores.fixtures(scores.days.last), incomplete: false));
     await tester.pumpAndSettle();
@@ -382,7 +352,6 @@ void main() {
         reason: 'No further days queued after changing scope');
     expect(browse.summaries.keys, [today],
         reason: 'Late old-scope results are discarded');
-    await choose(SportsFavoritesFilter.all);
     expect(counts(), {'basketball': 500, 'soccer': 500});
     expect(scores.days, hasLength(2));
     expect(tester.takeException(), isNull);
@@ -405,7 +374,6 @@ void main() {
         prefs,
         SportsSchedulePanel(
           follows: follows,
-          favoriteLeagueIds: const {'nba'},
           favoritesFilter: filter,
           browseState: browse,
           entryFocus: entry,
@@ -435,7 +403,7 @@ void main() {
             'Unordered fixtures with equal times have a stable identity tie-break');
     final times = <int>[];
     for (var i = 0; i < 40; i++) {
-      filter = SportsFavoritesFilter.values[(i * 3 + 1) % 4];
+      filter = SportsFavoritesFilter.values[(i * 3 + 1) % 2];
       final watch = Stopwatch()..start();
       await tester.pumpWidget(app());
       await tester.pump();
@@ -445,10 +413,7 @@ void main() {
           .widget<CompactChoiceList>(find.byType(CompactChoiceList))
           .choices;
       final expected = baselineOrder.where((id) =>
-          filter == SportsFavoritesFilter.all ||
-          filter == SportsFavoritesFilter.favorites ||
-          (filter == SportsFavoritesFilter.leagues && id.startsWith('nba:')) ||
-          (filter == SportsFavoritesFilter.teams && id.startsWith('eng.1:')));
+          filter == SportsFavoritesFilter.all || id.startsWith('eng.1:'));
       expect(choices.map((row) => row.id), expected);
       expect(
           tester
@@ -475,7 +440,7 @@ void main() {
     final day = DateTime(2026, 11, 9);
     final browse = SportsScheduleBrowseState()
       ..from = day
-      ..favoritesFilter = SportsFavoritesFilter.teams;
+      ..favoritesFilter = SportsFavoritesFilter.favorites;
     final entry = FocusNode();
     addTearDown(entry.dispose);
     await tester.pumpWidget(harness.app(
@@ -483,7 +448,6 @@ void main() {
         prefs,
         SportsSchedulePanel(
           follows: follows,
-          favoriteLeagueIds: const {},
           browseState: browse,
           entryFocus: entry,
           onFocusToolbar: () {},
@@ -527,7 +491,6 @@ void main() {
         prefs,
         SportsSchedulePanel(
           follows: follows,
-          favoriteLeagueIds: const {'nba'},
           favoritesFilter: filter,
           browseState: browse,
           entryFocus: entry,
@@ -547,7 +510,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('schedule-range-7')));
     await tester.pumpAndSettle();
     now = day.add(const Duration(minutes: 3));
-    filter = SportsFavoritesFilter.teams;
+    filter = SportsFavoritesFilter.favorites;
     leagues = [sportsLeagueById('eng.1')!];
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
@@ -592,7 +555,7 @@ void main() {
           service: service,
           panel: true,
           initialLeague: sportsLeagueById('eng.1'),
-          favoritesFilter: SportsFavoritesFilter.teams,
+          favoritesFilter: SportsFavoritesFilter.favorites,
         )));
     await tester.pumpAndSettle();
     expect(find.text('Retry'), findsOneWidget);

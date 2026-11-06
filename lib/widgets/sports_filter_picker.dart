@@ -23,29 +23,21 @@ class SportsFavoritesFilterButton extends StatelessWidget {
       {super.key,
       required this.filter,
       required this.onChanged,
-      this.favoriteLeagueCount,
       this.favoriteTeamCount,
       this.focusNode});
   final SportsFavoritesFilter filter;
   final ValueChanged<SportsFavoritesFilter> onChanged;
   final FocusNode? focusNode;
-  final int? favoriteLeagueCount, favoriteTeamCount;
+  final int? favoriteTeamCount;
 
   String _description(SportsFavoritesFilter option) {
-    if (favoriteLeagueCount == null || favoriteTeamCount == null) {
-      return option.description;
-    }
+    if (favoriteTeamCount == null) return option.description;
     final empty = option.emptySelectionMessage(
-        hasLeagues: favoriteLeagueCount! > 0,
         hasTeams: favoriteTeamCount! > 0);
     if (empty != null) return empty;
-    return switch (option) {
-      SportsFavoritesFilter.leagues =>
-        '$favoriteLeagueCount saved · includes the whole league',
-      SportsFavoritesFilter.teams =>
-        '$favoriteTeamCount saved · only these teams & athletes, in any league',
-      _ => option.description,
-    };
+    return option == SportsFavoritesFilter.favorites
+        ? '$favoriteTeamCount saved · only these teams & athletes, in any league'
+        : option.description;
   }
 
   Future<void> _choose(BuildContext context) async {
@@ -60,8 +52,6 @@ class SportsFavoritesFilterButton extends StatelessWidget {
                 icon: switch (option) {
                   SportsFavoritesFilter.all => Icons.list_rounded,
                   SportsFavoritesFilter.favorites => Icons.star_rounded,
-                  SportsFavoritesFilter.leagues => Icons.emoji_events_outlined,
-                  SportsFavoritesFilter.teams => Icons.groups_outlined,
                 }),
         ]);
     if (context.mounted && selected != null && selected != filter) {
@@ -76,10 +66,7 @@ class SportsFavoritesFilterButton extends StatelessWidget {
           label: 'Show results: ${filter.label}',
           hint: 'Choose all results or a favorites filter',
           child: SportsFilterButton(
-              caption: filter == SportsFavoritesFilter.leagues ||
-                      filter == SportsFavoritesFilter.teams
-                  ? 'Favorites'
-                  : 'Show',
+              caption: 'Show',
               value: filter.shortLabel,
               tooltip: 'Show: ${filter.label} · change result filter',
               selected: filter.isFiltered,
@@ -161,10 +148,10 @@ List<SportsFilterOption> sportsLeagueOptions(
               upcoming: counts[league.id]?.upcoming ?? 0),
     ];
 
-SportsFilterOption sportsManageLeaguesOption(int favoriteCount) =>
+SportsFilterOption sportsManageLeaguesOption(int leagueCount) =>
     SportsFilterOption(
         '__manage_leagues__', sportsManageLeaguesLabel, Icons.tune,
-        description: '$favoriteCount starred · include leagues, star favorites');
+        description: '$leagueCount leagues · choose which ones to show');
 
 String shortSportLabel(String sport) => switch (sport) {
       'soccer' => 'Soccer',

@@ -58,14 +58,6 @@ List<SportsLeague> savedSportsLeagues(StorageService storage) {
       : [for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!];
 }
 
-/// Starred leagues for the Favorites filter. Until the viewer stars one, every
-/// included league counts, which keeps the previous behaviour on upgrade.
-Set<String> savedSportsFavoriteLeagueIds(StorageService storage) {
-  final saved = storage.getSportsFavoriteLeagues();
-  if (saved == null) return savedSportsLeagues(storage).map((l) => l.id).toSet();
-  return saved.toSet();
-}
-
 /// Optional opening league, retained under its legacy single-favorite key.
 /// It must still belong to the default favorite-league selection.
 SportsLeague? favoriteSportsLeague(StorageService storage) {

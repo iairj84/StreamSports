@@ -73,7 +73,7 @@ void main() {
     await tester.pumpAndSettle();
     final search = find.byKey(const ValueKey('league-manager-search'));
     final sport = find.byKey(const ValueKey('league-manager-sport'));
-    final bulk = find.byKey(const ValueKey('enable-visible-leagues'));
+    final bulk = find.byKey(const ValueKey('show-visible-leagues'));
     expect(tester.getSize(search).height, 34);
     expect(tester.getRect(search).bottom, lessThan(tester.getRect(sport).top));
     expect(tester.getRect(sport).bottom, lessThan(tester.getRect(bulk).top));
@@ -114,7 +114,7 @@ void main() {
                 },
                 child: const Text('Open')))));
     Future<void> clear() async {
-      await tester.tap(find.byKey(const ValueKey('disable-visible-leagues')));
+      await tester.tap(find.byKey(const ValueKey('hide-visible-leagues')));
       await tester.pumpAndSettle();
       expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
       expect(storage.getSportsFavoriteLeague(), 'nhl');
@@ -138,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
     expect(storage.getSportsFavoriteLeague(), 'nhl');
-    expect(find.textContaining('0 starred · Choose leagues to finish'),
+    expect(find.textContaining('0 shown · Choose leagues to finish'),
         findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('nba')));
     await tester.pumpAndSettle();
@@ -207,13 +207,13 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     storage.failOnce = true;
-    await tester.tap(find.byKey(const ValueKey('enable-all-leagues')));
+    await tester.tap(find.byKey(const ValueKey('show-all-leagues')));
     await tester.pumpAndSettle();
     expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
     expect(
         find.text('Could not save leagues. Please try again.'), findsOneWidget);
     storage.gate = Completer<void>();
-    await tester.tap(find.byKey(const ValueKey('enable-all-leagues')));
+    await tester.tap(find.byKey(const ValueKey('show-all-leagues')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('close-leagues')));
     await tester.pump();
@@ -424,11 +424,11 @@ void main() {
           .map((c) => c.id)
           .toSet();
       expect(ids.length, greaterThan(2));
-      await tester.tap(find.byKey(const ValueKey('enable-visible-leagues')));
+      await tester.tap(find.byKey(const ValueKey('show-visible-leagues')));
       await tester.pumpAndSettle();
       expect(savedSportsLeagues(storage).map((l) => l.id).toSet(),
           {'nhl', ...ids});
-      await tester.tap(find.byKey(const ValueKey('disable-visible-leagues')));
+      await tester.tap(find.byKey(const ValueKey('hide-visible-leagues')));
       await tester.pumpAndSettle();
       expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
       expect(find.byKey(const ValueKey('league-manager-state')), findsNothing,
@@ -437,19 +437,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('All sports').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('disable-visible-leagues')));
+      await tester.tap(find.byKey(const ValueKey('hide-visible-leagues')));
       await tester.pump();
       expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
       expect(find.byType(SnackBar), findsNothing);
-      expect(find.textContaining('0 starred · Choose leagues to finish'),
+      expect(find.textContaining('0 shown · Choose leagues to finish'),
           findsOneWidget);
       expect(find.byType(CompactChoiceList), findsOneWidget,
           reason: 'Clearing Enabled only reveals leagues to choose next.');
       await tester.tap(find.byKey(const ValueKey('restore-league-selection')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('1 starred · Saved automatically'),
+      expect(find.textContaining('1 shown · Saved automatically'),
           findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('disable-visible-leagues')));
+      await tester.tap(find.byKey(const ValueKey('hide-visible-leagues')));
       await tester.pumpAndSettle();
       final search = find.byKey(const ValueKey('league-manager-search'));
       await tester.tap(search);

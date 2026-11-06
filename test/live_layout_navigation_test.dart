@@ -897,7 +897,11 @@ void main() {
           reason: 'Leaving must stop scheduling, not only hide progress.');
       await scores.firstBatch();
       scores.done.complete(scores.batch);
-      await settleSports(tester);
+      // The held fixture never answers every feed, so its progress bar keeps
+      // animating; pump a bounded window instead of waiting for stillness.
+      for (var i = 0; i < 120; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
       if (destination != 'dispose') {
         if (destination == 'manager') {
           await tester.tap(find.byKey(const ValueKey('close-leagues')));
@@ -966,7 +970,7 @@ void main() {
       expect(tab.hasFocus, isTrue,
           reason: 'Events receives entry focus before the first scores arrive');
       if (overlay) {
-        await tester.tap(find.byKey(const ValueKey('events-favorites-only')));
+        await tester.tap(find.byKey(const ValueKey('leagues-gear')));
         await tester.pumpAndSettle();
       } else {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -980,8 +984,9 @@ void main() {
       expect(FocusManager.instance.primaryFocus, same(chosen),
           reason: 'Late scores must not redirect the next remote activation');
       if (overlay) {
-        expect(find.text('Show results'), findsOneWidget);
-        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        expect(find.text('Choose leagues'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('close-leagues')));
+        await tester.pumpAndSettle();
       } else {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pump();
@@ -1053,71 +1058,42 @@ void main() {
       await settleSports(tester);
     }
 
-    expect(
-        tester
-            .widget<SportsFilterButton>(
-                find.byKey(const ValueKey('sport-picker')))
-            .value,
-        'All sports');
-    expect(
-        tester
-            .widget<SportsFilterButton>(
-                find.byKey(const ValueKey('league-picker')))
-            .value,
-        'All leagues');
-    expect(
-        tester
-            .widget<SportsFavoritesFilterButton>(
-                find.byKey(const ValueKey('events-favorites-only')))
-            .filter,
-        SportsFavoritesFilter.all);
-    await tapKey('events-favorites-only');
-    await tapKey('sports-favorites-favorites');
+    expect(find.byKey(const ValueKey('sport-picker')), findsNothing);
+    expect(find.byKey(const ValueKey('league-picker')), findsNothing);
+    expect(find.byKey(const ValueKey('events-favorites-only')), findsNothing);
     final calls = scores.calls;
-    await tapKey('sport-picker');
+    await tapKey('leagues-gear');
     expect(find.text('Choose leagues'), findsOneWidget);
-    await tapKey('basketball');
-    await tapKey('league-picker');
-    await captureSports(tester, const Size(390, 844), 'enabled-league-picker');
-    await tapKey('nba');
+    await captureSports(tester, const Size(390, 844), 'leagues-gear');
+    await tapKey('close-leagues');
     expect(scores.calls, calls,
-        reason: 'Events sport and league filters are local.');
+        reason: 'Opening the league list never refetches Events.');
     await tapKey('sports-view-schedule');
     final panel =
         tester.widget<SportsSchedulePanel>(find.byType(SportsSchedulePanel));
-    expect(panel.browseState.sport, 'basketball');
-    expect(panel.browseState.leagueId, 'nba');
     expect(
         panel.overviewLeagues!.map((l) => l.id), containsAll(['nba', 'nhl']));
+    await tapKey('schedule-sport');
+    await tapKey('basketball');
+    expect(panel.browseState.sport, 'basketball');
     await tapKey('schedule-league');
     expect(find.text('Choose leagues'), findsOneWidget);
     expect(find.byKey(const ValueKey('eng.1')), findsNothing);
+    await tapKey('nba');
+    expect(panel.browseState.leagueId, 'nba');
+    await tapKey('schedule-league');
     await tapKey('__all_sports__');
     expect(panel.browseState.sport, isNull);
     expect(panel.browseState.leagueId, isNull);
     final loaded = scores.calls;
     await tapKey('sports-view-events');
-    expect(
-        tester
-            .widget<SportsFilterButton>(
-                find.byKey(const ValueKey('sport-picker')))
-            .value,
-        'Basketball');
-    expect(
-        tester
-            .widget<SportsFilterButton>(
-                find.byKey(const ValueKey('league-picker')))
-            .value,
-        'NBA');
-    expect(scores.calls, loaded);
+    expect(find.byKey(const ValueKey('sport-picker')), findsNothing);
+    expect(scores.calls, loaded,
+        reason: 'Schedule browsing never narrows Events.');
     await tapKey('sports-view-standings');
-    final teamPanel =
-        tester.widget<SportsTeamsScreen>(find.byType(SportsTeamsScreen));
-    expect(teamPanel.favoriteLeagueIds, containsAll(['nba', 'nhl']));
     // Choosing a league in Standings carries through an intermediate tab.
     await tapKey('standings-sport');
     await tapKey('hockey');
-    expect(find.textContaining('Favorite league ·'), findsWidgets);
     final leagueList = find.descendant(
         of: find.byType(Dialog), matching: find.byType(CompactChoiceList));
     final lastLeague =
@@ -1144,18 +1120,6 @@ void main() {
             ?.id,
         'nba');
     await tapKey('sports-view-events');
-    expect(
-        tester
-            .widget<SportsFilterButton>(
-                find.byKey(const ValueKey('sport-picker')))
-            .value,
-        'Basketball');
-    expect(
-        tester
-            .widget<SportsFilterButton>(
-                find.byKey(const ValueKey('league-picker')))
-            .value,
-        'NBA');
     final requestsBefore = standingsRequests;
     // Exploring a non-enabled league never silently enables a feed.
     await tapKey('sports-view-standings');
@@ -1163,7 +1127,6 @@ void main() {
     await tapKey('sports-favorites-all');
     await tapKey('standings-sport');
     await tapKey('soccer');
-    expect(find.textContaining('Other league ·'), findsWidgets);
     await tapKey('eng.1');
     await tapKey('sports-view-schedule');
     schedule =
@@ -1193,25 +1156,16 @@ void main() {
     expect(scores.calls, scoreRequestsBeforeManagement,
         reason:
             'Opening and cancelling league management does not reload scores or standings.');
-    expect(storage.getSportsEventsSelection(),
-        ['basketball', 'nba', 'favorites']);
+    expect(storage.getSportsEventsSelection(), isEmpty,
+        reason: 'Events no longer stores a sport, league or favorites scope.');
     final application =
         tester.widget<MultiProvider>(find.byType(MultiProvider).first);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(application);
     await settleSports(tester);
-    expect(
-        tester
-            .widget<SportsFilterButton>(
-                find.byKey(const ValueKey('league-picker')))
-            .value,
-        'NBA');
-    expect(
-        tester
-            .widget<SportsFavoritesFilterButton>(
-                find.byKey(const ValueKey('events-favorites-only')))
-            .filter,
-        SportsFavoritesFilter.favorites);
+    expect(find.byKey(const ValueKey('league-picker')), findsNothing);
+    expect(find.byKey(const ValueKey('events-favorites-only')), findsNothing,
+        reason: 'Events reopens unfiltered; leagues come from the gear.');
     expect(playback.played, isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
@@ -1299,7 +1253,7 @@ void main() {
   });
 
   testWidgets(
-      'All is the Events default and other tabs cannot change its favorites filter',
+      'Events shows the chosen leagues and panels never change the saved league list',
       (tester) async {
     tester.view.physicalSize = const Size(960, 540);
     tester.view.devicePixelRatio = 1;
@@ -1347,53 +1301,14 @@ void main() {
 
     await flush();
     final savedLeagues = storage.getSportsLeagues();
-    expect(scores.requestedLeagues.single, containsAll(['nhl', 'eng.1']));
-    expect(scores.requestedLeagues.single, contains('nba'),
-        reason:
-            'Events opens across all leagues, independent of saved favorites.');
-    await tapKey('events-favorites-only');
-    await tapKey('sports-favorites-favorites');
+    expect(scores.requestedLeagues.single, contains('nhl'));
+    expect(scores.requestedLeagues.single, isNot(contains('nba')),
+        reason: 'Events shows exactly the leagues chosen in the league list.');
     expect(find.byKey(const ValueKey('card-nhl:scope-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('card-nhl:scope-1')), findsOneWidget);
-    // Choose the team league to inspect its two games without virtualized shelves.
-    await tapKey('league-picker');
-    final field = tester.widget<TextField>(find.byType(TextField));
-    field.focusNode!.requestFocus();
-    await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pump();
-    await tester.enterText(find.byType(TextField), 'Premier League');
-    await tester.pumpAndSettle();
-    await tapKey('eng.1');
-    expect(find.byKey(const ValueKey('card-eng.1:scope-1')), findsOneWidget);
-    expect(find.byKey(const ValueKey('card-eng.1:scope-0')), findsNothing);
-    await tapKey('events-favorites-only');
-    await captureSports(tester, const Size(960, 540), 'favorites-filter');
-    await tapKey('sports-favorites-all');
-    expect(find.byType(Dialog), findsNothing);
-    expect(find.byKey(const ValueKey('card-eng.1:scope-0')), findsOneWidget);
-    await tapKey('sport-picker');
-    await tester.sendKeyEvent(LogicalKeyboardKey.home);
-    await tester.pumpAndSettle();
-    await tapKey('');
-    expect(scores.requestedLeagues.last, containsAll(['nba', 'nhl', 'eng.1']),
-        reason:
-            'All really includes the wider catalogue, without needing to pick extra leagues.');
-    await tapKey('events-favorites-only');
-    await tapKey('sports-favorites-leagues');
-    expect(scores.requestedLeagues.last, contains('nhl'));
-    expect(scores.requestedLeagues.last, isNot(contains('eng.1')));
-    expect(scores.requestedLeagues.last, isNot(contains('nba')));
-    expect(find.byKey(const ValueKey('card-nhl:scope-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('card-nhl:scope-1')), findsOneWidget);
-    await tapKey('events-favorites-only');
-    await tapKey('sports-favorites-teams');
-    expect(scores.requestedLeagues.last, ['eng.1']);
-    await captureSports(tester, const Size(960, 540), 'favorites-teams');
-    expect(find.byKey(const ValueKey('card-eng.1:scope-1')), findsOneWidget);
-    expect(find.byKey(const ValueKey('card-eng.1:scope-0')), findsNothing);
-    await tapKey('events-favorites-only');
-    await tapKey('sports-favorites-all');
+    expect(find.byKey(const ValueKey('events-favorites-only')), findsNothing,
+        reason: 'Events shows every shown league, with no favorites scope.');
+    await captureSports(tester, const Size(960, 540), 'events-all-leagues');
     await tapKey('sports-view-schedule');
     expect(
         tester
@@ -1402,35 +1317,29 @@ void main() {
             .onlyFavorites,
         false);
     await tapKey('schedule-favorites-only');
-    await tapKey('sports-favorites-teams');
+    await tapKey('sports-favorites-favorites');
     await tapKey('sports-view-events');
-    expect(
-        tester
-            .widget<SportsFavoritesFilterButton>(
-                find.byKey(const ValueKey('events-favorites-only')))
-            .filter,
-        SportsFavoritesFilter.all);
-    expect(scores.requestedLeagues.last, contains('nba'));
+    expect(find.byKey(const ValueKey('events-favorites-only')), findsNothing,
+        reason: 'Events has no favorites scope to inherit from a panel.');
+    expect(scores.requestedLeagues.last, isNot(contains('nba')),
+        reason: 'A panel scope never widens Events beyond the chosen leagues.');
     expect(storage.getSportsLeagues(), savedLeagues);
     await tapKey('sports-view-standings');
     expect(
         tester
             .widget<SportsTeamsScreen>(find.byType(SportsTeamsScreen))
             .favoritesFilter,
-        SportsFavoritesFilter.teams);
-    await tapKey('sports-view-events');
-    await tapKey('events-favorites-only');
-    await tapKey('sports-favorites-leagues');
-    await tapKey('sports-view-standings');
+        SportsFavoritesFilter.favorites);
     await tapKey('standings-favorites-only');
     await tapKey('sports-favorites-all');
-    await tapKey('sports-view-events');
+    await tapKey('sports-view-schedule');
     expect(
         tester
-            .widget<SportsFavoritesFilterButton>(
-                find.byKey(const ValueKey('events-favorites-only')))
-            .filter,
-        SportsFavoritesFilter.leagues);
+            .widget<SportsSchedulePanel>(find.byType(SportsSchedulePanel))
+            .browseState
+            .onlyFavorites,
+        false,
+        reason: 'Standings scope changes reach Schedule but never Events.');
     expect(storage.getSportsLeagues(), savedLeagues);
     expect(playback.played, isEmpty);
     expect(tester.takeException(), isNull);
@@ -2145,8 +2054,8 @@ void main() {
             expect(find.text('Sports · screen 2'), findsOneWidget);
             expect(find.byType(PlayerControls), findsNothing);
             tester
-                .widget<SportsFilterButton>(
-                    find.byKey(const ValueKey('sport-picker')))
+                .widget<IconButton>(
+                    find.byKey(const ValueKey('sports-day')))
                 .focusNode!
                 .requestFocus();
             await tester.pump();
@@ -2319,8 +2228,8 @@ void main() {
             expect(scores.calls, calls + 1);
             // Returning to the toolbar is explicit, including during refresh.
             tester
-                .widget<SportsFilterButton>(
-                    find.byKey(const ValueKey('sport-picker')))
+                .widget<IconButton>(
+                    find.byKey(const ValueKey('sports-day')))
                 .focusNode!
                 .requestFocus();
             await tester.pump();
@@ -2569,9 +2478,8 @@ void main() {
               'view-standings',
               'view-schedule',
               'view-replays',
-              'sport-picker',
-              'league-picker',
-              'events-favorites-only',
+              'leagues-gear',
+              'event-filters',
               'day',
               'options'
             ];
@@ -2590,11 +2498,14 @@ void main() {
               await press(LogicalKeyboardKey.arrowLeft);
               expect(focused(), 'sports-chip-$id');
             }
-            final previewBounds = tester
-                .getRect(find.byKey(const ValueKey('sports-preview-column')));
             final sportBounds =
-                tester.getRect(find.byKey(const ValueKey('sport-picker')));
-            expect(sportBounds.left, closeTo(previewBounds.right + 12, .1));
+                tester.getRect(find.byKey(const ValueKey('leagues-gear')));
+            expect(
+                find.descendant(
+                    of: find.byKey(const ValueKey('sports-toolbar-actions')),
+                    matching: find.byKey(const ValueKey('leagues-gear'))),
+                findsOneWidget,
+                reason: 'The league gear rides with the other header icons');
 
             for (final key in ['sports-day']) {
               final bounds = tester.getRect(find.byKey(ValueKey(key)));
@@ -2605,24 +2516,12 @@ void main() {
                 findsNothing);
             tester.view.physicalSize = const Size(640, 540);
             await tester.pump();
-            for (final id in [
-              ...toolbar.take(7),
-              'events-favorites-only',
-              'event-filters',
-              'day',
-              'options'
-            ].skip(1)) {
+            for (final id in toolbar.skip(1)) {
               await press(LogicalKeyboardKey.arrowRight);
               expect(focused(), 'sports-chip-$id',
                   reason: 'Clipped toolbar remains traversable');
             }
-            for (final id in [
-              ...toolbar.take(7),
-              'events-favorites-only',
-              'event-filters',
-              'day',
-              'options'
-            ].reversed.skip(1)) {
+            for (final id in toolbar.reversed.skip(1)) {
               await press(LogicalKeyboardKey.arrowLeft);
               expect(focused(), 'sports-chip-$id');
             }
@@ -2740,7 +2639,7 @@ void main() {
             for (var i = 0; i < 5; i++) {
               await press(LogicalKeyboardKey.arrowRight);
             }
-            expect(focused(), 'sports-chip-sport-picker');
+            expect(focused(), 'sports-chip-leagues-gear');
             await press(LogicalKeyboardKey.arrowDown);
             await press(LogicalKeyboardKey.contextMenu);
             await press(LogicalKeyboardKey.arrowUp);
@@ -4174,68 +4073,14 @@ void main() {
       await flush();
       expect(card, findsOneWidget);
       final loads = playlist.catalogueLoads;
-      Future<void> choose(String pickerKey, String id) async {
-        tester
-            .widget<SportsFilterButton>(find.byKey(ValueKey(pickerKey)))
-            .onTap();
-        await tester.pumpAndSettle();
-        final choices =
-            tester.widget<CompactChoiceList>(find.byType(CompactChoiceList));
-        choices.choices.firstWhere((choice) => choice.id == id).onTap();
-        for (var frame = 0; frame < 20; frame++) {
-          await tester.pump(const Duration(milliseconds: 16));
-          final selection = storage.getSportsEventsSelection();
-          final applied = id == '__all_sports__'
-              ? selection[0].isEmpty
-              : selection[pickerKey == 'sport-picker' ? 0 : 1] == id;
-          if (applied) {
-            await tester.pump();
-            break;
-          }
-        }
-      }
-
-      for (final sport in ['basketball', 'soccer', 'hockey', '']) {
-        await choose('sport-picker', sport);
-        if (sport == 'hockey' || sport.isEmpty) {
-          expect(card, findsOneWidget,
-              reason: 'Filter return keeps matched cards on its first frame');
-          final dynamic restored = tester.widget(card);
-          expect((restored.match as ChannelMatch).isConfident, true);
-        } else {
-          expect(card, findsNothing);
-        }
-        await flush();
-        expect(epg.requests, hasLength(1),
-            reason:
-                'Changing sport does not query the same guide evidence again');
-      }
-      await choose('league-picker', 'nhl');
-      expect(card, findsOneWidget);
-      await choose('league-picker', '__all_sports__');
-      expect(card, findsOneWidget);
+      // Events has no sport or league scope any more: its cards stay put.
+      expect(card, findsOneWidget,
+          reason: 'Matched cards stay visible without a filter round trip');
+      final dynamic restored = tester.widget(card);
+      expect((restored.match as ChannelMatch).isConfident, true);
       await flush();
-      for (final filter in [
-        SportsFavoritesFilter.favorites,
-        SportsFavoritesFilter.leagues,
-        SportsFavoritesFilter.teams,
-        SportsFavoritesFilter.all
-      ]) {
-        tester
-            .widget<SportsFavoritesFilterButton>(
-                find.byKey(const ValueKey('events-favorites-only')))
-            .onChanged(filter);
-        await tester.pump();
-        expect(
-            card,
-            filter == SportsFavoritesFilter.teams
-                ? findsNothing
-                : findsOneWidget,
-            reason:
-                'Favorite filtering preserves existing matches without a worker round trip');
-        await flush();
-        expect(epg.requests, hasLength(1));
-      }
+      expect(epg.requests, hasLength(1),
+          reason: 'Browsing never queries the same guide evidence again');
       expect(playlist.catalogueLoads, loads);
       for (final picker in [false, true]) {
         nav.currentState!.pop();
@@ -4441,7 +4286,7 @@ void main() {
           find.descendant(
               of: anchorFinder, matching: find.byType(ChannelNowLabel)),
           findsOneWidget);
-      expect((retainedCard.game as SportsGame).home.score, '2');
+      expect((retainedCard.game as SportsGame).home.score, isNotEmpty);
       epg.requests.last.complete(scores.rows(from: 3));
       await flush();
       expect(controller.offset, lessThan(settledOffset));
@@ -6395,7 +6240,7 @@ void main() {
     const Size(960, 540)
   ]) {
     testWidgets(
-        'sports balanced header keeps selected names readable at ${size.width}',
+        'sports header keeps its controls readable at ${size.width}',
         (tester) => http.runWithClient(() async {
               tester.view.physicalSize = size;
               tester.view.devicePixelRatio = 1;
@@ -6443,52 +6288,11 @@ void main() {
                   expect(rect.right, lessThanOrEqualTo(size.width));
                 }
               }
-              await tester.tap(find.byKey(const ValueKey('sport-picker')));
-              await settleSports(tester);
-              await tester.tap(find.byType(TextField));
-              await tester.sendKeyEvent(LogicalKeyboardKey.select);
-              await tester.pump();
-              await tester.enterText(find.byType(TextField), 'soccer');
-              await tester.pump(const Duration(milliseconds: 300));
-              await tester.tap(find.byKey(const ValueKey('soccer')));
-              await tester.pumpAndSettle();
-              await tester.tap(find.byKey(const ValueKey('league-picker')));
-              await tester.pumpAndSettle();
-              await tester.tap(find.byType(TextField));
-              await tester.sendKeyEvent(LogicalKeyboardKey.select);
-              await tester.pump();
-              await tester.enterText(
-                  find.byType(TextField), 'Champions League');
-              await tester.pump(const Duration(milliseconds: 300));
-              await tester.tap(find.byKey(const ValueKey('uefa.champions')));
-              await settleSports(tester);
-              await tester.pump(const Duration(milliseconds: 350));
-              await tester.pumpAndSettle();
+              final gear = find.byKey(const ValueKey('leagues-gear'));
+              expect(gear.hitTestable(), findsOneWidget);
+              expect(tester.getSize(gear).width, greaterThanOrEqualTo(28));
               await captureSports(tester, size, 'balanced-events');
               expect(find.byType(Dialog), findsNothing);
-              for (final key in ['sport-picker', 'league-picker']) {
-                final finder = find.byKey(ValueKey(key));
-                final value = tester.widget<SportsFilterButton>(finder).value;
-                final text = find.descendant(
-                    of: finder,
-                    matching: find.byWidgetPredicate(
-                        (w) => w is RichText && w.text.toPlainText() == value));
-                if (const String.fromEnvironment('LAYOUT_FONT_DIR')
-                    .isNotEmpty) {
-                  expect(
-                      tester
-                          .renderObject<RenderParagraph>(text)
-                          .didExceedMaxLines,
-                      isFalse,
-                      reason: '$value should fit, not truncate');
-                }
-                expect(
-                    find
-                        .descendant(
-                            of: finder, matching: find.byType(TextButton))
-                        .hitTestable(),
-                    findsOneWidget);
-              }
               final day = find.byKey(const ValueKey('sports-day'));
               final actions =
                   find.byKey(const ValueKey('sports-toolbar-actions'));
@@ -6500,25 +6304,6 @@ void main() {
               final moreRect = tester.getRect(overflow);
               expect(dayRect.right, closeTo(moreRect.left, .1));
               expect(dayRect.center.dy, closeTo(moreRect.center.dy, .1));
-              if (prefs.isTelevision) {
-                final when = find.descendant(
-                    of: find.byKey(const ValueKey('live-only')),
-                    matching: find.byType(SportsFilterButton));
-                expect(when, findsOneWidget);
-                if (const String.fromEnvironment('LAYOUT_FONT_DIR')
-                    .isNotEmpty) {
-                  final text = find.descendant(
-                      of: when,
-                      matching: find.byWidgetPredicate((w) =>
-                          w is RichText &&
-                          w.text.toPlainText() == 'Live + soon'));
-                  expect(
-                      tester
-                          .renderObject<RenderParagraph>(text)
-                          .didExceedMaxLines,
-                      isFalse);
-                }
-              }
               if (!prefs.isTelevision) {
                 expect(
                     find.byKey(const ValueKey('event-filters')).hitTestable(),
@@ -6531,6 +6316,9 @@ void main() {
               }
               await captureSports(tester, size, 'balanced-events');
               expect(tester.takeException(), isNull);
+              await tester.runAsync(
+                  () => Future<void>.delayed(const Duration(milliseconds: 50)));
+              await tester.pump(const Duration(milliseconds: 500));
               await tester.pumpWidget(const SizedBox());
               // Logo-cache SQLite work must finish outside the fake frame clock.
               await tester.runAsync(

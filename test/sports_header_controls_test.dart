@@ -40,7 +40,6 @@ void main() {
                             child: SportsFavoritesFilterButton(
                                 focusNode: focus,
                                 filter: filter,
-                                favoriteLeagueCount: 2,
                                 favoriteTeamCount: 3,
                                 onChanged: (value) =>
                                     update(() => filter = value))))))));
@@ -56,8 +55,6 @@ void main() {
         await tester.pumpAndSettle();
         expect(filter, SportsFavoritesFilter.favorites,
             reason: 'Opening the menu does not change results');
-        expect(
-            find.text('2 saved · includes the whole league'), findsOneWidget);
         expect(
             find.text('3 saved · only these teams & athletes, in any league'),
             findsOneWidget);
@@ -82,8 +79,7 @@ void main() {
         }
         // Every scope is a single, mutually exclusive choice, with no save step.
         for (final next in [
-          SportsFavoritesFilter.leagues,
-          SportsFavoritesFilter.teams,
+          SportsFavoritesFilter.all,
           SportsFavoritesFilter.favorites
         ]) {
           await tester.tap(find.byType(SportsFavoritesFilterButton));
@@ -120,8 +116,7 @@ void main() {
         prefs,
         Center(
             child: SportsFavoritesFilterButton(
-          filter: SportsFavoritesFilter.teams,
-          favoriteLeagueCount: 0,
+          filter: SportsFavoritesFilter.favorites,
           favoriteTeamCount: 0,
           onChanged: (_) => changes++,
         ))));
@@ -136,8 +131,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SimpleDialog), findsOneWidget);
     expect(find.text('No favorite teams or athletes yet'), findsOneWidget);
-    expect(find.text('No favorite leagues yet'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('sports-favorites-teams')));
+    await tester.tap(find.byKey(const ValueKey('sports-favorites-favorites')));
     await tester.pumpAndSettle();
     expect(changes, 0, reason: 'Reselecting the active scope is a no-op');
     expect(find.byType(SimpleDialog), findsNothing);

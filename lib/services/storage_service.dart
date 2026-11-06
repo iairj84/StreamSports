@@ -427,14 +427,6 @@ class StorageService {
       ? _prefs.remove(_vk(AppConstants.keySportsFavoriteLeague))
       : _prefs.setString(_vk(AppConstants.keySportsFavoriteLeague), id);
 
-  /// Starred league ids; null = never starred, so every included league
-  /// counts. Kept apart from the included-league preference so including a
-  /// league no longer forces it into the Favorites filter.
-  List<String>? getSportsFavoriteLeagues() =>
-      _prefs.getStringList(_vk(AppConstants.keySportsFavoriteLeagues));
-  Future<void> setSportsFavoriteLeagues(List<String> ids) =>
-      _prefs.setStringList(_vk(AppConstants.keySportsFavoriteLeagues), ids);
-
   String getSportsChannelFilter() =>
       _prefs.getString(_vk('sports_channel_filter')) ?? 'possible';
   Future<void> setSportsChannelFilter(String value) =>

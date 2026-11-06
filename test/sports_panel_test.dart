@@ -229,13 +229,13 @@ void main() {
           find.byKey(const ValueKey('league-manager-search')));
       expect(search.focusNode!.hasFocus, isTrue);
       final all = tester.widget<OutlinedButton>(
-          find.byKey(const ValueKey('enable-all-leagues')));
+          find.byKey(const ValueKey('show-all-leagues')));
       all.focusNode!.requestFocus();
       await tester.pump();
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(storage.getSportsAllLeagues(), isTrue);
-      expect(find.text('All leagues included'), findsOneWidget);
+      expect(find.text('All leagues shown'), findsOneWidget);
       if (method == 'back') {
         firstRow.requestFocus();
         await tester.pump();

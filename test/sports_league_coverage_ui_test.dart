@@ -87,7 +87,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
         await tester.pump();
         final button = tester.widget<OutlinedButton>(
-            find.byKey(const ValueKey('enable-all-leagues')));
+            find.byKey(const ValueKey('show-all-leagues')));
         expect(
             tester
                 .widget<TextField>(
@@ -99,7 +99,7 @@ void main() {
         await tester.pump();
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       } else {
-        await tester.tap(find.byKey(const ValueKey('enable-all-leagues')));
+        await tester.tap(find.byKey(const ValueKey('show-all-leagues')));
       }
       await tester.pumpAndSettle();
       final all = {
@@ -113,7 +113,7 @@ void main() {
       expect(storage.getSportsFavoriteLeague(), 'nhl');
       expect(storage.getHiddenGuideLeagues(), isEmpty);
       expect(storage.getSportsAllLeagues(), isTrue);
-      expect(find.text('All leagues included'), findsOneWidget);
+      expect(find.text('All leagues shown'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.scrollUntilVisible(find.text('EFL Championship'), 250,
           scrollable: find

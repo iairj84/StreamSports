@@ -16,9 +16,8 @@ import '../widgets/sports_filter_picker.dart'
 import '../widgets/compact_choice_list.dart';
 import '../widgets/tv_text_field_gate.dart';
 
-/// One list with two explicit states: tapping a league includes or excludes it
-/// from Sports, and the star saves it for the Favorites filter. A league can be
-/// in Sports without being starred; a star always stays inside Sports.
+/// One list, one state per league: shown in Sports, or hidden. Tapping a row
+/// flips it. Nothing here is a favorite.
 class SportsLeagueManagerScreen extends StatefulWidget {
   const SportsLeagueManagerScreen({super.key, this.embedded = false});
   final bool embedded;
@@ -29,11 +28,9 @@ class SportsLeagueManagerScreen extends StatefulWidget {
 
 class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   late final StorageService _storage = context.read<StorageService>();
-  late Set<String> _included;
-  late Set<String> _favorites;
+  late Set<String> _shown;
   late String? _opening = _storage.getSportsFavoriteLeague();
-  late Set<String> _savedIncluded;
-  late Set<String> _savedFavorites;
+  late Set<String> _savedShown;
   String? _savedOpening;
   bool _changed = false, _saving = false;
   Future<void>? _pendingSave;
@@ -41,7 +38,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   final _search = TextEditingController();
   final _searchFocus = FocusNode(debugLabel: 'leagues-search');
   final _closeFocus = FocusNode(debugLabel: 'leagues-close');
-  final _allFocus = FocusNode(debugLabel: 'leagues-enable-all');
+  final _allFocus = FocusNode(debugLabel: 'leagues-show-all');
   final _scroll = ScrollController();
   String _query = '';
   String? _sport;
@@ -55,7 +52,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   static final _availableIds = {
     for (final l in [...kSportsLeagues, ...kSportsLeagueBank]) l.id
   };
-  bool get _allIncluded => _availableIds.every(_included.contains);
+  bool get _allShown => _availableIds.every(_shown.contains);
 
   void _filter() {
     final terms =
@@ -78,11 +75,8 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   @override
   void initState() {
     super.initState();
-    _included = savedSportsLeagues(_storage).map((l) => l.id).toSet();
-    _favorites = savedSportsFavoriteLeagueIds(_storage)
-      ..retainWhere(_included.contains);
-    _savedIncluded = Set.of(_included);
-    _savedFavorites = Set.of(_favorites);
+    _shown = savedSportsLeagues(_storage).map((l) => l.id).toSet();
+    _savedShown = Set.of(_shown);
     _savedOpening = _opening;
     _filter();
   }
@@ -121,71 +115,54 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     return groups.values.expand((group) => group).toList();
   }
 
-  Future<void> _persist(
-      Set<String> included, Set<String> favorites, String? opening) async {
-    await _storage.setSportsLeagues(included.toList());
+  Future<void> _persist(Set<String> shown, String? opening) async {
+    await _storage.setSportsLeagues(shown.toList());
     await _storage.setHiddenGuideLeagues([
       for (final l in kAutomaticSportsLeagues)
-        if (!included.contains(l.id)) l.id,
-    ]);
-    await _storage.setSportsFavoriteLeagues([
-      for (final l in _leagues)
-        if (favorites.contains(l.id)) l.id,
+        if (!shown.contains(l.id)) l.id,
     ]);
     await _storage.setSportsFavoriteLeague(opening);
-    await _storage.setSportsAllLeagues(_availableIds.every(included.contains));
+    await _storage.setSportsAllLeagues(_availableIds.every(shown.contains));
   }
 
-  Future<void> _apply(
-      Set<String> included, Set<String> favorites, String? opening) async {
-    // A star outside Sports would leave the Favorites filter with nothing to
-    // show, so excluding a league clears its star with it.
-    favorites = {...favorites}..retainWhere(included.contains);
+  Future<void> _apply(Set<String> shown, String? opening) async {
     if (_saving || _closing) return;
-    final unchanged = included.length == _included.length &&
-        included.containsAll(_included) &&
-        favorites.length == _favorites.length &&
-        favorites.containsAll(_favorites) &&
+    final unchanged = shown.length == _shown.length &&
+        shown.containsAll(_shown) &&
         opening == _opening;
     if (unchanged) return;
-    if (included.isEmpty) {
+    if (shown.isEmpty) {
       // Empty is an editing step, never a persisted selection: the loader
       // treats an empty saved set as the default catalogue.
       setState(() {
-        _included = included;
-        _favorites = favorites;
+        _shown = shown;
         _opening = opening;
         _filter();
       });
       return;
     }
-    final previous = Set<String>.of(_included),
-        previousFavorites = Set<String>.of(_favorites),
-        previousOpening = _opening;
+    final previous = Set<String>.of(_shown), previousOpening = _opening;
     setState(() {
       _saving = true;
-      _included = included;
-      _favorites = favorites;
+      _shown = shown;
       _opening = opening;
       _filter();
     });
     final complete = Completer<void>();
     _pendingSave = complete.future;
     try {
-      await _persist(included, favorites, opening);
-      _savedIncluded = Set.of(included);
-      _savedFavorites = Set.of(favorites);
+      await _persist(shown, opening);
+      _savedShown = Set.of(shown);
       _savedOpening = opening;
       _changed = true;
     } catch (_) {
       // Restore both the local view and any preference writes completed before failure.
       try {
-        await _persist(_savedIncluded, _savedFavorites, _savedOpening);
+        await _persist(_savedShown, _savedOpening);
       } catch (_) {}
       if (mounted) {
         setState(() {
-          _included = previous;
-          _favorites = previousFavorites;
+          _shown = previous;
           _opening = previousOpening;
           _filter();
         });
@@ -199,32 +176,20 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     }
   }
 
-  void _toggleInclude(SportsLeague league) {
-    final next = Set<String>.of(_included);
+  void _toggle(SportsLeague league) {
+    final next = Set<String>.of(_shown);
     if (!next.remove(league.id)) next.add(league.id);
-    _apply(next, _favorites, next.contains(_opening) ? _opening : null);
+    _apply(next, next.contains(_opening) ? _opening : null);
   }
 
-  void _toggleFavorite(SportsLeague league) {
-    final favorites = Set<String>.of(_favorites);
-    final included = Set<String>.of(_included);
-    if (!favorites.remove(league.id)) {
-      // Starring a league the viewer had excluded puts it back in Sports.
-      favorites.add(league.id);
-      included.add(league.id);
-    }
-    _apply(included, favorites, _opening);
-  }
-
-  void _bulkInclude(bool include) {
+  void _bulk(bool show) {
     final ids = _visibleLeagues.map((l) => l.id).toSet();
-    final next = include ? {..._included, ...ids} : _included.difference(ids);
-    _apply(next, _favorites, next.contains(_opening) ? _opening : null);
+    final next = show ? {..._shown, ...ids} : _shown.difference(ids);
+    _apply(next, next.contains(_opening) ? _opening : null);
   }
 
   void _restoreSelection() => setState(() {
-        _included = Set.of(_savedIncluded);
-        _favorites = Set.of(_savedFavorites);
+        _shown = Set.of(_savedShown);
         _opening = _savedOpening;
         _filter();
       });
@@ -266,23 +231,13 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     }
   }
 
-  /// The star is a touch target inside the row, so the remote needs the same
-  /// two actions here: starring for Favorites, and the opening league.
   Future<void> _openMenu(SportsLeague league) async {
-    final starred = _favorites.contains(league.id);
     final opening = _opening == league.id;
     final action = await showSportsChoices<String>(context,
         title: league.name,
         selected: '',
         showSelection: false,
         choices: [
-          SportsChoice(
-              'favorite',
-              starred ? 'Remove from favorites' : 'Add to favorites',
-              starred
-                  ? ''
-                  : 'Keeps the whole league in the Favorites filter.',
-              icon: starred ? Icons.star_border_rounded : Icons.star_rounded),
           SportsChoice(
               'opening',
               opening ? 'Clear opening league' : 'Set as opening league',
@@ -292,12 +247,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
               icon: Icons.push_pin_outlined),
         ]);
     if (!mounted || action == null) return;
-    if (action == 'favorite') {
-      _toggleFavorite(league);
-    } else if (action == 'opening') {
-      await _apply(
-          {..._included, league.id}, _favorites, opening ? null : league.id);
-    }
+    await _apply({..._shown, league.id}, opening ? null : league.id);
   }
 
   @override
@@ -337,8 +287,8 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         textStyle: const WidgetStatePropertyAll(
             TextStyle(fontSize: 11, fontWeight: FontWeight.w500)));
     final typing = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final includedCount =
-        _visibleLeagues.where((l) => _included.contains(l.id)).length;
+    final shownCount =
+        _visibleLeagues.where((l) => _shown.contains(l.id)).length;
     final choices = [
       for (final l in _visibleLeagues)
         CompactChoice(
@@ -346,17 +296,15 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
           title: l.name,
           group: _groupOf(l),
           subtitle: [
-            if (!_included.contains(l.id)) 'Not in Sports',
+            if (!_shown.contains(l.id)) 'Hidden',
             if (_opening == l.id) 'Opening league',
             if (l.region != null) l.region!,
             if (l.source == 'Channel guide') 'TV guide'
           ].join(' · '),
           leading: SportsLogo(
               url: l.logoUrl, size: 24, fallback: l.shortName, animate: false),
-          trailing: _FavoriteStar(
-              starred: _favorites.contains(l.id),
-              onTap: () => _toggleFavorite(l)),
-          onTap: () => _toggleInclude(l),
+          trailing: _ShownMark(shown: _shown.contains(l.id)),
+          onTap: () => _toggle(l),
           onHold: () => _openMenu(l),
         )
     ];
@@ -387,8 +335,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                             style: TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
                         if (!compact)
-                          Text('Included leagues appear in Sports · stars feed '
-                              'the Favorites filter',
+                          Text('Tap a league to show or hide it · nothing else',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -460,36 +407,36 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Wrap(spacing: 6, runSpacing: 2, children: [
                     OutlinedButton(
-                        key: const ValueKey('enable-visible-leagues'),
+                        key: const ValueKey('show-visible-leagues'),
                         style: bulkStyle,
-                        onPressed: _saving || includedCount == choices.length
+                        onPressed: _saving || shownCount == choices.length
                             ? null
-                            : () => _bulkInclude(true),
-                        child: const Text('Include shown')),
+                            : () => _bulk(true),
+                        child: const Text('Show listed')),
                     OutlinedButton(
-                        key: const ValueKey('disable-visible-leagues'),
+                        key: const ValueKey('hide-visible-leagues'),
                         style: bulkStyle,
-                        onPressed: _saving || includedCount == 0
+                        onPressed: _saving || shownCount == 0
                             ? null
-                            : () => _bulkInclude(false),
-                        child: const Text('Exclude shown')),
+                            : () => _bulk(false),
+                        child: const Text('Hide listed')),
                     OutlinedButton(
-                        key: ValueKey(_included.isEmpty
+                        key: ValueKey(_shown.isEmpty
                             ? 'restore-league-selection'
-                            : 'enable-all-leagues'),
+                            : 'show-all-leagues'),
                         focusNode: _allFocus,
                         style: bulkStyle,
-                        onPressed: _included.isEmpty
+                        onPressed: _shown.isEmpty
                             ? _restoreSelection
-                            : _saving || _allIncluded
+                            : _saving || _allShown
                                 ? null
-                                : () => _apply({..._included, ..._availableIds},
-                                    _favorites, _opening),
-                        child: Text(_included.isEmpty
+                                : () =>
+                                    _apply({..._shown, ..._availableIds}, _opening),
+                        child: Text(_shown.isEmpty
                             ? 'Restore selection'
-                            : _allIncluded
-                                ? 'All leagues included'
-                                : 'Include all leagues')),
+                            : _allShown
+                                ? 'All leagues shown'
+                                : 'Show all leagues')),
                   ])),
             Container(
                 padding: const EdgeInsets.fromLTRB(2, 5, 2, 6),
@@ -507,19 +454,13 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                               fontWeight: FontWeight.w600)),
                       const TextSpan(text: ' leagues · '),
                       TextSpan(
-                          text: '${_included.length} in Sports',
+                          text: '${_shown.length} shown',
                           style: TextStyle(
                               color: colors.onSurface,
                               fontWeight: FontWeight.w500)),
-                      const TextSpan(text: ' · '),
-                      TextSpan(
-                          text: '${_favorites.length} starred',
-                          style: TextStyle(
-                              color: colors.primary,
-                              fontWeight: FontWeight.w500)),
                       TextSpan(
                           text:
-                              ' · ${_included.isEmpty ? 'Choose leagues to finish' : _saving ? 'Saving…' : 'Saved automatically'}'),
+                              ' · ${_shown.isEmpty ? 'Choose leagues to finish' : _saving ? 'Saving…' : 'Saved automatically'}'),
                     ]),
                     style: TextStyle(
                         fontSize: 10, color: colors.onSurfaceVariant))),
@@ -554,11 +495,11 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
               Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                      _included.isEmpty
-                          ? 'Your previous selection stays saved until you include a league.'
+                      _shown.isEmpty
+                          ? 'Your previous selection stays saved until you show a league.'
                           : context.read<AppPreferences>().isTelevision
-                              ? 'OK: include · Star: favorites · Hold OK: more'
-                              : 'Tap to include · Tap the star to favorite · Hold for more',
+                              ? 'OK: show or hide · Hold OK: options'
+                              : 'Tap to show or hide · Hold for options',
                       style: TextStyle(
                           fontSize: 10, color: colors.onSurfaceVariant))),
           ]));
@@ -566,29 +507,22 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   }
 }
 
-/// Touch target for the per-row star. It never takes focus, so remote
-/// traversal still walks search → sport → bulk actions → list.
-class _FavoriteStar extends StatelessWidget {
-  const _FavoriteStar({required this.starred, required this.onTap});
-  final bool starred;
-  final VoidCallback onTap;
+/// Touch-free state marker: a shown league is checked, a hidden one is empty.
+class _ShownMark extends StatelessWidget {
+  const _ShownMark({required this.shown});
+  final bool shown;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Semantics(
-        button: true,
-        label: starred ? 'Remove from favorites' : 'Add to favorites',
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          child: Icon(
-              starred ? Icons.star_rounded : Icons.star_border_rounded,
-              size: 18,
-              color: starred ? colors.primary : colors.onSurfaceVariant),
-        ),
+    return Semantics(
+      label: shown ? 'Shown in Sports' : 'Hidden from Sports',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Icon(
+            shown ? Icons.check_circle : Icons.circle_outlined,
+            size: 18,
+            color: shown ? colors.primary : colors.onSurfaceVariant),
       ),
     );
   }

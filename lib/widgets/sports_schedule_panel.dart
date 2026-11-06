@@ -69,7 +69,6 @@ class SportsSchedulePanel extends StatefulWidget {
       this.follows,
       this.initialLeague,
       this.overviewLeagues,
-      this.favoriteLeagueIds,
       this.favoritesFilter,
       this.onGameDetails,
       this.channelMatchForGame,
@@ -90,7 +89,6 @@ class SportsSchedulePanel extends StatefulWidget {
 
   /// Enabled competitions only; null retains the single-league detail browser.
   final List<SportsLeague>? overviewLeagues;
-  final Set<String>? favoriteLeagueIds;
   final SportsFavoritesFilter? favoritesFilter;
   final ValueChanged<SportsGame>? onGameDetails;
 
@@ -318,14 +316,11 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
 
   String? get _emptyFavoriteSelection =>
       _browse.favoritesFilter.emptySelectionMessage(
-          hasLeagues: widget.favoriteLeagueIds?.isNotEmpty == true,
           hasTeams: widget.follows?.isEmpty == false);
 
   bool _isFavorite(SportsGame game) =>
-      (_browse.favoritesFilter.includesLeagues &&
-          widget.favoriteLeagueIds?.contains(game.league.id) == true) ||
-      (_browse.favoritesFilter.includesTeams &&
-          widget.follows?.involves(game) == true);
+      _browse.favoritesFilter.isFiltered &&
+      widget.follows?.involves(game) == true;
 
   void _filterGames() {
     final query = _browse.query.trim().toLowerCase();
@@ -339,7 +334,6 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
       query,
       _browse.groupBySport,
       _browse.favoritesFilter,
-      widget.favoriteLeagueIds,
       _browse.showCompleted,
       widget.follows,
       widget.follows?.revision
@@ -438,9 +432,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   bool get _overview => widget.overviewLeagues != null && _league == null;
   List<SportsLeague> get _overviewLeagues {
     final leagues = widget.overviewLeagues ?? const <SportsLeague>[];
-    return widget.favoriteLeagueIds != null &&
-            !_browse.onlyFavorites &&
-            _browse.sport != null
+    return !_browse.onlyFavorites && _browse.sport != null
         ? leagues
             .where((l) => l.espnPath.startsWith('${_browse.sport}/'))
             .toList()
@@ -586,7 +578,6 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     }
     final revision = widget.follows?.revision ?? 0;
     if (localModeChanged ||
-        oldWidget.favoriteLeagueIds != widget.favoriteLeagueIds ||
         oldWidget.follows != widget.follows ||
         revision != _followsRevision) {
       _followsRevision = revision;
@@ -711,8 +702,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
           ...sportsSportOptions(widget.overviewLeagues ?? _leagues, const {},
               showCounts: false, favoriteOnly: _browse.onlyFavorites),
           if (widget.onManageLeagues != null)
-            sportsManageLeaguesOption(
-                widget.favoriteLeagueIds?.length ?? _overviewLeagues.length),
+            sportsManageLeaguesOption(_overviewLeagues.length),
         ],
         showSortingControls: false);
     if (!mounted || selected == null) return;
@@ -771,8 +761,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                 '__all_sports__', 'All sports', Icons.public,
                 description: 'Clear the sport and league filters'),
           if (widget.onManageLeagues != null)
-            sportsManageLeaguesOption(
-                widget.favoriteLeagueIds?.length ?? _overviewLeagues.length),
+            sportsManageLeaguesOption(_overviewLeagues.length),
           for (final league in widget.overviewLeagues ?? _leagues)
             if (sport == null || league.espnPath.split('/').first == sport)
               SportsFilterOption(league.id, league.name,
@@ -842,7 +831,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   }
 
   String get _summaryScope =>
-      '${_overview ? _overviewLeagues.map((l) => l.id).join(',') : _browse.leagueId ?? ''}|${_browse.onlyFavorites ? '${_browse.favoritesFilter.name}:${widget.follows?.revision}:${widget.favoriteLeagueIds?.join(',')}' : 'all'}';
+      '${_overview ? _overviewLeagues.map((l) => l.id).join(',') : _browse.leagueId ?? ''}|${_browse.onlyFavorites ? '${_browse.favoritesFilter.name}:${widget.follows?.revision}' : 'all'}';
 
   void _rememberSummaries(
       List<SportsGame> games, DateTime from, int days, bool incomplete,
@@ -1288,7 +1277,6 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
             ? SportsFavoritesFilterButton(
                 key: const ValueKey('schedule-favorites-only'),
                 filter: _browse.favoritesFilter,
-                favoriteLeagueCount: widget.favoriteLeagueIds?.length ?? 0,
                 favoriteTeamCount: widget.follows?.teams.length ?? 0,
                 onChanged: _setFavoritesFilter)
             : const SizedBox.shrink(),
