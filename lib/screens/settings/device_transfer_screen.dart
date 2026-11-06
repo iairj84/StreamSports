@@ -34,6 +34,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
   SenderHandshake? _handshake;
   bool _busy = false;
   String? _error;
+  String? _result;
 
   StorageService get _storage => context.read<StorageService>();
 
@@ -51,6 +52,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       _role = _Role.receive;
       _busy = true;
       _error = null;
+      _result = null;
     });
     final receiver = _receiver = TransferReceiver(_storage,
         deviceName: 'This device');
@@ -72,6 +74,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       _role = _Role.send;
       _busy = true;
       _error = null;
+      _result = null;
       _peers = const [];
     });
     final sender = _sender = TransferSender(_storage, deviceName: 'This device');
@@ -94,6 +97,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       _busy = true;
       _peer = peer;
       _error = null;
+      _result = null;
       _handshake = null;
     });
     try {
@@ -123,27 +127,36 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
     final peer = _peer;
     final handshake = _handshake;
     if (peer == null || handshake == null) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _error = null;
+      _result = null;
+    });
     try {
       final report = await _sender!.send(peer, handshake,
           sections: TransferSection.values.toSet());
       if (!mounted) return;
       setState(() {
-        _peer = null;
         _handshake = null;
-        _peers = const [];
-        _error = null;
+        _result =
+            'Copied ${report?.values ?? 0} settings to ${peer.name}. Its playlists, settings and sports picks now match this device.';
       });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(tr('Copied ${report?.values ?? 0} settings to the other device.'))));
     } catch (e) {
-      if (mounted) {
-        setState(() => _error = 'The transfer did not finish. Nothing changed.');
-      }
+      if (!mounted) return;
+      setState(() => _error = e is StateError
+          ? e.message
+          : 'The transfer did not finish: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Show progress the moment the button is tapped; the sender can take a
+  /// few seconds to encrypt and upload a large playlist bundle.
+  Future<void> _approve() async {
+    setState(() => _status = ReceiverStatus(
+        phase: TransferPhase.receiving, address: _status.address));
+    await _receiver?.approve();
   }
 
   Future<void> _reset() async {
@@ -161,6 +174,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       _peer = null;
       _handshake = null;
       _error = null;
+      _result = null;
     });
   }
 
@@ -169,6 +183,10 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
     return SettingsScaffold(
       title: tr('Transfer to another device'),
       body: ListView(padding: const EdgeInsets.all(16), children: [
+        // Results and failures go first: below the fold they read as nothing
+        // happening, which is exactly how the first broken transfer looked.
+        if (_result != null) _ResultCard(message: _result!, onDone: _reset),
+        if (_error != null) _ErrorCard(message: _error!),
         if (_role == _Role.choose) ...[
           SettingsSection(title: tr('Copy this device to another'), children: [
             Padding(
@@ -201,6 +219,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
   List<Widget> _sendBody(BuildContext context) {
     final handshake = _handshake;
     final peer = _peer;
+    if (_result != null) return const [];
     return [
       SettingsSection(title: tr('Send from this device'), children: [
         if (handshake != null && peer != null) ...[
@@ -252,7 +271,6 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
           ),
         ],
       ]),
-      if (_error != null) _ErrorCard(message: _error!),
     ];
   }
 
@@ -284,8 +302,18 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
               Row(children: [
                 TextButton(onPressed: _receiver?.reject, child: Text(tr('Decline'))),
                 const SizedBox(width: 12),
-                FilledButton(onPressed: _receiver?.approve, child: Text(tr('Accept and replace'))),
+                FilledButton(onPressed: _approve, child: Text(tr('Accept and replace'))),
               ]),
+            ]),
+          )
+        else if (status.phase == TransferPhase.receiving)
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(tr('Receiving the settings…'),
+                  style: Theme.of(context).textTheme.bodyMedium),
             ]),
           )
         else if (status.phase == TransferPhase.failed)
@@ -321,7 +349,6 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
         ],
       ]),
       _ReplaceWarning(),
-      if (_error != null) _ErrorCard(message: _error!),
     ];
   }
 }
@@ -389,6 +416,38 @@ class _ReplaceWarning extends StatelessWidget {
                 tr('A transfer replaces the receiving device’s playlists, settings, sports picks, favorites and channel links. Anything only on that device is lost.'),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onErrorContainer)),
+          ),
+        ]),
+      );
+}
+
+class _ResultCard extends StatelessWidget {
+  const _ResultCard({required this.message, required this.onDone});
+  final String message;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(12)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.check_circle_outline,
+                color: Theme.of(context).colorScheme.onPrimaryContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer)),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton(onPressed: onDone, child: Text(tr('Done'))),
           ),
         ]),
       );

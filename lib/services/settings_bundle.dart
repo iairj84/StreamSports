@@ -118,10 +118,16 @@ class SettingsBundle {
   final DateTime createdAt;
   final String appVersion;
 
-  /// Refuse a payload that is not ours, is from a newer format, or is large
-  /// enough to be an attack rather than a settings file.
+  /// Refuse a payload that is not ours or is from a newer format, and cap the
+  /// size well above a real bundle: channel links and auto-paired EPG matches
+  /// are one entry per channel, which reaches several megabytes on a big
+  /// playlist. The old 512 KB cap rejected those transfers with a bare 413.
   static const int format = 1;
-  static const int maxBytes = 512 * 1024;
+  static const int maxBytes = 16 * 1024 * 1024;
+
+  bool get tooLarge => byteLength > maxBytes;
+
+  int get megabyteCount => (byteLength / (1024 * 1024)).ceil();
 
   Map<String, Object?> toJson() => {
         'format': format,

@@ -254,7 +254,8 @@ class TransferReceiver {
         response.statusCode = HttpStatus.methodNotAllowed;
         return;
       }
-      final body = await _readLimited(request, SettingsBundle.maxBytes + 4096);
+      final body =
+          await _readLimited(request, SettingsBundle.maxBytes + 65536);
       if (body == null) {
         response.statusCode = HttpStatus.requestEntityTooLarge;
         return;
@@ -268,8 +269,14 @@ class TransferReceiver {
           response.statusCode = HttpStatus.notFound;
       }
     } catch (e) {
-      debugPrint('Transfer: request failed: ${e.runtimeType}');
+      debugPrint('Transfer: request failed: ${e.runtimeType} $e');
       response.statusCode = HttpStatus.internalServerError;
+      if (_current.phase != TransferPhase.done) {
+        _emit(ReceiverStatus(
+            phase: TransferPhase.failed,
+            address: _address,
+            message: 'The transfer stopped: ${e.toString()}'));
+      }
     } finally {
       await response.close();
     }
@@ -346,7 +353,21 @@ class TransferReceiver {
           message: 'That device sent settings this version cannot read.'));
       return;
     }
-    final report = await bundle.applyTo(_storage);
+    debugPrint('Transfer: applying ${bundle.byteLength} bytes');
+    _emit(ReceiverStatus(phase: TransferPhase.receiving, address: _address));
+    late final TransferReport report;
+    try {
+      report = await bundle.applyTo(_storage);
+    } catch (e) {
+      debugPrint('Transfer: apply failed: $e');
+      response.statusCode = HttpStatus.internalServerError;
+      _emit(ReceiverStatus(
+          phase: TransferPhase.failed,
+          address: _address,
+          message: 'Saving the settings failed: ${e.toString()}'));
+      return;
+    }
+    debugPrint('Transfer: applied ${report.values} settings');
     _emit(ReceiverStatus(
         phase: TransferPhase.done, address: _address, report: report));
     response.headers.contentType = ContentType.json;
@@ -440,6 +461,11 @@ class TransferSender {
       {required Set<TransferSection> sections}) async {
     if (!handshake.approved) return null;
     final bundle = SettingsBundle.capture(_storage, sections: sections);
+    debugPrint('Transfer: sending ${bundle.byteLength} bytes');
+    if (bundle.tooLarge) {
+      throw StateError(
+          'These settings are too large to send (${bundle.megabyteCount} MB).');
+    }
     final sealed = await handshake.cipher.seal(bundle.encode());
     final response = await http
         .post(peer._endpoint('bundle'),
@@ -476,7 +502,7 @@ class SenderHandshake {
   final TransferCipher cipher;
 }
 
-enum TransferPhase { idle, waiting, approval, done, failed }
+enum TransferPhase { idle, waiting, approval, receiving, done, failed }
 
 class ReceiverStatus {
   const ReceiverStatus(
