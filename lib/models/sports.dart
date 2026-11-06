@@ -75,6 +75,18 @@ class SportsLeague {
   /// when no channel names the event itself.
   final List<String> seriesPhrases;
 
+  /// The full competition a conference or poll pick narrows, else null. A pick
+  /// never adds coverage — showing it replaces its full list, and showing the
+  /// full list already covers every pick.
+  String? get parentLeagueId => switch (espnPath) {
+        'football/college-football' when espnGroup != null || rankedOnly =>
+          'college-football',
+        'basketball/mens-college-basketball'
+            when espnGroup != null || rankedOnly =>
+          'basketball.mens-college-basketball',
+        _ => null,
+      };
+
   /// Golf and racing — no two sides, a leaderboard instead.
   bool get isField =>
       kind == SportsKind.golf ||

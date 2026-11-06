@@ -53,8 +53,17 @@ List<SportsLeague> savedSportsLeagues(StorageService storage) {
     for (final league in kAutomaticSportsLeagues)
       if (!hiddenGuide.contains(league.id)) league,
   ];
-  return leagues.isNotEmpty
-      ? leagues
+  // A pick next to its full list would fetch the same games twice and mean
+  // nothing to the viewer, so the full list wins.
+  final shownIds = {for (final league in leagues) league.id};
+  final resolved = [
+    for (final league in leagues)
+      if (league.parentLeagueId == null ||
+          !shownIds.contains(league.parentLeagueId))
+        league
+  ];
+  return resolved.isNotEmpty
+      ? resolved
       : [for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!];
 }
 

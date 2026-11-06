@@ -52,7 +52,15 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   static final _availableIds = {
     for (final l in [...kSportsLeagues, ...kSportsLeagueBank]) l.id
   };
-  bool get _allShown => _availableIds.every(_shown.contains);
+  late final Map<String, SportsLeague> _byId = {
+    for (final l in [...kSportsLeagues, ...kSportsLeagueBank]) l.id: l
+  };
+  // A conference or poll pick is covered by showing its full list.
+  bool get _allShown => _availableIds.every((id) {
+        if (_shown.contains(id)) return true;
+        final parent = _byId[id]?.parentLeagueId;
+        return parent != null && _shown.contains(parent);
+      });
 
   void _filter() {
     final terms =
@@ -94,6 +102,60 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   String _sportOf(SportsLeague league) => league.espnPath.split('/').first;
   String _groupOf(SportsLeague league) => sportLabel(_sportOf(league));
 
+  /// Picks that narrow [league]: its conferences and poll views.
+  List<SportsLeague> _picksOf(SportsLeague league) =>
+      [for (final l in _leagues) if (l.parentLeagueId == league.id) l];
+
+  /// One rule, in one place: a full competition and the picks that narrow it
+  /// are never shown together. Turning a pick on hides its full list; turning
+  /// the full list on already covers every pick, so the picks go.
+  Set<String> _settle(Set<String> shown, {String? favour}) {
+    final next = Set<String>.of(shown);
+    for (final league in _leagues) {
+      final parentId = league.parentLeagueId;
+      if (parentId == null || !next.contains(league.id)) continue;
+      if (!next.contains(parentId)) continue;
+      if (favour == league.id) {
+        next.remove(parentId);
+      } else {
+        next.remove(league.id);
+      }
+    }
+    return next;
+  }
+
+  String _subtitleOf(SportsLeague league) {
+    final shown = _shown.contains(league.id);
+    final parentId = league.parentLeagueId;
+    final parts = <String>[];
+    if (parentId != null) {
+      final parent = _byId[parentId];
+      if (_shown.contains(parentId)) {
+        parts.add('Included in ${parent?.name ?? 'the full list'}');
+      } else if (shown) {
+        parts.add(league.rankedOnly
+            ? 'Only games with a ranked team'
+            : 'Only ${league.shortName} games');
+      } else {
+        parts.add('Hidden');
+      }
+    } else {
+      final picks = [
+        for (final p in _picksOf(league))
+          if (_shown.contains(p.id)) p
+      ];
+      if (!shown) {
+        parts.add(picks.isEmpty
+            ? 'Hidden'
+            : 'Off — showing ${picks.length == 1 ? picks.single.name : '${picks.length} picks'}');
+      }
+    }
+    if (_opening == league.id) parts.add('Opening league');
+    if (league.region != null) parts.add(league.region!);
+    if (league.source == 'Channel guide') parts.add('TV guide');
+    return parts.join(' · ');
+  }
+
   late final List<SportsLeague> _leagues = _orderedLeagues();
 
   List<SportsLeague> _orderedLeagues() {
@@ -112,7 +174,21 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         return priority != 0 ? priority : order[a.id]!.compareTo(order[b.id]!);
       });
     }
-    return groups.values.expand((group) => group).toList();
+    final ordered = groups.values.expand((group) => group).toList();
+    final picks = <String, List<SportsLeague>>{};
+    for (final league in ordered) {
+      final parent = league.parentLeagueId;
+      if (parent != null) (picks[parent] ??= []).add(league);
+    }
+    if (picks.isEmpty) return ordered;
+    // Every pick sits directly under the list it narrows.
+    return [
+      for (final league in ordered)
+        if (league.parentLeagueId == null) ...[
+          league,
+          ...?picks[league.id],
+        ],
+    ];
   }
 
   Future<void> _persist(Set<String> shown, String? opening) async {
@@ -178,13 +254,15 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
 
   void _toggle(SportsLeague league) {
     final next = Set<String>.of(_shown);
-    if (!next.remove(league.id)) next.add(league.id);
-    _apply(next, next.contains(_opening) ? _opening : null);
+    final showing = !next.remove(league.id);
+    if (showing) next.add(league.id);
+    final settled = _settle(next, favour: showing ? league.id : null);
+    _apply(settled, settled.contains(_opening) ? _opening : null);
   }
 
   void _bulk(bool show) {
     final ids = _visibleLeagues.map((l) => l.id).toSet();
-    final next = show ? {..._shown, ...ids} : _shown.difference(ids);
+    final next = _settle(show ? {..._shown, ...ids} : _shown.difference(ids));
     _apply(next, next.contains(_opening) ? _opening : null);
   }
 
@@ -295,12 +373,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
           id: l.id,
           title: l.name,
           group: _groupOf(l),
-          subtitle: [
-            if (!_shown.contains(l.id)) 'Hidden',
-            if (_opening == l.id) 'Opening league',
-            if (l.region != null) l.region!,
-            if (l.source == 'Channel guide') 'TV guide'
-          ].join(' · '),
+          subtitle: _subtitleOf(l),
           leading: SportsLogo(
               url: l.logoUrl, size: 24, fallback: l.shortName, animate: false),
           trailing: _ShownMark(shown: _shown.contains(l.id)),
@@ -335,7 +408,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                             style: TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
                         if (!compact)
-                          Text('Tap a league to show or hide it · nothing else',
+                          Text('Tap to show or hide · a pick replaces its full list',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

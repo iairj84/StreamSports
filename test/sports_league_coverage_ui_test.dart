@@ -106,9 +106,13 @@ void main() {
         ...kSportsLeagues.map((l) => l.id),
         ...kSportsLeagueBank.map((l) => l.id)
       };
+      // Showing every league covers the conferences and poll views that
+      // narrow one, so those picks are not stored next to their full list.
+      final picks = kCollegeGroupLeagues.map((l) => l.id).toSet();
+      final expected = all.difference(picks);
       final saved = savedSportsLeagues(storage).map((l) => l.id).toList();
-      expect(saved.toSet(), all);
-      expect(saved.length, all.length,
+      expect(saved.toSet(), expected);
+      expect(saved.length, expected.length,
           reason: 'Automatic competitions must not be duplicated');
       expect(storage.getSportsFavoriteLeague(), 'nhl');
       expect(storage.getHiddenGuideLeagues(), isEmpty);
@@ -134,7 +138,7 @@ void main() {
       expect(savedSportsLeagues(storage).any((l) => l.id == 'eng.2'), isTrue);
       final reloaded = StorageService();
       await reloaded.init();
-      expect(savedSportsLeagues(reloaded).map((l) => l.id).toSet(), all);
+      expect(savedSportsLeagues(reloaded).map((l) => l.id).toSet(), expected);
       await tester.pumpWidget(const SizedBox());
     });
   }
