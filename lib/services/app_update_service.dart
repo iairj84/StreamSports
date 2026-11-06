@@ -90,10 +90,10 @@ class AppUpdateService extends ChangeNotifier {
   static const MethodChannel _channel =
       MethodChannel('com.nox.nox_iptv/updater');
 
-  /// How often a background check may run. App start is the only trigger, so a
-  /// device that is opened daily checks daily and a box left on all week
-  /// checks once a day rather than on every rebuild.
-  static const Duration checkInterval = Duration(hours: 12);
+  /// How often a background check may run. App start is the only trigger, so
+  /// an hourly interval keeps a fresh build within reach of the next launch
+  /// without hitting GitHub on every rebuild of the widget tree.
+  static const Duration checkInterval = Duration(hours: 1);
 
   final StorageService _storage;
 

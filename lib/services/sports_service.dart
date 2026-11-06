@@ -309,9 +309,7 @@ class SportsService {
         final params = <String, String>{
           'dates': _espnDate(month).substring(0, 6),
           'limit': '1000',
-          if (league.espnPath == 'basketball/mens-college-basketball')
-            'groups': '50',
-          if (league.espnPath == 'football/college-football') 'groups': '80',
+          if (_espnGroupFor(league) case final group?) 'groups': group,
         };
         final url = Uri.parse('$_base/${league.espnPath}/scoreboard')
             .replace(queryParameters: params);
@@ -816,8 +814,9 @@ class SportsService {
       // last week's card, so "no upcoming games"); a 60-day range lists
       // what's next. Team leagues keep the dateless call — a range there
       // is hundreds of games (NHL's failed outright).
+      final group = _espnGroupFor(league);
       final range = league.kind == SportsKind.team
-          ? ''
+          ? (group == null ? '' : '?groups=$group')
           : '?dates=${_espnDate(day)}-${_espnDate(sportsCalendarDay(day, 60))}';
       final response = await _getScoreboard(
           Uri.parse('$_base/${league.espnPath}/scoreboard$range'));
@@ -1008,11 +1007,21 @@ class _ScoreFailure implements Exception {
   String toString() => 'Event feed unavailable: $reason';
 }
 
-String _scoreboardOptions(SportsLeague league) => switch (league.espnPath) {
-      'basketball/mens-college-basketball' => '&groups=50&limit=300',
-      'football/college-football' => '&groups=80&limit=300',
-      _ => league.id == 'rugby.live' ? '&limit=100' : '',
+/// ESPN `groups` filter in force for [league]: an explicit conference id, or
+/// the whole-division default the college scoreboards use.
+String? _espnGroupFor(SportsLeague league) =>
+    league.espnGroup ??
+    switch (league.espnPath) {
+      'basketball/mens-college-basketball' => '50',
+      'football/college-football' => '80',
+      _ => null,
     };
+
+String _scoreboardOptions(SportsLeague league) {
+  final group = _espnGroupFor(league);
+  if (group != null) return '&groups=$group&limit=300';
+  return league.id == 'rugby.live' ? '&limit=100' : '';
+}
 
 class _CacheEntry {
   _CacheEntry(this.games, this.fetchedAt);
@@ -1152,6 +1161,14 @@ List<SportsGame> parseEspnScoreboard((String, SportsLeague) args) {
     } catch (_) {
       // One malformed event shouldn't drop the whole league.
     }
+  }
+  // A poll view is the same scoreboard, narrowed to games with a ranked
+  // side; ESPN reports poll positions on both competitors.
+  if (league.rankedOnly) {
+    return [
+      for (final game in games)
+        if (game.home.rank != null || game.away.rank != null) game
+    ];
   }
   return games;
 }

@@ -45,6 +45,8 @@ class SportsLeague {
     this.source = 'ESPN',
     this.allowSportOnlySuggestions = true,
     this.enabledByDefault = true,
+    this.espnGroup,
+    this.rankedOnly = false,
   });
 
   final SportsKind kind;
@@ -59,6 +61,14 @@ class SportsLeague {
   /// Optional regional feeds remain selectable without adding startup requests
   /// for viewers who have not enabled them.
   final bool enabledByDefault;
+
+  /// ESPN `groups` filter: a college conference id (`8` is the SEC) or another
+  /// provider grouping. Null fetches the whole competition.
+  final String? espnGroup;
+
+  /// Keep only games involving a ranked (top 25) side — a poll view, not a
+  /// separate feed: ESPN returns the same scoreboard with poll positions.
+  final bool rankedOnly;
 
   /// Event sports: how channels and guide titles name the series ("formula
   /// 1", "nascar", "pga tour"), lower-case — the channel matcher's fallback
@@ -591,9 +601,208 @@ final List<String> kDefaultSportsLeagueIds = List.unmodifiable({
     if (league.enabledByDefault) league.id,
 });
 
+/// College picks: an ESPN conference is just another `groups` value, so each
+/// one is a selectable league that narrows the same scoreboard. Poll entries
+/// narrow it further to games with a ranked side.
+const List<SportsLeague> kCollegeGroupLeagues = [
+  SportsLeague(
+      id: 'college-football.acc',
+      espnPath: 'football/college-football',
+      name: 'ACC Football',
+      shortName: 'ACC',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '1'),
+  SportsLeague(
+      id: 'college-football.big12',
+      espnPath: 'football/college-football',
+      name: 'Big 12 Football',
+      shortName: 'Big 12',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '4'),
+  SportsLeague(
+      id: 'college-football.bigten',
+      espnPath: 'football/college-football',
+      name: 'Big Ten Football',
+      shortName: 'Big Ten',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '5'),
+  SportsLeague(
+      id: 'college-football.sec',
+      espnPath: 'football/college-football',
+      name: 'SEC Football',
+      shortName: 'SEC',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '8'),
+  SportsLeague(
+      id: 'college-football.pac12',
+      espnPath: 'football/college-football',
+      name: 'Pac-12 Football',
+      shortName: 'Pac-12',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '9'),
+  SportsLeague(
+      id: 'college-football.cusa',
+      espnPath: 'football/college-football',
+      name: 'Conference USA Football',
+      shortName: 'CUSA',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '12'),
+  SportsLeague(
+      id: 'college-football.mwc',
+      espnPath: 'football/college-football',
+      name: 'Mountain West Football',
+      shortName: 'MWC',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '17'),
+  SportsLeague(
+      id: 'basketball.acc',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'ACC Basketball',
+      shortName: 'ACC',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '2'),
+  SportsLeague(
+      id: 'basketball.atlantic10',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'Atlantic 10 Basketball',
+      shortName: 'A-10',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '3'),
+  SportsLeague(
+      id: 'basketball.bigeast',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'Big East Basketball',
+      shortName: 'Big East',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '4'),
+  SportsLeague(
+      id: 'basketball.bigten',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'Big Ten Basketball',
+      shortName: 'Big Ten',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '7'),
+  SportsLeague(
+      id: 'basketball.big12',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'Big 12 Basketball',
+      shortName: 'Big 12',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '8'),
+  SportsLeague(
+      id: 'basketball.mwc',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'Mountain West Basketball',
+      shortName: 'MWC',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '21'),
+  SportsLeague(
+      id: 'basketball.sec',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'SEC Basketball',
+      shortName: 'SEC',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Conference',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      espnGroup: '23'),
+  SportsLeague(
+      id: 'college-football.top25',
+      espnPath: 'football/college-football',
+      name: 'Top 25 Football',
+      shortName: 'CFB Top 25',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png',
+      region: 'Top 25',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      rankedOnly: true),
+  SportsLeague(
+      id: 'basketball.mens-college-basketball.top25',
+      espnPath: 'basketball/mens-college-basketball',
+      name: 'Top 25 Basketball',
+      shortName: 'CBB Top 25',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Top 25',
+      kind: SportsKind.team,
+      hasStandings: false,
+      enabledByDefault: false,
+      rankedOnly: true),
+];
+
 /// Additional selectable competitions. Each entry declares its data source,
 /// default selection, event kind and standings support.
 const List<SportsLeague> kSportsLeagueBank = [
+  ...kCollegeGroupLeagues,
   ...kMotorsportCalendarLeagues,
   ...kAdditionalEnduranceLeagues,
   SportsLeague(
@@ -1897,6 +2106,8 @@ const List<String> kSportsLeagueRegions = [
   'World',
   'Women',
   'Basketball',
+  'Conference',
+  'Top 25',
   'Hockey',
   'Baseball',
   'Golf',
