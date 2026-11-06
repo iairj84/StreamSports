@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "StreamSports - an M3U/EPG IPTV player with live TV, sports, movies and series for Android phones, boxes and TVs."
 publish_to: 'none'
-version: 0.2.0+2493
+version: 0.2.1+2494
 
 environment:
   # Preserve the package language version; locked dependencies require Dart 3.12+.

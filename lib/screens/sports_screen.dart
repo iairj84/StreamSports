@@ -224,9 +224,22 @@ class _SportsScreenState extends State<SportsScreen>
   int _guidePlaylistRevision = -1;
   Object? _completedGuideDiscovery;
   DateTime? _guideDiscoveryUntil;
+  /// Only leagues the viewer shows may reach the listings. Extra schedules
+  /// used to invent `tsdb:` competitions with no row in the league list, and
+  /// rugby's live feed reports per-competition slugs (`rugby.12`) rather than
+  /// the `rugby.live` id that is actually switched on.
+  bool _shownLeague(SportsLeague league, Set<String> shown) =>
+      shown.contains(league.id) ||
+      (shown.contains('rugby.live') && league.id.startsWith('rugby.'));
+
   List<SportsGame> _withGuideGames(List<SportsGame> games, DateTime day) {
+    final shown = {for (final league in _displayLeagues) league.id};
+    final listed = [
+      for (final game in games)
+        if (_shownLeague(game.league, shown)) game,
+    ];
     return mergeSportsGuideCoverage([
-      ...games.where((g) =>
+      ...listed.where((g) =>
           !g.isGuideEvent &&
           (!g.league.espnPath.startsWith('rugby/') || g.isLive)),
     ], [

@@ -148,17 +148,34 @@ void main() {
   test(
       'same names in women/youth competitions or different kickoffs are not merged',
       () {
+    // Only competitions on the league list reach the listings, so these two
+    // need real rows to stand for the feed's "Women’s Super League" and
+    // "Premier League U21" entries.
+    const wsl = SportsLeague(
+        id: 'soccer.wsl',
+        espnPath: 'soccer/soccer.wsl',
+        name: 'Women’s Super League',
+        shortName: 'WSL',
+        logoUrl: '',
+        hasStandings: false);
+    const u21 = SportsLeague(
+        id: 'soccer.u21',
+        espnPath: 'soccer/soccer.u21',
+        name: 'Premier League U21',
+        shortName: 'PL U21',
+        logoUrl: '',
+        hasStandings: false);
     final extras = parseSupplementGames((
       [
         row(id: '102', competition: 'Women’s Super League'),
         row(id: '103', competition: 'Premier League U21'),
         row(id: '104', time: start.add(const Duration(hours: 2))),
       ],
-      [league],
+      [league, wsl, u21],
       day
     ));
     expect(mergeSupplementGames([primary()], extras).length, 4);
-    expect(extras.first.league.source, 'TheSportsDB');
+    expect(extras.first.league.id, 'soccer.wsl');
     expect(extras.first.league.hasStandings, false);
   });
   test('start time alone never marks a supplemental event live', () {
@@ -175,6 +192,23 @@ void main() {
     ));
     expect(games.map((g) => g.state),
         [GameState.pre, GameState.live, GameState.post]);
+  });
+  test('competitions the league list does not offer never reach the listings',
+      () {
+    // A free feed lists every competition playing that day. Inventing a league
+    // for each one put fixtures on Sports for competitions with no row in the
+    // league list, so nothing could switch them off.
+    final extras = parseSupplementGames((
+      [
+        row(id: '201', competition: 'Copa Libertadores'),
+        row(id: '202', competition: 'Club Friendlies'),
+        row(id: '203'),
+      ],
+      [league],
+      day
+    ));
+    expect(extras.map((g) => g.id), ['tsdb:203']);
+    expect(extras.single.league.id, 'eng.1');
   });
   test(
       'online TV lookup validates event identity, coalesces and caches requests',

@@ -241,7 +241,9 @@ void main() {
         }
     ];
     final parsed = parseSupplementGames(
-        (rows, [sportsLeagueById('mma.ufc')!], now.toLocal()));
+        (rows,
+            [sportsLeagueById('mma.ufc')!, sportsLeagueById('guide.one')!],
+            now.toLocal()));
     expect(parsed, hasLength(2));
     expect(parsed.first.league.kind, SportsKind.broadcast);
     expect(parsed.first.title, 'ONE Friday Fights 176');

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 6 November 2026
+
+- Keep Sports to the competitions you can actually show or hide. Extra schedules used to invent a league for every competition a free feed listed that day (club friendlies, continental cups and other one-off events), so fixtures appeared a minute or two after opening Sports under leagues that had no row in the league list and could not be switched off.
+- Match extra fixtures only to a listed competition, by name, by the feed's known aliases, or by short name. ONE Championship cards now sit under the ONE Championship entry.
+- Drop any event whose league is not one of the shown leagues before it reaches the listings, so no later feed can put unlisted competitions back on Sports. Rugby's live feed still reports its per-competition slugs under the live rugby entry.
+
 ## 0.2.0 — 6 November 2026
 
 - Rename the app to **StreamSports**, with a new launcher icon, adaptive and themed (monochrome) icon layers and a TV banner. The application ID is unchanged, so existing installs update in place.

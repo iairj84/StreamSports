@@ -457,6 +457,7 @@ List<SportsGame> parseSupplementGames(
     'English League Championship': 'eng.2',
     'English Championship': 'eng.2',
     'UFC': 'mma.ufc',
+    'ONE': 'guide.one',
     'Professional Fighters League': 'mma.pfl',
     'English Premier League': 'eng.1',
     'Spanish La Liga': 'esp.1',
@@ -544,34 +545,17 @@ List<SportsGame> parseSupplementGames(
       final normalizedName = _name(name);
       final catalogueLeague =
           sport == 'racing' ? _motorsportLeaguesByName[normalizedName] : null;
-      if (catalogueLeague != null && !enabled.contains(catalogueLeague.id)) {
-        continue;
-      }
-      final league = (cardOnly ? null : byName[normalizedName]) ??
-          catalogueLeague ??
-          (cardOnly
-              ? null
-              : leagues.where((l) => l.id == aliases[name]).firstOrNull) ??
-          SportsLeague(
-              id: 'tsdb:$leagueId',
-              espnPath: '$sport/tsdb-$leagueId',
-              name: name,
-              shortName: name,
-              logoUrl: '',
-              soccer: sport == 'soccer',
-              source: 'TheSportsDB',
-              region: 'Extra schedules',
-              hasStandings: false,
-              seriesPhrases: sport == 'mma' ? [name.toLowerCase()] : const [],
-              kind: cardOnly
-                  ? SportsKind.broadcast
-                  : field
-                      ? SportsKind.racing
-                      : sport == 'tennis'
-                          ? SportsKind.tennis
-                          : sport == 'mma'
-                              ? SportsKind.fight
-                              : SportsKind.team);
+      // Only competitions the league list already offers. A free feed lists
+      // every competition playing that day, and inventing a `tsdb:` league for
+      // each one put fixtures on Sports for competitions that had no row to
+      // switch off — they looked like phantom leagues arriving a minute late.
+      final league = byName[normalizedName] ??
+          (catalogueLeague != null && enabled.contains(catalogueLeague.id)
+              ? catalogueLeague
+              : null) ??
+          leagues.where((l) => l.id == aliases[name]).firstOrNull ??
+          leagues.where((l) => _name(l.shortName) == normalizedName).firstOrNull;
+      if (league == null) continue;
       SportsTeam team(String side, String title) => SportsTeam(
           id: 'tsdb:${row['id${side}Team'] ?? title}',
           name: title,
