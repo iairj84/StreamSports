@@ -29,7 +29,7 @@ Set a public commit identity, such as a GitHub noreply address, before the first
 ## Android APK
 
 1. Set the four signing values from `.env.example`; keep the keystore outside source. Preserve the certificate for updates. Without these values, local release builds fall back to debug signing and are not distribution builds.
-2. Increase the version/build number in `pubspec.yaml`. Build from a neutral directory such as `/workspace/iptv-app` so generated source paths do not expose a personal home directory.
+2. Increase the version/build number in `pubspec.yaml`. Build from a neutral directory such as `/workspace/StreamSports` so generated source paths do not expose a personal home directory.
 3. Build and verify:
 
 ```sh
@@ -47,12 +47,12 @@ Separately check the application ID, embedded version, signing certificate and c
 
 Create a version tag from the reviewed source and prepare a draft release. Attach:
 
-- `iptv-app.apk`: the signed, audited APK. Keep this filename stable for the latest-download link.
-- `iptv-app-source.zip`: the exact corresponding application source, without local configuration or build output.
+- `app-release.apk`: the signed, audited APK. Keep this filename stable for the latest-download link.
+- `StreamSports-source.zip`: the exact corresponding application source, without local configuration or build output.
 - `android-native-sources.zip`: the pinned decoder build project, Media3 and FFmpeg source trees, licences and build instructions.
 - `SHA256SUMS.txt`: SHA-256 checksums of the three files above.
 
-Verify the draft assets before publishing. The stable APK address is `https://github.com/akus0/iptv-app-public/releases/latest/download/iptv-app.apk`; mark a normal release as latest for that route to work. Keep experimental prereleases separate. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
+Verify the draft assets before publishing. The stable APK address is `https://github.com/iairj84/StreamSports/releases/latest/download/app-release.apk`, which only resolves for a normal release — GitHub excludes prereleases from `latest`, so link a beta by its tag (`.../releases/tag/vX.Y.Z-NNNN-beta`) instead. Keep experimental prereleases separate. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
 
 ## Distribution
 

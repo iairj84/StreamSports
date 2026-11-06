@@ -108,8 +108,8 @@ const Map<String, String> kFr = {
       "Ce lien n'est pas un module de sous-titres (seuls ceux-ci sont pris en charge).",
   'That add-on is already in the list.': 'Ce module est déjà dans la liste.',
   '{name} added.': '{name} ajouté.',
-  "Add-ons find subtitles online for movies and episodes, in many languages. They are free community services, separate from your provider — iptv-app only uses them for subtitles. Turn one on, then pick \"Search online subtitles\" in the player's Subtitles button.":
-      'Les modules trouvent des sous-titres en ligne pour les films et les épisodes, dans de nombreuses langues. Ce sont des services communautaires gratuits, distincts de votre fournisseur — iptv-app ne les utilise que pour les sous-titres. Activez-en un, puis choisissez « Chercher des sous-titres en ligne » dans le bouton Sous-titres du lecteur.',
+  "Add-ons find subtitles online for movies and episodes, in many languages. They are free community services, separate from your provider — StreamSports only uses them for subtitles. Turn one on, then pick \"Search online subtitles\" in the player's Subtitles button.":
+      'Les modules trouvent des sous-titres en ligne pour les films et les épisodes, dans de nombreuses langues. Ce sont des services communautaires gratuits, distincts de votre fournisseur — StreamSports ne les utilise que pour les sous-titres. Activez-en un, puis choisissez « Chercher des sous-titres en ligne » dans le bouton Sous-titres du lecteur.',
   'Subtitle add-ons': 'Modules de sous-titres',
   'Subtitles in 60+ languages from OpenSubtitles.org':
       'Sous-titres en plus de 60 langues depuis OpenSubtitles.org',
@@ -352,8 +352,8 @@ const Map<String, String> kFr = {
   'Double': "Double",
   'for groups': "pour les groupes",
   'Exit and free up this login?': "Quitter et libérer cette connexion?",
-  'This disconnects your login here so it can be used on another device, then fully closes iptv-app. Your channels/movies will need to reload next time you open it.':
-      "Ça déconnecte votre compte ici pour qu'il serve sur un autre appareil, puis ferme complètement iptv-app. Vos chaînes et films devront recharger à la prochaine ouverture.",
+  'This disconnects your login here so it can be used on another device, then fully closes StreamSports. Your channels/movies will need to reload next time you open it.':
+      "Ça déconnecte votre compte ici pour qu'il serve sur un autre appareil, puis ferme complètement StreamSports. Vos chaînes et films devront recharger à la prochaine ouverture.",
   'Exit': "Quitter",
   'Exit {appName}?': "Quitter {appName}?",
   'Are you sure you want to exit {appName}?':
@@ -392,7 +392,7 @@ const Map<String, String> kFr = {
   // ── Welcome ──────────────────────────────────────────────────────────
   'Hey beautiful Human,': "Salut, bel humain,",
   'Hey beautiful Human': "Salut, bel humain",
-  'Welcome to iptv-app': "Bienvenue dans iptv-app",
+  'Welcome to StreamSports': "Bienvenue dans StreamSports",
   'Add your first playlist?': "Ajouter votre première liste?",
   'Add a playlist to kick things off, or skip for now if you just want to browse and discover the app without content.':
       "Ajoutez une liste pour commencer, ou passez pour l'instant si vous voulez juste découvrir l'appli sans contenu.",
@@ -525,8 +525,8 @@ const Map<String, String> kFr = {
   'Couldn\'t open the download link.':
       "Impossible d'ouvrir le lien de téléchargement.",
   'Allow installing updates': "Autoriser l'installation des MAJ",
-  'Android needs one-time permission for iptv-app to install an update it downloaded. The next screen is Android\'s own settings — turn the toggle on, then come back here and press Install again.':
-      "Android doit autoriser une fois iptv-app à installer une MAJ téléchargée. L'écran suivant est dans les paramètres d'Android — activez l'option, puis revenez ici et appuyez de nouveau sur Installer.",
+  'Android needs one-time permission for StreamSports to install an update it downloaded. The next screen is Android\'s own settings — turn the toggle on, then come back here and press Install again.':
+      "Android doit autoriser une fois StreamSports à installer une MAJ téléchargée. L'écran suivant est dans les paramètres d'Android — activez l'option, puis revenez ici et appuyez de nouveau sur Installer.",
   'Check for Updates': "Vérifier les MAJ",
   'Current version: —': "Version actuelle : —",
   'Current version: {currentVersion}': "Version actuelle : {currentVersion}",
@@ -789,12 +789,12 @@ const Map<String, String> kFr = {
   'Saved, but TMDB rejected this key — double-check it\'s correct':
       "Enregistrée, mais TMDB a refusé cette clé — vérifiez-la",
   'What\'s New refreshed from TMDB': "Nouveautés actualisées depuis TMDB",
-  'TMDB (The Movie Database) is a free, independent movie and TV database — not your IPTV provider. Adding your own free TMDB key lets iptv-app look up a title\'s actual real-world release date, which powers two things: a "TMDB" sort option on any group\'s "Expand catalog" screen, and a more accurate "What\'s New" row (ordered by real release date instead of just when your provider added the title).':
-      "TMDB (The Movie Database) est une base de données gratuite et indépendante de films et séries — ce n'est pas votre fournisseur IPTV. Avec votre propre clé TMDB gratuite, iptv-app trouve la vraie date de sortie d'un titre, ce qui sert à deux choses : un tri « TMDB » dans l'écran « Catalogue complet » de chaque groupe, et une rangée « Nouveautés » plus juste (classée par vraie date de sortie plutôt que par date d'ajout chez votre fournisseur).",
-  'This is completely optional and free — iptv-app works 100% without it. Without a key, sorting just falls back to whenever your provider added or updated each title, which is still available and works fine on its own.':
-      "C'est entièrement facultatif et gratuit — iptv-app fonctionne à 100 % sans. Sans clé, le tri se fait selon la date d'ajout ou de MAJ chez votre fournisseur, ce qui fonctionne très bien aussi.",
-  'To get one: create a free account at themoviedb.org, then generate an API key under Settings > API (choose "Personal use" when asked) and paste it below. iptv-app never collects or shares it — it\'s stored only on this device.':
-      "Pour en avoir une : créez un compte gratuit sur themoviedb.org, puis générez une clé API dans Settings > API (choisissez « Personal use ») et collez-la ci-dessous. iptv-app ne la collecte ni ne la partage jamais — elle reste sur cet appareil.",
+  'TMDB (The Movie Database) is a free, independent movie and TV database — not your IPTV provider. Adding your own free TMDB key lets StreamSports look up a title\'s actual real-world release date, which powers two things: a "TMDB" sort option on any group\'s "Expand catalog" screen, and a more accurate "What\'s New" row (ordered by real release date instead of just when your provider added the title).':
+      "TMDB (The Movie Database) est une base de données gratuite et indépendante de films et séries — ce n'est pas votre fournisseur IPTV. Avec votre propre clé TMDB gratuite, StreamSports trouve la vraie date de sortie d'un titre, ce qui sert à deux choses : un tri « TMDB » dans l'écran « Catalogue complet » de chaque groupe, et une rangée « Nouveautés » plus juste (classée par vraie date de sortie plutôt que par date d'ajout chez votre fournisseur).",
+  'This is completely optional and free — StreamSports works 100% without it. Without a key, sorting just falls back to whenever your provider added or updated each title, which is still available and works fine on its own.':
+      "C'est entièrement facultatif et gratuit — StreamSports fonctionne à 100 % sans. Sans clé, le tri se fait selon la date d'ajout ou de MAJ chez votre fournisseur, ce qui fonctionne très bien aussi.",
+  'To get one: create a free account at themoviedb.org, then generate an API key under Settings > API (choose "Personal use" when asked) and paste it below. StreamSports never collects or shares it — it\'s stored only on this device.':
+      "Pour en avoir une : créez un compte gratuit sur themoviedb.org, puis générez une clé API dans Settings > API (choisissez « Personal use ») et collez-la ci-dessous. StreamSports ne la collecte ni ne la partage jamais — elle reste sur cet appareil.",
   'TMDB API Key': "Clé API TMDB",
   'What\'s New only re-checks TMDB about once a week on its own. Use this to force it right now instead of waiting — useful right after saving a key for the first time.':
       "Nouveautés ne revérifie TMDB qu'environ une fois par semaine. Utilisez ceci pour le forcer tout de suite — pratique juste après avoir enregistré une clé.",
@@ -888,8 +888,8 @@ const Map<String, String> kFr = {
       "Copie vos listes, favoris, groupes masqués, profils, progression et réglages vers un autre appareil. Sur le même Wi-Fi, ça passe directement; ailleurs, ça passe par un envoi chiffré que seul le code peut ouvrir. Les chaînes, films et le guide se téléchargent de nouveau sur le nouvel appareil.",
   'This setup is too big to upload. Use the same-Wi-Fi transfer instead.':
       "Cette configuration est trop grosse pour l'envoi. Utilisez plutôt le transfert par le même Wi-Fi.",
-  'Couldn\'t reach the iptv-app transfer server. Check this device\'s internet connection and try again.':
-      "Impossible de joindre le serveur de transfert iptv-app. Vérifiez la connexion Internet de cet appareil et réessayez.",
+  'Couldn\'t reach the StreamSports transfer server. Check this device\'s internet connection and try again.':
+      "Impossible de joindre le serveur de transfert StreamSports. Vérifiez la connexion Internet de cet appareil et réessayez.",
   '{n} hour': "{n} heure",
   '{n} hours': "{n} heures",
   '{n} day': "{n} jour",
@@ -953,8 +953,8 @@ const Map<String, String> kFr = {
   'The transfer didn\'t go through. Try again.':
       "Le transfert n'a pas fonctionné. Réessayez.",
   'Transfer complete': "Transfert terminé",
-  'iptv-app will close now. Open it again to load your playlists.':
-      "iptv-app va se fermer. Rouvrez-le pour charger vos listes.",
+  'StreamSports will close now. Open it again to load your playlists.':
+      "StreamSports va se fermer. Rouvrez-le pour charger vos listes.",
   'Enter the code shown on the other device':
       "Entrez le code affiché sur l'autre appareil",
   'Ready to copy': "Prêt à copier",
@@ -1055,8 +1055,8 @@ const Map<String, String> kFr = {
   "That source is already in the list.": "Cette source est déjà dans la liste.",
   "This source lists no episodes for this show.":
       "Cette source n'indique aucun épisode pour cette série.",
-  "iptv-app ships no sources. The titles you open are requested from the source you added; nothing else is shared.":
-      "iptv-app n'inclut aucune source. Les titres que vous ouvrez sont demandés à la source ajoutée; rien d'autre n'est partagé.",
+  "StreamSports ships no sources. The titles you open are requested from the source you added; nothing else is shared.":
+      "StreamSports n'inclut aucune source. Les titres que vous ouvrez sont demandés à la source ajoutée; rien d'autre n'est partagé.",
   "Your sources": "Vos sources",
   "{n} TV show catalogs": "{n} catalogues de séries",
   "{n} movie catalogs": "{n} catalogues de films",
@@ -1088,12 +1088,12 @@ const Map<String, String> kFr = {
   // Transfer: Archive tab data
   // Media Hub tab (was Extras, before that Archive) + Multiview toggle
   // Trakt & Simkl (trackers_screen.dart, tracker rows)
-  'Watch tracking powered by Trakt and Simkl; iptv-app is not affiliated with or endorsed by either.':
-      "Suivi de visionnage fourni par Trakt et Simkl; iptv-app n'est ni affilié à l'un ni approuvé par l'un ou l'autre.",
+  'Watch tracking powered by Trakt and Simkl; StreamSports is not affiliated with or endorsed by either.':
+      "Suivi de visionnage fourni par Trakt et Simkl; StreamSports n'est ni affilié à l'un ni approuvé par l'un ou l'autre.",
   'Powered by Trakt (trakt.tv) and Simkl (simkl.com).':
       "Fourni par Trakt (trakt.tv) et Simkl (simkl.com).",
-  'iptv-app is not affiliated with or endorsed by Trakt or Simkl.':
-      "iptv-app n'est ni affilié à Trakt ou Simkl, ni approuvé par eux.",
+  'StreamSports is not affiliated with or endorsed by Trakt or Simkl.':
+      "StreamSports n'est ni affilié à Trakt ou Simkl, ni approuvé par eux.",
   'Trakt & Simkl': 'Trakt et Simkl',
   'Track what you watch, lists in the Media Hub':
       'Suivi de ce que vous regardez, listes dans le Media Hub',
@@ -1146,8 +1146,8 @@ const Map<String, String> kFr = {
       'Aucun serveur Jellyfin ou Emby trouvé à cette adresse.',
   'Sign in to your own Jellyfin or Emby server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server (no transcoding).':
       'Connectez-vous à votre propre serveur Jellyfin ou Emby : ses bibliothèques de films et de séries apparaissent dans le Media Hub. Les fichiers sont lus tels qu\'ils sont stockés sur le serveur (sans transcodage).',
-  'Your password is only sent to your server. iptv-app keeps the sign-in token the server gives back, not the password.':
-      'Votre mot de passe n\'est envoyé qu\'à votre serveur. iptv-app garde le jeton de connexion que le serveur renvoie, pas le mot de passe.',
+  'Your password is only sent to your server. StreamSports keeps the sign-in token the server gives back, not the password.':
+      'Votre mot de passe n\'est envoyé qu\'à votre serveur. StreamSports garde le jeton de connexion que le serveur renvoie, pas le mot de passe.',
   'Media Hub': 'Media Hub',
   'Media Hub sources': 'Sources Media Hub',
   'Add-on sources for the Media Hub tab':

@@ -1618,7 +1618,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       builder: (context) => AlertDialog(
         title: Text(tr('Exit and free up this login?')),
         content: Text(
-          tr('This disconnects your login here so it can be used on another device, then fully closes iptv-app. Your channels/movies will need to reload next time you open it.'),
+          tr('This disconnects your login here so it can be used on another device, then fully closes StreamSports. Your channels/movies will need to reload next time you open it.'),
         ),
         actions: [
           ModeButton(

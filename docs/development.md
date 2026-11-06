@@ -257,7 +257,7 @@ Keep device serials, addresses and private fixture paths in `.env`. Keep logs an
 
 ## Android scope
 
-The app retains IPTV playlists, Live TV, Sports matching, Movies, Series, local history, embedded subtitles and multiview. Media-server/archive catalogues, detailed match summaries, account scrobbling, profile management, online subtitle add-ons, desktop players and the inactive APK updater/settings transfer have been removed. Phone-to-TV playlist entry remains available. Sports replays and highlights load when selected rather than warming in the background.
+The app retains IPTV playlists, Live TV, Sports matching, Movies, Series, local history, embedded subtitles and multiview. Media-server/archive catalogues, detailed match summaries, account scrobbling, profile management, online subtitle add-ons and desktop players have been removed. Phone-to-TV playlist entry remains available, the in-app APK updater is active, and **Settings → Devices & app → Transfer to another device** copies playlists, settings and sports picks to another device over the LAN. Sports replays and highlights load when selected rather than warming in the background.
 
 Keep the existing stored viewer namespace even though profile management is gone: changing it would hide saved favourites, history and resume positions for upgraded installations. Do not delete legacy keys or alter catalogue schemas as part of UI cleanup. The Android Media3/FFmpeg decoder is still required for IPTV playback; it is independent of the removed media-server integration.
 

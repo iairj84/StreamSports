@@ -19,7 +19,7 @@ class PlaylistOrganisationPicker extends StatelessWidget {
                 const InputDecoration(labelText: 'Playlist organisation'),
             items: const [
               DropdownMenuItem(
-                  value: 'organised', child: Text('Organise with iptv-app')),
+                  value: 'organised', child: Text('Organise with StreamSports')),
               DropdownMenuItem(
                   value: 'provider', child: Text('Keep provider categories')),
             ],

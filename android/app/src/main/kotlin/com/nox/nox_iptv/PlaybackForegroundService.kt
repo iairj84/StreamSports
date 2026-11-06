@@ -22,7 +22,7 @@ class PlaybackForegroundService : Service() {
     }
 
     private lateinit var session: MediaSession
-    private var title = "iptv-app"
+    private var title = "StreamSports"
     private var playing = false
 
     override fun onCreate() {
@@ -35,8 +35,8 @@ class PlaybackForegroundService : Service() {
         // Promote before MediaSession binder work or any command can return.
         // TV firmware can be slow to create a session; Android's deadline still
         // applies even when playback was cancelled during service startup.
-        startForeground(NOTIFICATION, notification("iptv-app", false))
-        session = MediaSession(this, "iptv-app").apply {
+        startForeground(NOTIFICATION, notification("StreamSports", false))
+        session = MediaSession(this, "StreamSports").apply {
             setCallback(object : MediaSession.Callback() {
                 override fun onPlay() { onAction?.invoke("play") }
                 override fun onPause() { onAction?.invoke("pause") }
@@ -55,7 +55,7 @@ class PlaybackForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == null) {
             playing = intent?.getBooleanExtra("playing", false) == true
-            title = intent?.getStringExtra("title") ?: "iptv-app"
+            title = intent?.getStringExtra("title") ?: "StreamSports"
         }
         // Each foreground start must be acknowledged, including queued stops
         // and stale notification actions after the activity has gone away.
@@ -73,7 +73,7 @@ class PlaybackForegroundService : Service() {
         }
         session.setMetadata(MediaMetadata.Builder()
             .putString(MediaMetadata.METADATA_KEY_TITLE, title)
-            .putString(MediaMetadata.METADATA_KEY_ARTIST, "iptv-app")
+            .putString(MediaMetadata.METADATA_KEY_ARTIST, "StreamSports")
             .build())
         session.setPlaybackState(PlaybackState.Builder()
             .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or

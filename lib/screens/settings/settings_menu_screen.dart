@@ -128,7 +128,7 @@ class SettingsMenuScreen extends StatelessWidget {
                           const DeviceTransferScreen()),
                       link(
                           Icons.info_outline,
-                          'About iptv-app',
+                          'About StreamSports',
                           'Version, credits and open-source licences',
                           const AppInfoScreen()),
                       link(
@@ -165,9 +165,9 @@ class _AppInfoScreenState extends State<AppInfoScreen> {
 
   @override
   Widget build(BuildContext context) => SettingsScaffold(
-      title: tr('About iptv-app'),
+      title: tr('About StreamSports'),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        SettingsSection(title: 'iptv-app', children: [
+        SettingsSection(title: 'StreamSports', children: [
           Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -190,7 +190,7 @@ class _AppInfoScreenState extends State<AppInfoScreen> {
               title: tr('Open-source licences'),
               onTap: () => showLicensePage(
                   context: context,
-                  applicationName: 'iptv-app',
+                  applicationName: 'StreamSports',
                   applicationLegalese:
                       'Based on VesperTV by NoXqc and contributors. GPL-3.0.')),
         ]),

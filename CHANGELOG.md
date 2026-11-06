@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — 6 November 2026
+
+- Rename the app to **StreamSports**, with a new launcher icon, adaptive and themed (monochrome) icon layers and a TV banner. The application ID is unchanged, so existing installs update in place.
+- Add **Transfer to another device** over the local network: playlists and their logins, settings, sports picks, favorites, hidden channels, group order, channel links and guide overrides. The receiving device is replaced rather than merged, and says so before accepting.
+- Encrypt transfers with an ephemeral X25519 exchange and AES-256-GCM; both screens show the same six-digit code before anything is sent. No server or account is involved, and device-only state (resume positions, update checks, caches, layout) never travels.
+- Replace per-league favorites with a single shown/hidden list, including bulk show/hide, restore selection and a coverage hint.
+- Add college conferences and Top 25 picks to the league list. Selecting a pick narrows its full competition; selecting both never silently means every game.
+- Check for app updates hourly, with **Later** to dismiss and **Skip** to ignore a specific version.
+- Keep Sports to the leagues the viewer selected: guide-discovered competitions no longer appear alongside chosen leagues.
+
+Beta builds between 0.1.6 and 0.1.21 were incremental previews and did not get individual entries here.
+
 ## 0.1.5 — 4 November 2026
 
 - Preserve the native video view across Live TV, Sports and fullscreen transitions to avoid video freezes while audio continues.

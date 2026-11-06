@@ -40,7 +40,7 @@ class WelcomeAddPlaylistScreen extends StatelessWidget {
                       size: 64, color: palette.primary),
                   const SizedBox(height: 20),
                   Text(
-                    tr('Welcome to iptv-app'),
+                    tr('Welcome to StreamSports'),
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,

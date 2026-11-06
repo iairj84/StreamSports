@@ -43,7 +43,7 @@ class PictureInPictureService extends ChangeNotifier {
   bool _hidden = false;
   bool _screenOffPlayback = false;
   bool _mediaStopped = false;
-  String _title = 'iptv-app';
+  String _title = 'StreamSports';
   bool? _lastSession;
   bool? _lastPlaying;
   String? _lastTitle;
@@ -74,7 +74,7 @@ class PictureInPictureService extends ChangeNotifier {
     if (_disposed) return;
     _controller?.removeListener(_sync);
     _controller = controller;
-    _title = title ?? 'iptv-app';
+    _title = title ?? 'StreamSports';
     _allowBackgroundAudio = allowBackgroundAudio;
     _mediaStopped = false;
     controller?.addListener(_sync);

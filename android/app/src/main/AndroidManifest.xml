@@ -13,10 +13,11 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
 
     <application
-        android:label="iptv-app"
+        android:label="StreamSports"
         android:name="${applicationName}"
-        android:icon="@drawable/iptv_icon"
-        android:banner="@drawable/iptv_banner"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:banner="@drawable/streamsports_banner"
         android:usesCleartextTraffic="true"
         android:largeHeap="true">
         <!-- Impeller (Vulkan) crashes on startup on several budget Amlogic/Mali

@@ -1,11 +1,11 @@
 {
-    "name": "iptv-app",
-    "short_name": "iptv-app",
+    "name": "StreamSports",
+    "short_name": "StreamSports",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#171D25",
     "theme_color": "#171D25",
-    "description": "iptv-app: live TV, sports, movies, series and multiview. Bring your own M3U or Xtream playlist.",
+    "description": "StreamSports: live TV, sports, movies, series and multiview. Bring your own M3U or Xtream playlist.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

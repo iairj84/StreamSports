@@ -260,7 +260,7 @@ class AppUpdateService extends ChangeNotifier {
         }
       }
       final safeTag = release.tag.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-');
-      final file = File('${directory.path}/iptv-app-$safeTag.apk');
+      final file = File('${directory.path}/StreamSports-$safeTag.apk');
       final request = http.Request('GET', Uri.parse(release.apkUrl))
         ..headers['User-Agent'] = AppConstants.appName;
       final response = await client.send(request).timeout(

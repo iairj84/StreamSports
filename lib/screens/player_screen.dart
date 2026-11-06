@@ -336,7 +336,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (!mounted || entered) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
       content: Text(
-          'Start playback and allow picture-in-picture for iptv-app in Android settings.'),
+          'Start playback and allow picture-in-picture for StreamSports in Android settings.'),
     ));
   }
 

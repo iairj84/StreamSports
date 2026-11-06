@@ -69,7 +69,7 @@ class FormulaOneScheduleService {
           'GET',
           Uri.https(
               'api.jolpi.ca', '/ergast/f1/$year/races/', {'limit': '100'}));
-      request.headers['User-Agent'] = 'iptv-app/0.1.0-preview.59';
+      request.headers['User-Agent'] = 'StreamSports/0.1.0-preview.59';
       final response =
           await client.send(request).timeout(const Duration(seconds: 8));
       if (response.statusCode != 200 ||

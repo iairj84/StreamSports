@@ -304,7 +304,7 @@ class MainActivity : FlutterActivity() {
                         pipRatio = if (ratio.isFinite() && ratio > 0) ratio else 16.0 / 9.0
                         mediaSessionEnabled = call.argument<Boolean>("mediaSession") == true
                         mediaPlaying = call.argument<Boolean>("playing") == true
-                        updatePlaybackService(call.argument<String>("title") ?: "iptv-app")
+                        updatePlaybackService(call.argument<String>("title") ?: "StreamSports")
                         updatePipParams()
                         result.success(null)
                     }

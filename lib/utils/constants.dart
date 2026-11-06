@@ -6,7 +6,7 @@ import '../models/cyberpunk_palette.dart';
 /// keys used by [StorageService]. Centralized here so key names never drift
 /// between the services that read and write them.
 class AppConstants {
-  static const String appName = 'iptv-app';
+  static const String appName = 'StreamSports';
 
   // Libraries load on demand; enabling tabs never starts a bulk catalogue sync.
   static const bool onDemandEnabled = true;

@@ -1,22 +1,27 @@
-# iptv-app
+# StreamSports
 
-A free IPTV player for Android phones and TVs. Live TV, sports, replays, highlights, movies, series and multiview. Bring your own M3U, Xtream or Stalker / MAC playlist. No channels or subscriptions are included.
+A free IPTV player for Android phones, TV boxes and Android TV. Live TV with a guide, sports events with channel matching, replays and highlights, movies, series and multiview. Bring your own M3U, Xtream or Stalker / MAC playlist — no channels or subscriptions are included.
 
 ## Download
 
-- **TV:** Install [Downloader by AFTVnews](https://play.google.com/store/apps/details?id=com.esaba.downloader) and enter **3461840**.
-- **Phone:** [Download the APK](https://github.com/akus0/iptv-app-public/releases/latest/download/iptv-app.apk) and open it to install.
+Grab the latest APK from [Releases](https://github.com/iairj84/StreamSports/releases) and open it on the device. The app is distributed as `app-release.apk`; the same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7.0 or newer.
 
-One APK for ARM devices on Android 7.0+. [Installation help](docs/install.md) · [Releases](https://github.com/akus0/iptv-app-public/releases)
+[Installation help](docs/install.md) · [Changelog](CHANGELOG.md) · [Build instructions](docs/development.md)
 
 ## Get started
 
-1. Open **Settings → Playlists & guide → Add Playlist** and enter your details.
-2. Choose **Organise with iptv-app** or **Keep provider categories**. For Xtream playlists, enable Movies and Series under **Content from this playlist** if wanted.
+1. Open **Settings → Playlists & guide → Add Playlist** and enter your details. On a phone, **Pair with TV** can send the playlist to another device on the same Wi-Fi.
+2. Choose **Organise with StreamSports** or **Keep provider categories**. For Xtream playlists, enable Movies and Series under **Content from this playlist** if wanted.
+3. To copy an existing setup to a second device, use **Settings → Devices & app → Transfer to another device**. Both devices must be on the same Wi-Fi; the receiving device is replaced with a copy of the sender's playlists, settings, sports picks, favorites and channel links.
 
-## What’s new in 0.1.5
+## Features
 
-Progressive sports channel matching, faster guide and category startup, clearer favourites filters, polished team and game details, and improved calendar navigation with optional month loading. Playback transitions retain the video surface, and suspended matches stay visible. This release also adds custom XMLTV guides and per-playlist user-agent settings, and improves Xtream setup. [Full changelog](CHANGELOG.md).
+- **Live TV** with a timeline guide, category management, favorites, hidden channels and picture-in-picture.
+- **Sports** across leagues, college conferences, Top 25 polls, motorsport and regional feeds — events, schedules, standings, team pages, replays and highlights, matched against your own channels.
+- **Movies and series** with category browsing, search, favorites and watch history.
+- **Multiview** for watching several live channels side by side.
+- **Per-playlist guide sources**, including custom XMLTV guides, with per-playlist user-agent settings.
+- **Device transfer** over the local network, with no account and no server in the middle.
 
 ## Screenshots
 
@@ -43,8 +48,8 @@ Progressive sports channel matching, faster guide and category startup, clearer 
 
 Screenshots use [sample data](docs/screenshots/README.md).
 
-## Development & licence
+## Development, licence and attribution
 
-[Build instructions](docs/development.md) · [Release preparation](docs/release.md) · [Changelog](CHANGELOG.md)
+[Build instructions](docs/development.md) · [Release preparation](docs/release.md) · [Release checks](docs/release-readiness.md) · [Changelog](CHANGELOG.md)
 
-[GPL-3.0](LICENSE). Based on [VesperTV](https://github.com/NoXqc/VesperTV) by NoXqc and contributors; independently maintained. [Attribution](NOTICE.md) · [Trademark terms](TRADEMARKS.md)
+[GPL-3.0](LICENSE). StreamSports is based on [VesperTV](https://github.com/NoXqc/VesperTV) by NoXqc and contributors, independently renamed and maintained. The name, icon and banner are this project's own and are not VesperTV artwork. [Attribution](NOTICE.md) · [Trademark terms](TRADEMARKS.md)
