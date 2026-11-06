@@ -899,4 +899,37 @@ class StorageService {
       _prefs.getBool(AppConstants.keyFavoritesDbReconciled) ?? false;
   Future<void> setFavoritesDbReconciled(bool value) =>
       _prefs.setBool(AppConstants.keyFavoritesDbReconciled, value);
+
+  /// Every stored preference, exactly as saved. The device-transfer bundle
+  /// needs the raw values — re-reading 79 typed settings one getter at a time
+  /// would silently drop any key added later.
+  Map<String, Object?> rawPreferences() => {
+        for (final key in _prefs.getKeys()) key: _prefs.get(key),
+      };
+
+  /// Remove [remove], then write [values] — a device transfer replaces this
+  /// device's configuration rather than merging two sets of playlists.
+  Future<void> replaceRawPreferences(
+    Map<String, Object?> values, {
+    required Iterable<String> remove,
+  }) async {
+    for (final key in remove) {
+      await _prefs.remove(key);
+    }
+    for (final entry in values.entries) {
+      final key = entry.key;
+      final value = entry.value;
+      if (value is String) {
+        await _prefs.setString(key, value);
+      } else if (value is bool) {
+        await _prefs.setBool(key, value);
+      } else if (value is int) {
+        await _prefs.setInt(key, value);
+      } else if (value is double) {
+        await _prefs.setDouble(key, value);
+      } else if (value is List) {
+        await _prefs.setStringList(key, value.whereType<String>().toList());
+      }
+    }
+  }
 }

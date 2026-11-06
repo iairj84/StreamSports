@@ -12,6 +12,7 @@ import '../../l10n/l10n.dart';
 
 import 'general_settings_screen.dart';
 import 'app_update_screen.dart';
+import 'device_transfer_screen.dart';
 import 'playlist_manager_screen.dart';
 import 'theme_screen.dart';
 
@@ -120,6 +121,11 @@ class SettingsMenuScreen extends StatelessWidget {
                             SettingsAction.multiview),
                       ]),
                     SettingsSection(title: tr('Devices & app'), children: [
+                      link(
+                          Icons.sync_alt,
+                          'Transfer to another device',
+                          'Copy playlists, settings and sports picks over Wi-Fi',
+                          const DeviceTransferScreen()),
                       link(
                           Icons.info_outline,
                           'About iptv-app',
