@@ -144,7 +144,8 @@ class _SportsScreenState extends State<SportsScreen>
       (_favoritesFilter.includesTeams && _follows.involves(game));
   List<SportsLeague> _feedsFor(SportsFavoritesFilter filter) => {
         if (filter.includesLeagues)
-          for (final league in _leagues) league.id: league,
+          for (final league in _leagues)
+            if (_favoriteLeagueIds.contains(league.id)) league.id: league,
         if (filter.includesTeams)
           for (final team in _follows.teams)
             if (sportsLeagueById(team.leagueId) case final league?)
@@ -707,7 +708,7 @@ class _SportsScreenState extends State<SportsScreen>
     _picks = SportsChannelPicks.load(_storage);
     _follows = SportsFollows.load(_storage);
     _leagues = _savedLeagues();
-    _favoriteLeagueIds = _leagues.map((l) => l.id).toSet();
+    _favoriteLeagueIds = savedSportsFavoriteLeagueIds(_storage);
     final eventSelection = _storage.getSportsEventsSelection();
     if (eventSelection.length == 3) {
       _sportFilter = sportsBrowseLeagues.any(
@@ -2130,7 +2131,7 @@ class _SportsScreenState extends State<SportsScreen>
     }
     setState(() {
       _leagues = _savedLeagues();
-      _favoriteLeagueIds = _leagues.map((l) => l.id).toSet();
+      _favoriteLeagueIds = savedSportsFavoriteLeagueIds(_storage);
       _updateFavoriteFeeds();
       _lastLoadCompleted = null;
       if (_onlyFavorites &&

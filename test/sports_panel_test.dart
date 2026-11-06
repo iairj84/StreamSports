@@ -235,7 +235,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(storage.getSportsAllLeagues(), isTrue);
-      expect(find.text('All leagues favorited'), findsOneWidget);
+      expect(find.text('All leagues included'), findsOneWidget);
       if (method == 'back') {
         firstRow.requestFocus();
         await tester.pump();

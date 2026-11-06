@@ -113,7 +113,7 @@ void main() {
       expect(storage.getSportsFavoriteLeague(), 'nhl');
       expect(storage.getHiddenGuideLeagues(), isEmpty);
       expect(storage.getSportsAllLeagues(), isTrue);
-      expect(find.text('All leagues favorited'), findsOneWidget);
+      expect(find.text('All leagues included'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.scrollUntilVisible(find.text('EFL Championship'), 250,
           scrollable: find

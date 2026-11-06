@@ -81,14 +81,11 @@ void main() {
     await key(tester, LogicalKeyboardKey.arrowUp);
     expect(focused('league-manager-search'), isTrue);
     await key(tester, LogicalKeyboardKey.arrowDown);
-    expect(focused('league-manager-sport') || focused('league-manager-state'),
-        isTrue);
-    if (focused('league-manager-state')) {
-      await key(tester, LogicalKeyboardKey.arrowLeft);
-    }
     expect(focused('league-manager-sport'), isTrue);
     await key(tester, LogicalKeyboardKey.arrowRight);
-    expect(focused('league-manager-state'), isTrue);
+    expect(focused('league-manager-sport'), isTrue,
+        reason: 'The Show filter is gone, so Sport is alone in its row.');
+    expect(find.byKey(const ValueKey('league-manager-state')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -141,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
     expect(storage.getSportsFavoriteLeague(), 'nhl');
-    expect(find.textContaining('0 favorites · Choose leagues to finish'),
+    expect(find.textContaining('0 starred · Choose leagues to finish'),
         findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('nba')));
     await tester.pumpAndSettle();
@@ -434,11 +431,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('disable-visible-leagues')));
       await tester.pumpAndSettle();
       expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
-      await tester.tap(find.byKey(const ValueKey('league-manager-state')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Favorites only').last);
-      await tester.pumpAndSettle();
-      expect(find.text('No matching leagues'), findsOneWidget);
+      expect(find.byKey(const ValueKey('league-manager-state')), findsNothing,
+          reason: 'One list: inclusion is the only filter');
       await tester.tap(find.byKey(const ValueKey('league-manager-sport')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('All sports').last);
@@ -447,13 +441,13 @@ void main() {
       await tester.pump();
       expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
       expect(find.byType(SnackBar), findsNothing);
-      expect(find.textContaining('0 favorites · Choose leagues to finish'),
+      expect(find.textContaining('0 starred · Choose leagues to finish'),
           findsOneWidget);
       expect(find.byType(CompactChoiceList), findsOneWidget,
           reason: 'Clearing Enabled only reveals leagues to choose next.');
       await tester.tap(find.byKey(const ValueKey('restore-league-selection')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('1 favorites · Saved automatically'),
+      expect(find.textContaining('1 starred · Saved automatically'),
           findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('disable-visible-leagues')));
       await tester.pumpAndSettle();
