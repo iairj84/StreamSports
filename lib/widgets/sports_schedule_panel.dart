@@ -117,7 +117,11 @@ String _scheduleTime(SportsGame game, DateFormat clock) =>
 class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   late final _service = widget.service ?? SportsService.instance;
   late final _browse = widget.browseState;
-  late final _leagues = [...kSportsLeagues, ...kSportsLeagueBank]
+  /// With an overview the caller's shown list decides which competitions this
+  /// browser offers; only the single-league detail browser falls back to the
+  /// whole catalogue.
+  late final _leagues = (widget.overviewLeagues ??
+          [...kSportsLeagues, ...kSportsLeagueBank])
       .where((l) => supportsSportsSchedule(l) && l.id != 'rugby.live')
       .toList();
   late final _leaguesById = {for (final league in _leagues) league.id: league};

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2 — 6 November 2026
+
+- Make **Schedule** follow the league list. It was listing every competition in the catalogue whatever had been hidden, so sports that were switched off still appeared in its sport and league pickers and in the fixtures it loaded. Schedule now uses the same shown leagues as Events and Standings.
+
 ## 0.2.1 — 6 November 2026
 
 - Keep Sports to the competitions you can actually show or hide. Extra schedules used to invent a league for every competition a free feed listed that day (club friendlies, continental cups and other one-off events), so fixtures appeared a minute or two after opening Sports under leagues that had no row in the league list and could not be switched off.

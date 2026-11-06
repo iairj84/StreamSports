@@ -1073,6 +1073,8 @@ void main() {
         tester.widget<SportsSchedulePanel>(find.byType(SportsSchedulePanel));
     expect(
         panel.overviewLeagues!.map((l) => l.id), containsAll(['nba', 'nhl']));
+    expect(panel.overviewLeagues!.map((l) => l.id), isNot(contains('eng.1')),
+        reason: 'Schedule offers the shown leagues, never the whole catalogue.');
     await tapKey('schedule-sport');
     await tapKey('basketball');
     expect(panel.browseState.sport, 'basketball');

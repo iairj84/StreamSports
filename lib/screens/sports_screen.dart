@@ -133,8 +133,10 @@ class _SportsScreenState extends State<SportsScreen>
   late List<SportsLeague> _eventLeagues;
   late List<SportsLeague> _favoriteFeeds;
   late List<SportsLeague> _favoriteScheduleFeeds;
-  late final _allScheduleFeeds =
-      sportsBrowseLeagues.where(supportsSportsSchedule).toList();
+  /// Schedule follows the same shown list as Events: it used to offer every
+  /// competition in the catalogue whatever the league list had hidden.
+  List<SportsLeague> get _allScheduleFeeds =>
+      _leagues.where(supportsSportsSchedule).toList();
   bool _isFavoriteGame(SportsGame game) =>
       _favoritesFilter.isFiltered && _follows.involves(game);
   List<SportsLeague> _feedsFor(SportsFavoritesFilter filter) => {
