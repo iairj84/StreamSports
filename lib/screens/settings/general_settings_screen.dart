@@ -4,6 +4,7 @@ import '../../services/app_preferences.dart';
 import '../../services/picture_in_picture_service.dart';
 import '../../services/playback_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/live_buffer.dart';
 import '../../utils/playback_buffer.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/live_resume_hint.dart';
@@ -39,6 +40,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
       _storage.getUpdatePlaylistsAtStartup();
   late bool _pipOnHome = _storage.getPictureInPictureOnHome();
   late String _buffer = _storage.getPlaybackBuffer();
+  late int _liveBufferMs = _storage.getLiveBufferMs();
 
   /// Cancel is focused by default so a stray Select can't wipe anything.
   Future<bool> _confirm(String title, String message) async {
@@ -125,6 +127,36 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     final prefs = context.read<AppPreferences>();
     Navigator.of(context).popUntil((route) => route.isFirst);
     await prefs.setLanguage(value);
+  }
+
+  String get _liveBufferLabel => liveBufferChoices
+      .firstWhere((choice) => choice.$1 == _liveBufferMs,
+          orElse: () => liveBufferChoices.first)
+      .$2;
+
+  Future<void> _pickLiveBuffer() async {
+    final choice = await showDialog<int>(
+        context: context,
+        builder: (dialogContext) => SimpleDialog(
+              title: Text(tr('Live buffer')),
+              children: [
+                for (final (ms, label) in liveBufferChoices)
+                  TvMenuTile(
+                    icon: Icons.av_timer,
+                    autofocus: ms == _liveBufferMs,
+                    title: tr(label),
+                    trailing: ms == _liveBufferMs
+                        ? Icon(Icons.check,
+                            color: Theme.of(dialogContext).colorScheme.primary)
+                        : null,
+                    onTap: () => Navigator.of(dialogContext).pop(ms),
+                  ),
+              ],
+            ));
+    if (choice == null || !mounted) return;
+    setState(() => _liveBufferMs = choice);
+    await _storage.setLiveBufferMs(choice);
+    await LiveBuffer.setDefault(choice);
   }
 
   Future<void> _pickBuffer() async {
@@ -243,6 +275,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     title: tr('Buffering'),
                     subtitle: tr(playbackBufferPreset(_buffer).detail),
                     onTap: _pickBuffer,
+                  ),
+                  TvMenuTile(
+                    icon: Icons.av_timer,
+                    title: tr('Live buffer'),
+                    subtitle:
+                        '${tr(_liveBufferLabel)}. ${tr('Live channels store this much before playing, so short dropouts from the provider do not show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.')}',
+                    onTap: _pickLiveBuffer,
                   ),
                   const Divider(height: 24),
                   SectionLabel(tr('Startup')),

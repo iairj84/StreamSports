@@ -29,6 +29,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
   // VesperTV patch: embedded subtitles, see SubtitleBridge.
   @Nullable private SubtitleBridge subtitleBridge;
   @Nullable private PlaybackTimelineBridge playbackTimelineBridge;
+  @Nullable private LiveBufferBridge liveBufferBridge;
 
   /** Register this with the v2 embedding for the plugin to respond to lifecycle callbacks. */
   public VideoPlayerPlugin() {}
@@ -46,6 +47,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     flutterState.startListening(this, binding.getBinaryMessenger());
     subtitleBridge = new SubtitleBridge(binding.getBinaryMessenger(), videoPlayers);
     playbackTimelineBridge = new PlaybackTimelineBridge(binding.getBinaryMessenger(), videoPlayers);
+    liveBufferBridge = new LiveBufferBridge(binding.getBinaryMessenger(), videoPlayers);
 
     binding
         .getPlatformViewRegistry()
@@ -68,6 +70,10 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     if (playbackTimelineBridge != null) {
       playbackTimelineBridge.dispose();
       playbackTimelineBridge = null;
+    }
+    if (liveBufferBridge != null) {
+      liveBufferBridge.dispose();
+      liveBufferBridge = null;
     }
     onDestroy();
   }

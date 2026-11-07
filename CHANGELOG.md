@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.10 — 7 November 2026
+
+- Settings > Playback & preferences > Live buffer keeps a live channel playing through the short dropouts IPTV providers leave in a stream: Off, a reserve of 1.5, 4, 8 or 12 seconds, or Gradual.
+- A reserve holds playback until that much live video is buffered, and re-earns it after a stall, so a gap plays out of the cushion instead of stopping the picture. A bigger reserve hides longer dropouts, but the channel starts later and plays that much further behind live.
+- Gradual starts at once like Off, then plays at 96 % speed until it has built the same cushion, so a channel steadies the longer it is left on. Sound is time-stretched with pitch kept, so picture and sound stay in sync, and a speed the viewer chose is never overridden.
+- The choice applies to the next channel opened, and only to live channels: a movie or episode keeps its normal start. Multiview is unchanged.
+
 ## 0.2.9 — 7 November 2026
 
 - Settings > Playback & preferences > Buffering offers four presets — Automatic, Quick start, Balanced and Smoothest — that set how much the main player buffers before it starts and before it resumes after a rebuffer. Automatic keeps the tuning this build ships with, so nothing changes unless a viewer picks one, and it applies to the next channel opened.

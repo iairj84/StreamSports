@@ -287,6 +287,16 @@ class StorageService {
   Future<void> setPlaybackBuffer(String id) =>
       _prefs.setString(AppConstants.keyPlaybackBuffer, id);
 
+  /// Settings > Playback > Live buffer, in ms: 0 off, -1 Gradual. An unknown
+  /// stored value falls back to off.
+  int getLiveBufferMs() {
+    final stored = _prefs.getInt(AppConstants.keyLiveBufferMs);
+    return liveBufferChoices.any((choice) => choice.$1 == stored) ? stored! : 0;
+  }
+
+  Future<void> setLiveBufferMs(int ms) =>
+      _prefs.setInt(AppConstants.keyLiveBufferMs, ms);
+
   /// Settings > General: Home enters picture-in-picture while something
   /// plays. Off unless asked for; the in-app mini-player button still works.
   bool getPictureInPictureOnHome() =>

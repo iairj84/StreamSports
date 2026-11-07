@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import io.flutter.plugins.videoplayer.ExoPlayerEventListener;
+import io.flutter.plugins.videoplayer.LiveBufferLoadControl;
 import io.flutter.plugins.videoplayer.VideoAsset;
 import io.flutter.plugins.videoplayer.VideoPlayer;
 import io.flutter.plugins.videoplayer.VideoPlayerCallbacks;
@@ -55,11 +56,15 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
       @NonNull VideoPlayerCallbacks events,
       @NonNull VideoAsset asset,
       @NonNull VideoPlayerOptions options) {
-    return new PlatformViewVideoPlayer(
-        events,
-        asset.getMediaItem(),
-        options,
-        () -> {
+    // The player builds its ExoPlayer eagerly inside this provider, so the live
+    // buffer wrapper is captured out in a holder and handed over afterwards.
+    final LiveBufferLoadControl[] liveLoadControl = new LiveBufferLoadControl[1];
+    PlatformViewVideoPlayer player =
+        new PlatformViewVideoPlayer(
+            events,
+            asset.getMediaItem(),
+            options,
+            () -> {
           ExoPlayer.Builder builder = new ExoPlayer.Builder(context);
           DefaultLoadControl.Builder loadControlBuilder = new DefaultLoadControl.Builder();
           // See TextureVideoPlayer.create()'s identical setup for why the
@@ -97,7 +102,9 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
               loadControlBuilder.setBackBuffer(backBufferInt, /* retainBackBufferFromKeyframe= */ true);
             }
           }
-          builder.setLoadControl(loadControlBuilder.build());
+          builder.setLoadControl(
+              liveLoadControl[0] =
+                  new LiveBufferLoadControl(loadControlBuilder.build()));
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
               new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
           // Compatible TV codecs can send frames directly to the display. On the
@@ -170,6 +177,8 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
               .setRenderersFactory(renderersFactory);
           return builder.build();
         });
+    player.setLoadControl(liveLoadControl[0]);
+    return player;
   }
 
   @NonNull

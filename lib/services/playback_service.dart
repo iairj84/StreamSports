@@ -14,6 +14,7 @@ import 'storage_service.dart';
 import 'playlist_http_client.dart';
 
 import 'picture_in_picture_service.dart';
+import 'live_buffer.dart';
 import 'playback_health.dart';
 import '../l10n/l10n.dart';
 
@@ -26,6 +27,11 @@ class PlaybackService extends ChangeNotifier {
     // for it — see PictureInPictureService.autoEnterOnLeave.
     pictureInPicture.setAutoEnterOnLeave(
         _storage.getPictureInPictureOnHome());
+    try {
+      unawaited(LiveBuffer.setDefault(_storage.getLiveBufferMs()));
+    } catch (_) {
+      // Storage not ready (tests): the 500 ms start stays.
+    }
   }
 
   final pictureInPicture = PictureInPictureService();
@@ -78,9 +84,12 @@ class PlaybackService extends ChangeNotifier {
                 }));
 
   Future<bool> _readyToPlay(
-      VideoPlayerHdrController c, int request, bool live) async {
+      VideoPlayerHdrController c, int request, bool live,
+      {Channel? channel}) async {
     if (!_owns(c, request)) return false;
     await PlaybackHealthBridge.configure(c, live);
+    final target = channel ?? currentChannel;
+    if (target != null) await LiveBuffer.configure(c, target);
     if (!_owns(c, request)) return false;
     notifyListeners();
     await SchedulerBinding.instance.endOfFrame;
@@ -464,7 +473,10 @@ class PlaybackService extends ChangeNotifier {
       // mid-stream, which some TV boxes' decoders answer with a restart:
       // one frame, black until the next keyframe, then the picture
       // (Timeline guide).
-      if (!await _readyToPlay(newController, request, isLive)) return;
+      if (!await _readyToPlay(newController, request, isLive,
+          channel: channel)) {
+        return;
+      }
       await newController.play();
       if (!_owns(newController, request)) return;
       // Fire TV/Android TV boxes otherwise sleep the screen mid-stream on
@@ -571,7 +583,7 @@ class PlaybackService extends ChangeNotifier {
       initFuture = future;
       notifyListeners();
       await future;
-      if (!await _readyToPlay(next, request, true)) return;
+      if (!await _readyToPlay(next, request, true, channel: playable)) return;
       await next.play();
       if (!_owns(next, request)) return;
       reconnectStatus = null;
@@ -663,7 +675,10 @@ class PlaybackService extends ChangeNotifier {
             .timeout(const Duration(seconds: 30));
         initFuture = future;
         await future;
-        if (!await _readyToPlay(retryController, request, true)) return false;
+        if (!await _readyToPlay(retryController, request, true,
+            channel: channel)) {
+          return false;
+        }
         await retryController.play();
         if (!_owns(retryController, request)) return false;
         reconnectStatus = null;

@@ -16,6 +16,7 @@ import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackParameters;
+import androidx.media3.common.Player;
 import androidx.media3.common.TrackGroup;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
@@ -43,6 +44,21 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
   private boolean isDisposed = false;
   private long lastDiagnosticAt;
+
+  // VesperTV port: Live buffer reserve, and Gradual — start at once, then play
+  // slightly slow until a cushion covers the provider's gaps. IPTV live TS
+  // arrives in bursts with several seconds of silence between them, at
+  // real-time speed, so a reserve held at start never grows by itself.
+  @Nullable private LiveBufferLoadControl liveBufferLoadControl;
+  private boolean liveGradual;
+  private boolean cushionSlow;
+  private static final float CUSHION_SPEED = 0.96f;
+  private static final long CUSHION_SAMPLE_MS = 1000;
+  private static final long CUSHION_LOW_MS = 1500;
+  private static final long CUSHION_OK_MS = 3000;
+  private final long[] cushionSamples = new long[60];
+  private int cushionCount;
+  private int cushionNext;
 
   /** A closure-compatible signature since {@link java.util.function.Supplier} is API level 24. */
   public interface ExoPlayerProvider {
@@ -514,8 +530,100 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
         trackSelector.buildUponParameters().setOverrideForType(override).build());
   }
 
+  /** The wrapper created with this player's load control; null before it exists. */
+  public void setLoadControl(@NonNull LiveBufferLoadControl control) {
+    liveBufferLoadControl = control;
+  }
+
+  /**
+   * Settings > Playback > Live buffer. A negative value selects Gradual: no reserve, normal fast
+   * start, then {@link #cushionTick} earns the cushion by playing at 96 % speed.
+   */
+  void setLiveBuffer(long ms) {
+    if (liveBufferLoadControl != null) {
+      liveBufferLoadControl.setLiveReserveMs(Math.max(0, ms));
+    }
+    liveGradual = ms < 0;
+    resetCushion();
+    if (liveGradual) {
+      mainHandler.postDelayed(cushionTick, CUSHION_SAMPLE_MS);
+    }
+  }
+
+  boolean isLiveGradual() {
+    return liveGradual;
+  }
+
+  boolean isCushionSlow() {
+    return cushionSlow;
+  }
+
+  private final Runnable cushionTick =
+      new Runnable() {
+        @Override
+        public void run() {
+          if (isDisposed || !liveGradual) {
+            return;
+          }
+          final int state = exoPlayer.getPlaybackState();
+          if (!exoPlayer.isCurrentMediaItemLive()) {
+            setCushionSlow(false);
+          } else if (exoPlayer.getPlayWhenReady()
+              && (state == Player.STATE_READY || state == Player.STATE_BUFFERING)) {
+            // A stall counts as an empty buffer.
+            final long buffered =
+                state == Player.STATE_READY ? exoPlayer.getTotalBufferedDuration() : 0;
+            cushionSamples[cushionNext] = buffered;
+            cushionNext = (cushionNext + 1) % cushionSamples.length;
+            cushionCount = Math.min(cushionCount + 1, cushionSamples.length);
+            long low = Long.MAX_VALUE;
+            for (int i = 0; i < cushionCount; i++) {
+              low = Math.min(low, cushionSamples[i]);
+            }
+            if (!cushionSlow && low < CUSHION_LOW_MS) {
+              setCushionSlow(true);
+            } else if (cushionSlow
+                && cushionCount == cushionSamples.length
+                && low >= CUSHION_OK_MS) {
+              setCushionSlow(false);
+            }
+          }
+          mainHandler.postDelayed(this, CUSHION_SAMPLE_MS);
+        }
+      };
+
+  /**
+   * Speed is the player's clock, not a video rate: ExoPlayer time-stretches the decoded audio
+   * (pitch kept) and releases video frames against it, so picture and sound stay in sync. A
+   * passthrough receiver cannot be slowed down, which is why this fork keeps every track decoded.
+   */
+  private void setCushionSlow(boolean slow) {
+    if (cushionSlow == slow) {
+      return;
+    }
+    final float current = exoPlayer.getPlaybackParameters().speed;
+    // Never override a speed the viewer chose.
+    if (current != 1f && current != CUSHION_SPEED) {
+      return;
+    }
+    cushionSlow = slow;
+    exoPlayer.setPlaybackParameters(new PlaybackParameters(slow ? CUSHION_SPEED : 1f));
+    android.util.Log.i("VesperCushion", slow ? "building reserve" : "reserve ok");
+  }
+
+  private void resetCushion() {
+    mainHandler.removeCallbacks(cushionTick);
+    setCushionSlow(false);
+    cushionCount = 0;
+    cushionNext = 0;
+    for (int i = 0; i < cushionSamples.length; i++) {
+      cushionSamples[i] = 0;
+    }
+  }
+
   public void dispose() {
     isDisposed = true;
+    liveGradual = false;
     mainHandler.removeCallbacksAndMessages(null);
     if (disposeHandler != null) {
       disposeHandler.onDispose();

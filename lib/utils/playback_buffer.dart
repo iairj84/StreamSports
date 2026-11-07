@@ -46,6 +46,17 @@ const playbackBufferPresets = <PlaybackBufferPreset>[
           bufferForPlaybackAfterRebufferMs: 9000)),
 ];
 
+/// Settings > Playback > Live buffer: (ms, label). -1 is Gradual, 0 is off.
+const liveBufferChoices = <(int, String)>[
+  (0, 'Off'),
+  // Native player: fast start, then 96 % until a reserve covers the gaps.
+  (-1, 'Gradual (starts fast, builds up)'),
+  (1500, 'Small (1.5 seconds)'),
+  (4000, '4 seconds'),
+  (8000, '8 seconds'),
+  (12000, '12 seconds'),
+];
+
 Set<String> get playbackBufferPresetIds =>
     {for (final preset in playbackBufferPresets) preset.id};
 

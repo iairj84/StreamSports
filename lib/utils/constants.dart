@@ -66,6 +66,9 @@ class AppConstants {
   /// Settings > Playback & preferences: buffering preset for the main player.
   /// Device-wide; 'auto' keeps the values this build is tuned with.
   static const String keyPlaybackBuffer = 'vesper_playback_buffer';
+
+  /// Settings > Playback > Live buffer: live reserve in ms, -1 for Gradual.
+  static const String keyLiveBufferMs = 'vesper_live_buffer_ms';
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
   // Stremio-style subtitle add-ons (AddonService), JSON list.
   static const String keyAddons = 'vesper_addons';
