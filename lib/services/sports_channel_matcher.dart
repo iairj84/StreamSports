@@ -4601,12 +4601,6 @@ final _usServiceKeys = {
 String _serviceCountry(String name) =>
     _usServiceKeys.contains(_networkKey(name)) ? 'United States' : '';
 
-/// The service behind a spelling: "FS1", "F-Sports 1" and "Fox Sports 1" are
-/// one network, as are "ESPN2" and "ESPN 2", and "BTN" is Big Ten Network.
-/// This is the same key the catalogue index and the manual search use, so a
-/// spelling added to [_serviceSpellings] reaches every caller at once.
-String _networkIdentity(String name) => _networkKey(name);
-
 bool _listingCountryFits(String country, String name, String group) {
   if (country.isEmpty) return true;
   const tags = _countryTags;
