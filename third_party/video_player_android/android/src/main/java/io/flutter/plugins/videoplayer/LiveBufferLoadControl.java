@@ -8,7 +8,7 @@ import androidx.media3.common.Timeline;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.LoadControl;
 import androidx.media3.exoplayer.analytics.PlayerId;
-import androidx.media3.exoplayer.source.MediaPeriodId;
+import androidx.media3.exoplayer.source.MediaSource.MediaPeriodId;
 import androidx.media3.exoplayer.source.TrackGroupArray;
 import androidx.media3.exoplayer.trackselection.ExoTrackSelection;
 import androidx.media3.exoplayer.upstream.Allocator;
