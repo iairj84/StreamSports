@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7 — 7 November 2026
+
+- The scoreboard's own broadcaster now outranks a guess made from a channel's category, and the primary network counts for more than a secondary one, so a game listed on ACC Network no longer falls to whichever listed network sorts first alphabetically.
+- Provider spellings resolve: "F-Sports 1" for FS1, "ESPN 2" for ESPN2, and an unlabelled "TNT" in a plain sports group no longer fails the region check when it is the only copy of that service.
+- Picking a channel for a game now lists that game's own channel at the top of the search, even when the typed words are team names the channel name does not contain, and a broadcaster's spelling finds the service on your playlist.
+
 ## 0.2.6 — 6 November 2026
 
 - Remap the playback buttons themselves: OK/Select, Left, Right, Up and Down can each be set to Scores, Channel list, Last channel, Channel up/down, Stream info, Channel card, Play/pause, Top bar, Player controls, Back to guide, or Do nothing.

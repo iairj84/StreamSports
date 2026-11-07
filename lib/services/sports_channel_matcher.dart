@@ -119,9 +119,11 @@ class ChannelMatch {
   int get evidenceRank => switch (reason) {
         MatchReason.pick => 0,
         MatchReason.name => 1,
-        MatchReason.category => 2,
-        MatchReason.guide => 3,
-        MatchReason.network || MatchReason.listing => 4,
+        // A broadcaster the scoreboard names is event-specific evidence, so it
+        // outranks a channel that merely sits in a league/sport category.
+        MatchReason.network || MatchReason.listing => 2,
+        MatchReason.category => 3,
+        MatchReason.guide => 4,
         // Possible coverage keeps its own score order: a dedicated tournament
         // feed is still a better guess than a generic sport channel.
         MatchReason.sport || MatchReason.league || MatchReason.tournament => 5,
@@ -916,15 +918,44 @@ class SportsChannelMatcher {
     final key = _networkKey(name);
     final aliases = _listedNetworkKeys[key];
     if (aliases == null) return _byCanonical[key] ?? const <int>[];
+    // These synonyms describe US services. For example, Australian Fox Sports 1
+    // is not FS1. Preserve exact matches, but require region evidence before
+    // adding a differently named service. A playlist that carries only the
+    // unlabelled service ("F-Sports 1" in a plain Sports group) is not a
+    // regional ambiguity: there is no qualified copy to prefer, so it stands.
+    final qualified = aliases.any((alias) =>
+        (_byCanonical[alias] ?? const <int>[]).any((i) => _listingCountryFits(
+            'United States', _names[i], _channelHints(i).group)));
+    final identity = _networkIdentity(name);
     return aliases.expand((alias) {
       final channels = _byCanonical[alias] ?? const <int>[];
       if (alias == key) return channels;
-      // These synonyms describe US services. For example, Australian Fox
-      // Sports 1 is not FS1. Preserve exact matches, but require region evidence
-      // before adding a differently named service to a broadcaster's results.
-      return channels.where((i) => _listingCountryFits(
-          'United States', _names[i], _channelHints(i).group));
+      return channels.where((i) =>
+          _listingCountryFits(
+              'United States', _names[i], _channelHints(i).group) ||
+          (!qualified &&
+              !_regionTagged(_names[i], _channelHints(i).group) &&
+              _networkIdentity(_names[i]) == identity));
     });
+  }
+
+  /// A provider that spells one service differently ("F-Sports 1", "ESPN 2")
+  /// and files it under a category with no region label must still resolve the
+  /// scoreboard's listing. The strict country check exists to choose between
+  /// regional copies, not to reject the only copy of an unambiguous service.
+  bool _networkListingFits(int i, String listed, String country) {
+    if (_listingCountryFits(country, _names[i], _channelHints(i).group)) {
+      return true;
+    }
+    if (_regionTagged(_names[i], _channelHints(i).group)) return false;
+    if (_networkIdentity(_names[i]) != _networkIdentity(listed)) return false;
+    for (final j in _byCanonical[_networkKey(listed)] ?? const <int>[]) {
+      if (j != i &&
+          _listingCountryFits(country, _names[j], _channelHints(j).group)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   List<Channel> get channels => _channels;
@@ -2779,7 +2810,10 @@ class SportsChannelMatcher {
               for (final name in g.broadcasts)
                 SportsBroadcast(name, source: 'ESPN')
             ];
-      for (final listing in scoreboard) {
+      // ESPN lists a game's primary carrier first. Score by that order so a
+      // secondary or geo listing cannot win an alphabetical tie ("ABC" beating
+      // the network that actually carries the game).
+      for (final (position, listing) in scoreboard.indexed) {
         final network = listing.name;
         if (listing.isStreaming ||
             _streamingOnly.contains(network.toUpperCase())) {
@@ -2787,8 +2821,7 @@ class SportsChannelMatcher {
         }
         for (final i in _listedNetworkChannels(network)) {
           if (!_eligible(i, g) ||
-              !_listingCountryFits(
-                  listing.country, _names[i], _channelHints(i).group)) {
+              !_networkListingFits(i, listing.name, listing.country)) {
             continue;
           }
           final bias = _channelHints(i).bias;
@@ -2799,7 +2832,7 @@ class SportsChannelMatcher {
               g.league.kind == SportsKind.tennis
                   ? MatchReason.league
                   : MatchReason.network,
-              180 + bias,
+              250 - math.min(position, 8) * 8 + bias,
               network);
         }
       }
@@ -2827,8 +2860,7 @@ class SportsChannelMatcher {
         }
         for (final i in _listedNetworkChannels(name)) {
           if (!_eligible(i, g) ||
-              !_listingCountryFits(
-                  listing.country, _names[i], _channelHints(i).group)) {
+              !_networkListingFits(i, listing.name, listing.country)) {
             continue;
           }
           final channel = _channels[i];
@@ -3462,6 +3494,23 @@ class SportsChannelMatcher {
     final known = {for (final match in matches) match.channel.id: match};
     final guide = <String, List<({EpgProgram programme, String title})>>{};
     final found = <({ChannelSearchResult result, int score, int index})>[];
+    // The event's own channels are what the viewer is usually looking for, so
+    // they belong at the top even when the typed words are team names that the
+    // channel name does not contain ("ACC Network" for a Duke game).
+    final seeded = <String>{};
+    for (final match in matches) {
+      final index = _byId[match.channel.id];
+      if (index == null || _excluded.contains(index)) continue;
+      seeded.add(match.channel.id);
+      found.add((
+        result: ChannelSearchResult(match.channel,
+            match: match,
+            programme: match.programme,
+            programmeSearchHit: false),
+        score: 3200 + match.score,
+        index: index
+      ));
+    }
     int compare(({ChannelSearchResult result, int score, int index}) a,
         ({ChannelSearchResult result, int score, int index}) b) {
       int evidenceTier(ChannelMatch? match) => match == null
@@ -3491,6 +3540,7 @@ class SportsChannelMatcher {
       }
       if (_excluded.contains(i)) continue;
       final channel = _channels[i];
+      if (seeded.contains(channel.id)) continue;
       final name = _names[i];
       var slots = guide[channel.epgId];
       if (slots == null) {
@@ -3504,7 +3554,13 @@ class SportsChannelMatcher {
         // Do not retain tens of thousands of empty guide entries on TV boxes.
         if (slots.isNotEmpty) guide[channel.epgId] = slots;
       }
-      final nameHit = words.every(name.contains);
+      // A broadcaster's own spelling must find the service: typing "FS1" or
+      // "ESPN 2" has to reach "F-Sports 1" and "ESPN2" on the playlist.
+      final nameHit = words.every(name.contains) ||
+          (words.length <= 2 &&
+              name.isNotEmpty &&
+              normalized.isNotEmpty &&
+              _networkIdentity(name) == _networkIdentity(normalized));
       final slot = slots
           .where((p) =>
               words.any(p.title.contains) &&
@@ -3575,12 +3631,22 @@ class SportsChannelMatcher {
 final _formatMarkers = RegExp(
     r'\b(?:2160|1080|720|576|480)[pi]\d*\b|\b[48]k\b|\b\d{2,3}fps\b',
     caseSensitive: false);
-final _networkNumber = RegExp(r'\b(espn|tsn|sportsnet|bein sports)\s+(\d+)\b',
+final _networkNumber = RegExp(
+    r'\b((?:fox sports|f[ -]?sports|fs)\s+|(?:espn|tsn|sportsnet|bein sports)\s*)(\d+)\b',
     caseSensitive: false);
 String _networkKey(String name) {
   final key = canonicalChannelKey(name
       .replaceAll(_formatMarkers, '')
-      .replaceAllMapped(_networkNumber, (m) => '${m[1]}${m[2]}'));
+      .replaceAllMapped(_networkNumber, (m) {
+    // "F-Sports 1", "F Sports 1" and "Fox Sports 1" are one service spelled
+    // three ways. Collapse the spelling and number onto one token so every
+    // variant produces the same canonical key.
+    final family = m[1]!.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+    return switch (family) {
+      'fs' || 'fsports' || 'foxsports' => 'foxsports${m[2]}',
+      _ => '$family${m[2]}',
+    };
+  }));
   // Explicit, unambiguous NHL network abbreviations only. Generic SN and
   // streaming-only services must not become a guessed regional channel.
   return _networkAliases[key] ?? key;
@@ -3628,7 +3694,7 @@ Map<String, List<String>> _buildListedNetworkKeys() {
     ['USA Net', 'USA Network'],
     ['NBA TV', 'NBATV'],
   ]) {
-    final keys = names.map(canonicalChannelKey).toSet().toList();
+    final keys = names.map(_networkKey).toSet().toList();
     for (final key in keys) {
       result[key] = keys;
     }
@@ -4502,19 +4568,58 @@ Set<int> _naming(
   return hits;
 }
 
+const _countryTags = {
+  'united kingdom': ['uk', 'gb', 'british', 'united kingdom'],
+  'united states': ['us', 'usa', 'united states'],
+  'australia': ['au', 'aus', 'australia', 'australian'],
+  'canada': ['ca', 'can', 'canada', 'canadian'],
+  'france': ['fr', 'france', 'french'],
+  'germany': ['de', 'germany', 'german'],
+  'spain': ['es', 'spain', 'spanish'],
+  'italy': ['it', 'italy', 'italian'],
+  'new zealand': ['nz', 'new zealand'],
+};
+
+/// True when a channel name or group carries any recognisable region label.
+bool _regionTagged(String name, String group) {
+  final text = ' ${name.trim()} ${group.trim()} ';
+  return _countryTags.values
+      .any((tags) => tags.any((tag) => text.contains(' $tag ')));
+}
+
+/// The service behind a spelling: "FS1", "F-Sports 1" and "Fox Sports 1" are
+/// one network, as are "ESPN2" and "ESPN 2". Identity only, never a channel
+/// lookup: aliases still have to resolve through the catalogue.
+final _networkFsIdentity = RegExp(
+    r'\b(?:fox\s*sports?|f[\s-]*sports?|fs)\s*(\d+)\b',
+    caseSensitive: false);
+String _networkIdentity(String name) {
+  var text = name.toLowerCase().replaceAll(_formatMarkers, ' ');
+  final fs = _networkFsIdentity.firstMatch(text);
+  if (fs != null) return 'foxsports${fs[1]}';
+  text = text.replaceAllMapped(_networkNumber, (m) => 'net${m[2]}');
+  final words =
+      text.split(RegExp(r'[^a-z0-9+]+')).where((w) => w.isNotEmpty).toSet();
+  const families = {
+    'accn': 'accnetwork',
+    'acc': 'accnetwork',
+    'secn': 'secnetwork',
+    'sec': 'secnetwork',
+    'btn': 'bigtennetwork',
+    'bigten': 'bigtennetwork',
+    'cbssn': 'cbssportsnetwork',
+    'espnu': 'espnu',
+    'nbatv': 'nbatv',
+  };
+  for (final word in words) {
+    if (families.containsKey(word)) return families[word]!;
+  }
+  return words.join(' ');
+}
+
 bool _listingCountryFits(String country, String name, String group) {
   if (country.isEmpty) return true;
-  const tags = {
-    'united kingdom': ['uk', 'gb', 'british', 'united kingdom'],
-    'united states': ['us', 'usa', 'united states'],
-    'australia': ['au', 'aus', 'australia', 'australian'],
-    'canada': ['ca', 'can', 'canada', 'canadian'],
-    'france': ['fr', 'france', 'french'],
-    'germany': ['de', 'germany', 'german'],
-    'spain': ['es', 'spain', 'spanish'],
-    'italy': ['it', 'italy', 'italian'],
-    'new zealand': ['nz', 'new zealand'],
-  };
+  const tags = _countryTags;
   final normalizedCountry = sportsNormalize(country).trim();
   final expected = tags[normalizedCountry] ?? [normalizedCountry];
   for (final region in tags.entries) {
