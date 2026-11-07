@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.13 — 7 November 2026
+
+- NFL RedZone now has a card of its own in the football section on Sundays, carrying your provider's channel artwork, and the same card opens the player's Scores tray. It appears only on Sundays, only when the NFL is one of your leagues, and only while the playlist carries a channel for it.
+- Tap it to open the remembered RedZone channel through the usual preview; hold it to choose between the RedZone channels in your playlist. That choice is remembered for every Sunday rather than for one day's fixture.
+- The toolbar RedZone pill is gone: the card is the way in, on the day it is actually on.
+
 ## 0.2.12 — 7 November 2026
 
 - Every tray that lists a day's games now shows one card per event: the scores pane in the player, the Live now list, the Schedule panel and the Multiview game picker. A conference feed and its Top 25 poll publish the same scoreboard row, and each tray had its own path to that data.

@@ -240,7 +240,7 @@ class _SportsScreenState extends State<SportsScreen>
       for (final game in games)
         if (_shownLeague(game.league, shown)) game,
     ];
-    return mergeSportsGuideCoverage([
+    final merged = mergeSportsGuideCoverage([
       ...listed.where((g) =>
           !g.isGuideEvent &&
           (!g.league.espnPath.startsWith('rugby/') || g.isLive)),
@@ -256,6 +256,10 @@ class _SportsScreenState extends State<SportsScreen>
             g.end?.isAfter(_now) == true &&
             _eventLeagues.any((l) => l.id == g.league.id)),
     ]);
+    // An NFL Sunday already carries RedZone: one card for the channel itself,
+    // beside the games it is flipping between.
+    final redZone = _redZoneCard(day);
+    return redZone == null ? merged : [redZone, ...merged];
   }
 
   List<SportsGame> _withExtras(List<SportsGame> games, DateTime day) =>
@@ -2271,8 +2275,12 @@ class _SportsScreenState extends State<SportsScreen>
       Future<void> Function(Channel, SportsGame)? watch]) async {
     if (_gamePickerOpen || _route?.isCurrent == false) return;
     final play = watch ?? _watch;
-    final matches =
-        gameMatches ?? _matches[_gameKey(game)] ?? const <ChannelMatch>[];
+    // RedZone offers every channel named for it, so holding its card is the
+    // way to choose between the provider's copies.
+    final matches = gameMatches ??
+        (game.league.id == kNflRedZoneLeague.id
+            ? _redZoneMatches()
+            : _matches[_gameKey(game)] ?? const <ChannelMatch>[]);
     final online = gameMatches == null ? _pickerMatches(game) : null;
     Widget menu(BuildContext context) {
       final playingChannel =
@@ -2345,7 +2353,11 @@ class _SportsScreenState extends State<SportsScreen>
       return;
     }
     if (result.reset) {
-      await _picks.clearFor(game);
+      if (game.league.id == kNflRedZoneLeague.id) {
+        await _picks.setRedZone(null);
+      } else {
+        await _picks.clearFor(game);
+      }
       await _rematch();
       return;
     }
@@ -2357,6 +2369,16 @@ class _SportsScreenState extends State<SportsScreen>
     }
     if (result.multiview) {
       await openChannelInMultiview(context, channel);
+      return;
+    }
+    if (game.league.id == kNflRedZoneLeague.id) {
+      // RedZone is a channel, not a fixture: the choice is remembered as the
+      // RedZone channel itself, so next Sunday's card already opens it.
+      if (channel.id != _picks.redZoneChannelId) {
+        await _picks.setRedZone(channel.id);
+        if (mounted) setState(() {});
+      }
+      await play(channel, game);
       return;
     }
     if (!result.manual) {
@@ -2472,56 +2494,38 @@ class _SportsScreenState extends State<SportsScreen>
         now: _now, entries: next.take(5).toList(growable: false));
   }
 
-  static final _redZoneName = RegExp(r'\bred\s*zone\b', caseSensitive: false);
-
   /// The chosen RedZone channel, otherwise the first channel named RedZone.
-  Channel? _redZoneChannel() {
-    final channels = context.read<PlaylistManager>().visibleLiveChannels;
+  Channel? _redZoneChannel() => redZoneChannelOf(
+      context.read<PlaylistManager>().visibleLiveChannels,
+      _picks.redZoneChannelId);
+
+  /// Every RedZone channel the playlist carries, as picker rows: holding the
+  /// card offers the provider's own list instead of an empty search.
+  List<ChannelMatch> _redZoneMatches() {
     final chosen = _picks.redZoneChannelId;
-    if (chosen != null) {
-      for (final channel in channels) {
-        if (channel.id == chosen) return channel;
-      }
-    }
-    for (final channel in channels) {
-      if (_redZoneName.hasMatch(channel.name)) return channel;
-    }
-    return null;
+    return [
+      for (final channel in context
+          .read<PlaylistManager>()
+          .visibleLiveChannels
+          .where((c) => redZoneChannelName.hasMatch(c.name)))
+        ChannelMatch(channel, MatchReason.pick,
+            channel.id == chosen ? 100 : 90,
+            detail: 'RedZone'),
+    ];
   }
 
-  bool get _hasNfl => _games.any((g) =>
-      g.league.espnPath.toLowerCase().contains('nfl') ||
-      g.league.name.toLowerCase().contains('nfl'));
-
-  Future<void> _chooseRedZone() async {
-    final channels = context
-        .read<PlaylistManager>()
-        .visibleLiveChannels
-        .where((c) => _redZoneName.hasMatch(c.name))
-        .take(12)
-        .toList();
-    if (channels.isEmpty) return;
-    final chosen = await showSportsDialog<String>(
-        context: context,
-        builder: (context) => SportsCompactDialog(
-              title: 'NFL RedZone channel',
-              actions: [
-                TextButton(
-                    onPressed: () => popRouteIfCurrent(context),
-                    child: const Text('Cancel'))
-              ],
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                for (final channel in channels)
-                  ListTile(
-                      dense: true,
-                      title: Text(channel.name),
-                      selected: channel.id == _picks.redZoneChannelId,
-                      onTap: () => Navigator.of(context).pop(channel.id)),
-              ]),
-            ));
-    if (chosen == null || !mounted) return;
-    await _picks.setRedZone(chosen);
-    if (mounted) setState(() {});
+  /// RedZone is a channel, not a fixture: one card, on Sundays, and only while
+  /// the playlist carries a channel for it. Its own channel is the match, so
+  /// tapping it opens the chosen (or first RedZone) channel like any other
+  /// card, and holding it still offers every RedZone channel to pick from.
+  SportsGame? _redZoneCard(DateTime day) {
+    if (sportsCalendarDay(day).weekday != DateTime.sunday) return null;
+    if (!_eventLeagues.any((l) => l.id == 'nfl')) return null;
+    final channel = _redZoneChannel();
+    if (channel == null) return null;
+    return nflRedZoneGame(day,
+        logoUrl: channel.logoUrl,
+        today: sportsCalendarDayOffset(_now, day) == 0);
   }
 
   @override
@@ -2535,7 +2539,6 @@ class _SportsScreenState extends State<SportsScreen>
     final preview = _livePreview(playback);
     final current = _playingNow(playback);
     final playing = current != null && Channel.isLiveId(current.rawId);
-    final redZone = _hasNfl ? _redZoneChannel() : null;
     // An unrelated current channel must not inherit the focused game's score.
     Widget buildPreview(Widget activity) => widget.onChooseChannel != null
         ? activity
@@ -2754,20 +2757,6 @@ class _SportsScreenState extends State<SportsScreen>
                                         header: _buildHeader(
                                             const SizedBox.shrink(),
                                             actions: Row(mainAxisSize: MainAxisSize.min, children: [
-                                              if (redZone != null) ...[
-                                                RedZonePill(
-                                                    focusNode:
-                                                        _chipNode('redzone'),
-                                                    onFocus: () {
-                                                      _zone = _filterZone;
-                                                      _lockBrowse();
-                                                    },
-                                                    onTap: () => unawaited(
-                                                        _play(redZone)),
-                                                    onHold: () => unawaited(
-                                                        _chooseRedZone())),
-                                                const SizedBox(width: 6),
-                                              ],
                                               SportsToolbarActions(children: [
                                                 _buildLeaguesGear(),
                                                 _buildEventFilterButton(),
@@ -3401,8 +3390,11 @@ class _SportsScreenState extends State<SportsScreen>
           onPressed: _editLeagues));
 
   Future<void> _activatePreview(SportsGame game) async {
-    final channel =
-        _channelFilter.preferred(_matches[_gameKey(game)] ?? const [])?.channel;
+    final channel = game.league.id == kNflRedZoneLeague.id
+        ? _redZoneChannel()
+        : _channelFilter
+            .preferred(_matches[_gameKey(game)] ?? const [])
+            ?.channel;
     if (channel == null) return _openGame(game);
     await _setPreview(game, channel);
   }
@@ -3732,13 +3724,21 @@ class _SportsScreenState extends State<SportsScreen>
   }
 
   ChannelMatch? _displayedMatch(SportsGame game, SportsGame? preview,
-          [List<ChannelMatch>? matches]) =>
-      displayedSportsChannel(
-          matches ?? _matches[_gameKey(game)] ?? const [], _channelFilter,
-          playing: preview != null && _gameKey(preview) == _gameKey(game)
-              ? _previewChannel
-              : null,
-          savedId: _picks.channelIdFor(game));
+      [List<ChannelMatch>? matches]) {
+    // The RedZone card is the channel itself, so that channel is its match.
+    if (game.league.id == kNflRedZoneLeague.id) {
+      final channel = _redZoneChannel();
+      if (channel != null) {
+        return ChannelMatch(channel, MatchReason.pick, 100, detail: 'RedZone');
+      }
+    }
+    return displayedSportsChannel(
+        matches ?? _matches[_gameKey(game)] ?? const [], _channelFilter,
+        playing: preview != null && _gameKey(preview) == _gameKey(game)
+            ? _previewChannel
+            : null,
+        savedId: _picks.channelIdFor(game));
+  }
 
   Widget _buildGameCard(
           SportsGame g, _Section s, SportsGame? preview, int zoneIndex) =>
@@ -4605,6 +4605,16 @@ class _GameCardState extends State<_GameCard> {
                       children: [
                         Row(
                           children: [
+                            // A guide channel has no team logos to show, so its
+                            // own mark stands in (RedZone).
+                            if (g.league.kind == SportsKind.broadcast &&
+                                g.league.logoUrl.isNotEmpty)
+                              Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: SportsLogo(
+                                      url: g.league.logoUrl,
+                                      size: 14,
+                                      fallback: g.league.shortName)),
                             if (widget.starred)
                               Padding(
                                 padding: const EdgeInsets.only(right: 4),

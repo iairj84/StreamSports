@@ -8,7 +8,6 @@ import '../services/app_preferences.dart';
 import '../utils/constants.dart';
 import '../models/sports.dart';
 import 'sports_header_controls.dart';
-import 'hold_to_activate.dart';
 import '../l10n/l10n.dart';
 
 // Pieces shared by the Sports screen and its Standings / My Teams screens.
@@ -284,75 +283,7 @@ class _SportsChipState extends State<SportsChip> {
   }
 }
 
-/// RedZone shortcut using the same quiet rectangular control as league filters.
-class RedZonePill extends StatefulWidget {
-  const RedZonePill({
-    super.key,
-    required this.focusNode,
-    required this.onTap,
-    required this.onFocus,
-    this.onHold,
-  });
 
-  final FocusNode focusNode;
-  final VoidCallback onTap;
-  final VoidCallback onFocus;
-
-  /// Hold OK (or long-press): choose the RedZone channel.
-  final VoidCallback? onHold;
-
-  @override
-  State<RedZonePill> createState() => _RedZonePillState();
-}
-
-class _RedZonePillState extends State<RedZonePill> {
-  late bool _focused = widget.focusNode.hasFocus;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, right: 8),
-      child: HoldToActivate(
-        onTap: widget.onTap,
-        onHold: widget.onHold,
-        child: InkWell(
-          focusNode: widget.focusNode,
-          borderRadius: BorderRadius.circular(3),
-          onTap: widget.onTap,
-          onLongPress: widget.onHold,
-          onFocusChange: (focused) {
-            setState(() => _focused = focused);
-            if (focused) widget.onFocus();
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: _focused
-                  ? scheme.primaryContainer
-                  : scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(
-                  color: _focused ? scheme.primary : Colors.transparent,
-                  width: 2),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.sports_football,
-                  size: 18,
-                  color: interfaceColor(context, const Color(0xFFEF7777))),
-              const SizedBox(width: 6),
-              Text('NFL RedZone',
-                  style: TextStyle(
-                      color: interfaceColor(context, Colors.white),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500)),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// The Sports screens were laid out for a TV (~960 logical px wide). A big
 /// display can make content too small, so wider

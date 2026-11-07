@@ -2,6 +2,7 @@
 /// times in UTC and convert only for display.
 library;
 
+import 'channel.dart';
 import 'epg_program.dart';
 
 part 'motorsport_leagues.dart';
@@ -115,6 +116,27 @@ class SportsLeague {
   final bool hasStandings;
 
   bool get isBase => region == null;
+
+  /// The same competition with a different card logo — used when the
+  /// provider's own channel artwork is a better picture of what a card opens
+  /// than the league's mark.
+  SportsLeague withLogo(String logoUrl) => SportsLeague(
+        id: id,
+        espnPath: espnPath,
+        name: name,
+        shortName: shortName,
+        logoUrl: logoUrl,
+        soccer: soccer,
+        region: region,
+        hasStandings: hasStandings,
+        kind: kind,
+        seriesPhrases: seriesPhrases,
+        source: source,
+        allowSportOnlySuggestions: allowSportOnlySuggestions,
+        enabledByDefault: enabledByDefault,
+        espnGroup: espnGroup,
+        rankedOnly: rankedOnly,
+      );
 }
 
 /// Known guide competitions stay visible even when no broadcast is airing.
@@ -513,7 +535,67 @@ const kAutomaticSportsLeagues = [...kGuideSportsLeagues, kLiveRugbyLeague];
 bool matchesSportsLeague(SportsLeague league, String? filter) =>
     filter == null ||
     league.id == filter ||
+    // RedZone belongs to the NFL section, so filtering to the NFL keeps it.
+    (filter == 'nfl' && league.id == kNflRedZoneLeague.id) ||
     (filter == 'rugby.live' && league.espnPath.startsWith('rugby/'));
+
+/// NFL RedZone is a channel, not a competition: it gets a card of its own on
+/// the NFL's day rather than a place in the scoreboard, and it is never
+/// offered in the League manager.
+const kNflRedZoneLeague = SportsLeague(
+    id: 'redzone',
+    espnPath: 'football/nfl',
+    name: 'NFL RedZone',
+    shortName: 'RedZone',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png',
+    kind: SportsKind.broadcast,
+    hasStandings: false,
+    source: 'RedZone',
+    enabledByDefault: false);
+
+/// How a playlist names the channel, for both the card and its picker.
+final redZoneChannelName = RegExp(r'\bred\s*zone\b', caseSensitive: false);
+
+/// The channel a RedZone card opens: the viewer's own choice, else the first
+/// channel in the playlist named for it.
+Channel? redZoneChannelOf(Iterable<Channel> channels, String? chosenId) {
+  if (chosenId != null) {
+    for (final channel in channels) {
+      if (channel.id == chosenId) return channel;
+    }
+  }
+  for (final channel in channels) {
+    if (redZoneChannelName.hasMatch(channel.name)) return channel;
+  }
+  return null;
+}
+
+/// RedZone's own card: a channel rather than a fixture, so it carries the
+/// provider's artwork and reads as live on the day itself.
+SportsGame nflRedZoneGame(DateTime day,
+    {String? logoUrl, bool today = true}) {
+  final league = logoUrl != null && logoUrl.isNotEmpty
+      ? kNflRedZoneLeague.withLogo(logoUrl)
+      : kNflRedZoneLeague;
+  final side = SportsTeam(
+      id: '',
+      name: kNflRedZoneLeague.name,
+      shortName: 'RedZone',
+      abbreviation: 'RZ');
+  return SportsGame(
+      id: 'redzone:${day.year}-${day.month}-${day.day}',
+      league: league,
+      // 1 PM ET; the fixed offset matches how the service reads ESPN's day.
+      start: DateTime.utc(day.year, day.month, day.day, 18).toLocal(),
+      state: today ? GameState.live : GameState.pre,
+      statusText: today ? 'Live · RedZone' : 'Sundays · 1 PM ET',
+      home: side,
+      away: side,
+      source: 'RedZone',
+      event: SportsEventInfo(
+          title: kNflRedZoneLeague.name, venue: 'Sundays from 1 PM ET'),
+      broadcasts: const ['NFL RedZone']);
+}
 
 /// One ESPN event can arrive twice: a conference feed and its poll (Top 25)
 /// view publish the same scoreboard row. Keep one card per event, preferring

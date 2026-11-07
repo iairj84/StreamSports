@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/sports.dart';
+import '../services/playlist_manager.dart';
+import '../services/sports_channel_matcher.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
 import '../utils/interface_colors.dart';
@@ -77,6 +79,20 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     super.dispose();
   }
 
+  /// RedZone's own card on Sundays, when the playlist carries a channel for
+  /// it: the channel is the card, so it sits with the live games.
+  SportsGame? _redZoneCard(List<SportsLeague> leagues, DateTime now) {
+    if (now.weekday != DateTime.sunday) return null;
+    if (!leagues.any((l) => l.id == 'nfl')) return null;
+    final channel = redZoneChannelOf(
+        context.read<PlaylistManager>().visibleLiveChannels,
+        SportsChannelPicks.load(context.read<StorageService>())
+            .redZoneChannelId);
+    return channel == null
+        ? null
+        : nflRedZoneGame(now, logoUrl: channel.logoUrl);
+  }
+
   Future<void> _load() async {
     final storage = context.read<StorageService>();
     final leagues = [
@@ -88,13 +104,18 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
       return;
     }
     try {
+      final now = DateTime.now();
       // A conference and its Top 25 poll publish the same scoreboard row: one
       // game, one card, even though the leagues are both selected.
       final games = dedupeSportsEvents(
-          await SportsService.instance.gamesForDay(leagues, DateTime.now()));
+          await SportsService.instance.gamesForDay(leagues, now));
       if (!mounted) return;
+      final redZone = _redZoneCard(leagues, now);
       // Finals stay: they are the end of the running order, not noise.
-      final ordered = games.toList()
+      final ordered = [
+        if (redZone != null) redZone,
+        ...games,
+      ]
         ..sort((a, b) {
           int bucket(SportsGame g) => g.isLive
               ? 0

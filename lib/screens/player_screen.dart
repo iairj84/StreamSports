@@ -245,6 +245,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _playScoreGame(SportsGame game) async {
     setState(() => _scoresOpen = false);
     _rootFocus.requestFocus();
+    if (game.league.id == kNflRedZoneLeague.id) {
+      // RedZone is a channel, not a fixture: play the remembered one.
+      final channel = redZoneChannelOf(
+          context.read<PlaylistManager>().visibleLiveChannels,
+          SportsChannelPicks.load(context.read<StorageService>())
+              .redZoneChannelId);
+      if (channel == null) return;
+      await _playback.play(channel);
+      _watchedGame = game;
+      _watchedGameChannelId = channel.id;
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final storage = context.read<StorageService>();
     final playlist = context.read<PlaylistManager>();
