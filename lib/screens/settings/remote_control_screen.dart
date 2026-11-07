@@ -48,6 +48,45 @@ class _RemoteControlScreenState extends State<RemoteControlScreen> {
     }
   }
 
+  static const _playbackIcons = {
+    PlaybackAction.off: Icons.block,
+    PlaybackAction.scores: Icons.scoreboard_outlined,
+    PlaybackAction.channelList: Icons.view_list_outlined,
+    PlaybackAction.lastChannel: Icons.history,
+    PlaybackAction.channelUp: Icons.keyboard_arrow_up,
+    PlaybackAction.channelDown: Icons.keyboard_arrow_down,
+    PlaybackAction.streamInfo: Icons.analytics_outlined,
+    PlaybackAction.infoCard: Icons.info_outline,
+    PlaybackAction.playPause: Icons.play_arrow,
+    PlaybackAction.topBar: Icons.vertical_align_top,
+    PlaybackAction.controls: Icons.vertical_align_bottom,
+    PlaybackAction.backToGuide: Icons.keyboard_return,
+  };
+
+  Future<void> _pickPlayback(PlaybackKey key) async {
+    final current = _controls.playbackActionFor(key);
+    final picked = await showDialog<PlaybackAction>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(tr('{key} does', {'key': tr(key.label)})),
+        children: [
+          for (final action in PlaybackAction.values)
+            TvMenuTile(
+              icon: _playbackIcons[action],
+              autofocus: action == current,
+              title: tr(action.label),
+              trailing: action == current
+                  ? Icon(Icons.check,
+                      color: Theme.of(dialogContext).colorScheme.primary)
+                  : null,
+              onTap: () => Navigator.of(dialogContext).pop(action),
+            ),
+        ],
+      ),
+    );
+    if (picked != null) _controls.bindPlayback(key, picked);
+  }
+
   Future<void> _reset() async {
     final ok = await showDialog<bool>(
         context: context,
@@ -77,6 +116,37 @@ class _RemoteControlScreenState extends State<RemoteControlScreen> {
               body: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
+                  SettingsSection(title: tr('When watching'), children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Text(
+                          tr(
+                              'Each player button can do any of these. The ones shown are what they do today.'),
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ),
+                    AnimatedBuilder(
+                        animation: _controls,
+                        builder: (context, _) => Column(children: [
+                              for (final key in PlaybackKey.values)
+                                TvMenuTile(
+                                  icon: _playbackIcons[_controls
+                                          .playbackActionFor(key)] ??
+                                      Icons.radio_button_checked,
+                                  title: tr(key.label),
+                                  subtitle: tr(_controls
+                                      .playbackActionFor(key)
+                                      .label),
+                                  onTap: () => _pickPlayback(key),
+                                ),
+                            ])),
+                    TvMenuTile(
+                      icon: Icons.restart_alt,
+                      title: tr('Reset player buttons'),
+                      subtitle: tr('Back to the shipped defaults'),
+                      enabled: !_controls.playbackIsDefault,
+                      onTap: _controls.resetPlayback,
+                    ),
+                  ]),
                   SettingsSection(
                       title: tr('What your remote does'),
                       children: [
@@ -89,7 +159,7 @@ class _RemoteControlScreenState extends State<RemoteControlScreen> {
                             icon: Icons.unfold_less,
                             title: tr('Left and right'),
                             detail: tr(
-                                'Steps between categories and channels. In the guide it moves through time; in the player it seeks.')),
+                                'Steps between categories and channels, and through time in the guide. In the player, Left opens the channel list and Right returns to the last channel — both can be changed above.')),
                         _Reference(
                             icon: Icons.radio_button_checked,
                             title: tr('OK / Select'),
@@ -126,13 +196,13 @@ class _RemoteControlScreenState extends State<RemoteControlScreen> {
                         ),
                       ]),
                   SettingsSection(
-                      title: tr('Remap a button'),
+                      title: tr('Extra buttons'),
                       children: [
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                           child: Text(
                               tr(
-                                  'Choose an action, then press the button you want to use for it. A button does one thing at a time, and remapped buttons work in Live TV.'),
+                                  'Only for remotes with spare buttons beyond the D-pad. Choose an action, then press the button. These work in Live TV.'),
                               style: Theme.of(context).textTheme.bodySmall),
                         ),
                         AnimatedBuilder(

@@ -21,6 +21,7 @@ import '../utils/tv_theme.dart';
 import '../widgets/player_chrome.dart';
 import '../widgets/player_stream_info.dart';
 import '../widgets/player_controls.dart';
+import '../services/remote_controls.dart';
 import '../widgets/player_scores_panel.dart';
 import '../models/sports.dart';
 import '../services/sports_channel_matcher.dart';
@@ -158,9 +159,43 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else if (event is KeyUpEvent) {
       final tap = _infoDown && !_infoHeld;
       _cancelInfoHold();
-      if (tap) _toggleScores();
+      if (tap) _runPlaybackAction(PlaybackKey.center);
     }
     return KeyEventResult.handled;
+  }
+
+  /// Runs whatever the viewer assigned to [key] in Settings > Remote control.
+  /// Defaults reproduce the original behaviour exactly, so an untouched
+  /// install is unchanged; an unassigned button simply does nothing.
+  void _runPlaybackAction(PlaybackKey key) {
+    switch (RemoteControls.instance.playbackActionFor(key)) {
+      case PlaybackAction.off:
+        break;
+      case PlaybackAction.scores:
+        _toggleScores();
+      case PlaybackAction.channelList:
+        if (Channel.isLiveId((_playback.currentChannel ?? widget.channel).rawId)) {
+          _openPanel();
+        }
+      case PlaybackAction.lastChannel:
+        _playback.playPrevious();
+      case PlaybackAction.channelUp:
+        _zapChannel(-1);
+      case PlaybackAction.channelDown:
+        _zapChannel(1);
+      case PlaybackAction.streamInfo:
+        _showStreamInfo();
+      case PlaybackAction.infoCard:
+        _toggleInfoCard();
+      case PlaybackAction.playPause:
+        _handlePlayPause();
+      case PlaybackAction.topBar:
+        _handleUp();
+      case PlaybackAction.controls:
+        _handleDown();
+      case PlaybackAction.backToGuide:
+        Navigator.of(context).maybePop();
+    }
   }
 
   bool _scoresOpen = false;
@@ -297,6 +332,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _playback = context.read<PlaybackService>();
+    // The player is reachable from Library/Sports too, where the home screen
+    // may not have attached the saved buttons yet.
+    RemoteControls.instance.attach(context.read<StorageService>());
     _playback.play(widget.channel);
     _playback.claimFullscreen(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -741,9 +779,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 bindings: <ShortcutActivator, VoidCallback>{
                   const SingleActivator(LogicalKeyboardKey.info,
                       includeRepeats: false): _showStreamInfo,
-                  const SingleActivator(LogicalKeyboardKey.arrowUp): _handleUp,
-                  const SingleActivator(LogicalKeyboardKey.arrowDown):
-                      _handleDown,
+                  const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                      _runPlaybackAction(PlaybackKey.up),
+                  const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                      _runPlaybackAction(PlaybackKey.down),
                   // Some remotes send a single combined key, others send separate
                   // Play and Pause keys (e.g. a dedicated Pause button) — bound to
                   // the same toggle handler either way, since it already checks
@@ -763,18 +802,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   const SingleActivator(LogicalKeyboardKey.pageDown): () =>
                       _zapChannel(1),
                   if (!_focusInBar) ...{
-                    // Back is the only way out now; Left opens the side
-                    // panel on a live channel (a no-op on movies/episodes).
-                    const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-                      if (Channel.isLiveId(channel.rawId)) _openPanel();
-                    },
-                    // Right goes back to the live channel that was playing
-                    // before this one (a toggle). On movies/episodes and when
-                    // nothing else has played it still consumes the press
-                    // instead of searching focusable widgets on the covered
-                    // catalogue route, which may hold a very large focus graph.
+                    // Back is the only way out now; Left and Right default to
+                    // the channel list and the last channel (see
+                    // kDefaultPlaybackActions) but both are the viewer's to
+                    // reassign in Settings > Remote control.
+                    const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+                        _runPlaybackAction(PlaybackKey.left),
                     const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
-                        _playback.playPrevious(),
+                        _runPlaybackAction(PlaybackKey.right),
                     // No repeats: the OK held to open this player must not
                     // pop the card on arrival.
                   },

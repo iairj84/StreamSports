@@ -60,6 +60,19 @@ class StorageService {
   String? getRemoteControlBindings() =>
       _prefs.getString('remote_control_bindings_v1');
 
+  /// Player button remapping (Settings > Remote control > When watching):
+  /// JSON `{"right": "backToGuide"}`. Null means the shipped defaults.
+  String? getRemotePlaybackBindings() =>
+      _prefs.getString('remote_playback_bindings_v1');
+
+  Future<void> setRemotePlaybackBindings(String? json) async {
+    if (json == null || json.isEmpty) {
+      await _prefs.remove('remote_playback_bindings_v1');
+      return;
+    }
+    await _prefs.setString('remote_playback_bindings_v1', json);
+  }
+
   Future<void> setRemoteControlBindings(String? json) async {
     if (json == null || json.isEmpty) {
       await _prefs.remove('remote_control_bindings_v1');

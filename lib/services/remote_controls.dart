@@ -31,6 +31,67 @@ enum RemoteAction {
   }
 }
 
+/// The buttons the player listens to while watching. Back, Play/Pause and the
+/// channel keys keep their own hardware meaning and are not in this map.
+enum PlaybackKey {
+  center('OK / Select'),
+  left('Left'),
+  right('Right'),
+  up('Up'),
+  down('Down');
+
+  const PlaybackKey(this.label);
+
+  /// English label; screens pass it through `tr()`.
+  final String label;
+
+  static PlaybackKey? byName(String? name) {
+    for (final key in values) {
+      if (key.name == name) return key;
+    }
+    return null;
+  }
+}
+
+/// Every command the player offers, which is the whole point of keeping this
+/// as a list: a remap can only point at something this screen can actually do.
+enum PlaybackAction {
+  off('Do nothing'),
+  scores('Scores'),
+  channelList('Channel list'),
+  lastChannel('Last channel'),
+  channelUp('Channel up'),
+  channelDown('Channel down'),
+  streamInfo('Stream info'),
+  infoCard('Channel card'),
+  playPause('Play / pause'),
+  topBar('Top bar'),
+  controls('Player controls'),
+  backToGuide('Back to guide');
+
+  const PlaybackAction(this.label);
+
+  /// English label; screens pass it through `tr()`.
+  final String label;
+
+  static PlaybackAction? byName(String? name) {
+    for (final action in values) {
+      if (action.name == name) return action;
+    }
+    return null;
+  }
+}
+
+/// What each button does before the viewer changes it — today's behaviour,
+/// kept as data so a remap replaces a value instead of a code path.
+const Map<PlaybackKey, PlaybackAction> kDefaultPlaybackActions = {
+  PlaybackKey.center: PlaybackAction.scores,
+  PlaybackKey.left: PlaybackAction.channelList,
+  PlaybackKey.right: PlaybackAction.lastChannel,
+  PlaybackKey.up: PlaybackAction.topBar,
+  PlaybackKey.down: PlaybackAction.controls,
+};
+
 /// One button the viewer chose, plus the words to show for it. The label is
 /// captured on the device that pressed the button: a TV remote sends keys
 /// Flutter has no name for (coloured buttons especially), and a bare number
@@ -70,6 +131,10 @@ class RemoteControls extends ChangeNotifier {
 
   final Map<int, RemoteBinding> _bindings = {};
 
+  /// Player buttons, by key. Starts on [kDefaultPlaybackActions].
+  final Map<PlaybackKey, PlaybackAction> _playback =
+      Map.of(kDefaultPlaybackActions);
+
   /// Bound buttons, by the pressed key's USB HID usage (its physical id).
   Map<int, RemoteBinding> get bindings => Map.unmodifiable(_bindings);
 
@@ -91,6 +156,7 @@ class RemoteControls extends ChangeNotifier {
     _attached = true;
     _storage = storage;
     _replaceFromJson(storage.getRemoteControlBindings());
+    _replacePlaybackFromJson(storage.getRemotePlaybackBindings());
   }
 
   /// Binds [physicalKeyId] to [action]. A button does one thing and an action
@@ -129,6 +195,40 @@ class RemoteControls extends ChangeNotifier {
     return _bindings[event.physicalKey.usbHidUsage]?.action;
   }
 
+  PlaybackAction playbackActionFor(PlaybackKey key) =>
+      _playback[key] ?? PlaybackAction.off;
+
+  /// True while no player button has been changed from its default.
+  bool get playbackIsDefault =>
+      kDefaultPlaybackActions.entries.every(
+          (entry) => _playback[entry.key] == entry.value) &&
+      _playback.length == kDefaultPlaybackActions.length;
+
+  void bindPlayback(PlaybackKey key, PlaybackAction action) {
+    if (playbackActionFor(key) == action) return;
+    _playback[key] = action;
+    _storage?.setRemotePlaybackBindings(playbackToJson());
+    notifyListeners();
+  }
+
+  void resetPlayback() {
+    if (playbackIsDefault) return;
+    _playback
+      ..clear()
+      ..addAll(kDefaultPlaybackActions);
+    _storage?.setRemotePlaybackBindings(null);
+    notifyListeners();
+  }
+
+  String playbackToJson() => jsonEncode({
+        for (final entry in _playback.entries)
+          entry.key.name: entry.value.name
+      });
+
+  /// For tests, and for a fresh load from storage.
+  @visibleForTesting
+  void loadPlaybackFrom(String? raw) => _replacePlaybackFromJson(raw);
+
   String toJson() => jsonEncode({
         for (final entry in _bindings.entries)
           '${entry.key}': {
@@ -143,6 +243,26 @@ class RemoteControls extends ChangeNotifier {
 
   void _save() {
     _storage?.setRemoteControlBindings(_bindings.isEmpty ? null : toJson());
+  }
+
+  void _replacePlaybackFromJson(String? raw) {
+    _playback
+      ..clear()
+      ..addAll(kDefaultPlaybackActions);
+    if (raw == null || raw.isEmpty) return;
+    Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (_) {
+      return;
+    }
+    if (decoded is! Map) return;
+    decoded.forEach((key, value) {
+      final button = PlaybackKey.byName('$key');
+      final action = PlaybackAction.byName('$value');
+      if (button == null || action == null) return;
+      _playback[button] = action;
+    });
   }
 
   void _replaceFromJson(String? raw) {

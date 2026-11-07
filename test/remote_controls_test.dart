@@ -80,6 +80,48 @@ void main() {
     expect(controls.isEmpty, isTrue);
   });
 
+  test('player buttons start on the shipped defaults', () {
+    final controls = RemoteControls.test();
+    expect(controls.playbackActionFor(PlaybackKey.center), PlaybackAction.scores);
+    expect(
+        controls.playbackActionFor(PlaybackKey.left), PlaybackAction.channelList);
+    expect(controls.playbackActionFor(PlaybackKey.right),
+        PlaybackAction.lastChannel);
+    expect(controls.playbackActionFor(PlaybackKey.up), PlaybackAction.topBar);
+    expect(
+        controls.playbackActionFor(PlaybackKey.down), PlaybackAction.controls);
+    expect(controls.playbackIsDefault, isTrue);
+  });
+
+  test('a changed player button survives a reload and can be reset', () {
+    final controls = RemoteControls.test()
+      ..bindPlayback(PlaybackKey.right, PlaybackAction.backToGuide)
+      ..bindPlayback(PlaybackKey.center, PlaybackAction.lastChannel);
+    expect(controls.playbackIsDefault, isFalse);
+
+    final reloaded = RemoteControls.test()
+      ..loadPlaybackFrom(controls.playbackToJson());
+    expect(reloaded.playbackActionFor(PlaybackKey.right),
+        PlaybackAction.backToGuide);
+    expect(reloaded.playbackActionFor(PlaybackKey.center),
+        PlaybackAction.lastChannel);
+    // Untouched buttons keep their default.
+    expect(reloaded.playbackActionFor(PlaybackKey.left), PlaybackAction.channelList);
+
+    reloaded.resetPlayback();
+    expect(reloaded.playbackIsDefault, isTrue);
+    expect(reloaded.playbackActionFor(PlaybackKey.right),
+        PlaybackAction.lastChannel);
+  });
+
+  test('a corrupt or unknown player map falls back to the defaults', () {
+    final controls = RemoteControls.test()
+      ..loadPlaybackFrom('{"right": "teleport", "head": "scores"}');
+    expect(controls.playbackIsDefault, isTrue);
+    expect(controls.playbackActionFor(PlaybackKey.right),
+        PlaybackAction.lastChannel);
+  });
+
   test('the navigation buttons the app relies on are reserved', () {
     for (final key in [
       LogicalKeyboardKey.arrowDown,

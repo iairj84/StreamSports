@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6 — 6 November 2026
+
+- Remap the playback buttons themselves: OK/Select, Left, Right, Up and Down can each be set to Scores, Channel list, Last channel, Channel up/down, Stream info, Channel card, Play/pause, Top bar, Player controls, Back to guide, or Do nothing.
+- The shipped behaviour is the default for every button and is stored as data, so an untouched install is unchanged and every choice survives a restart. Back, Play/pause and the channel keys keep their hardware meaning.
+
 ## 0.2.5 — 6 November 2026
 
 - Settings > Remote control: a plain-language guide to what every button does in Live TV, the guide, the player and menus, including the ones the TV itself consumes and the extra buttons most remotes send no default for.
