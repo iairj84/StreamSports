@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8 — 7 November 2026
+
+- One table now holds every known spelling of a linear network — `BTN`/`Big Ten Network`, `ACCN`/`ACC Network`, `SECN`/`SEC Network`, `CBSSN`/`CBS Sports Network`, `NBATV`/`NBA TV`, `NFLN`/`NFL Network`, `MLBN`, `NHLN`, `LHN`/`Longhorn Network`, `P12N`/`Pac-12 Network`, `ESPNU`/`ESPN U`, `FS1`/`F-Sports 1`, `ESPN2`/`ESPN 2`, and the 2024 Bally/FanDuel rename — so a game listed under one spelling finds a playlist carrying another, in either direction and from the channel search as well.
+- The persisted channel-name cache is versioned, so an install that had already indexed its playlist rebuilds the keys instead of keeping the spellings it learned earlier.
+- An unscoped US shorthand still cannot pull in another region's copy of the network, and the playlist's own exact spelling is kept beside it.
+
 ## 0.2.7 — 7 November 2026
 
 - The scoreboard's own broadcaster now outranks a guess made from a channel's category, and the primary network counts for more than a secondary one, so a game listed on ACC Network no longer falls to whichever listed network sorts first alphabetically.

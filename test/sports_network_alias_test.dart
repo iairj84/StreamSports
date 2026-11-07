@@ -125,4 +125,60 @@ void main() {
     final rows = await matcher.searchWithGuide('FS1');
     expect(rows.first.channel.name, 'F-Sports 1');
   });
+
+  test('an abbreviation and its spelled-out service are one channel', () async {
+    const pairs = [
+      ['BTN', 'Big Ten Network'],
+      ['ACCN', 'ACC Network'],
+      ['SECN', 'SEC Network'],
+      ['CBSSN', 'CBS Sports Network'],
+      ['NBATV', 'NBA TV'],
+      ['ESPNU', 'ESPN U'],
+      ['NFLN', 'NFL Network'],
+      ['MLBN', 'MLB Network'],
+      ['NHLN', 'NHL Network'],
+      ['LHN', 'Longhorn Network'],
+      ['P12N', 'Pac-12 Network'],
+      ['SN1', 'Sportsnet One'],
+    ];
+    for (final pair in pairs) {
+      await matcher.prepare([channel(pair[1])]);
+      expect((await match(game([pair[0]]))).map((m) => m.channel.name),
+          [pair[1]],
+          reason: '${pair[0]} should reach ${pair[1]}');
+      await matcher.prepare([channel(pair[0])]);
+      expect((await match(game([pair[1]]))).map((m) => m.channel.name),
+          [pair[0]],
+          reason: '${pair[1]} should reach ${pair[0]}');
+    }
+  });
+
+  test('ESPN2 resolves a playlist that only spells it ESPN 2', () async {
+    await matcher.prepare([channel('ESPN 2')]);
+    expect((await match(game(['ESPN2']))).map((m) => m.channel.name),
+        ['ESPN 2']);
+    await matcher.prepare([channel('ESPN2')]);
+    expect((await match(game(['ESPN 2']))).map((m) => m.channel.name),
+        ['ESPN2']);
+  });
+
+  test('a renamed regional network still resolves', () async {
+    await matcher.prepare([channel('Bally Sports Detroit', group: 'RSN')]);
+    expect(
+        (await match(game(['FanDuel Sports Network Detroit'])))
+            .map((m) => m.channel.name),
+        ['Bally Sports Detroit']);
+  });
+
+  test('search finds either spelling of an abbreviated service', () async {
+    await matcher.prepare([channel('Big Ten Network')]);
+    expect((await matcher.searchWithGuide('BTN')).map((r) => r.channel.name),
+        contains('Big Ten Network'));
+    expect(matcher.search('BTN').map((c) => c.name), contains('Big Ten Network'));
+    await matcher.prepare([channel('BTN')]);
+    expect(
+        (await matcher.searchWithGuide('Big Ten Network'))
+            .map((r) => r.channel.name),
+        contains('BTN'));
+  });
 }

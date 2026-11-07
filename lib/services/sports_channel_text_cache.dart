@@ -9,7 +9,9 @@ import 'package:crypto/crypto.dart';
 class SportsChannelTextCache {
   SportsChannelTextCache(this.file);
   final File file;
-  static const version = 2;
+  // Version 3 folds numbered families ("ESPN2" = "ESPN 2") and the service
+  // table, so every earlier canonical key is stale.
+  static const version = 3;
   // Every newly translated club/qualifier contains one of these scripts.
   // Flags, accents and full-width Latin alone keep their existing text.
   static final _nativeClubScript =

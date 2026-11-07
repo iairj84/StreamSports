@@ -911,47 +911,33 @@ class SportsChannelMatcher {
     return i == null ? null : _channels[i];
   }
 
-  // Expand only a listed broadcaster, using existing exact channel buckets.
-  // Keep stored canonical names unchanged: aliases need no catalogue rebuild,
-  // extra guide read or scan, and still pass the normal region/guide vetoes.
-  Iterable<int> _listedNetworkChannels(String name) {
-    final key = _networkKey(name);
-    final aliases = _listedNetworkKeys[key];
-    if (aliases == null) return _byCanonical[key] ?? const <int>[];
-    // These synonyms describe US services. For example, Australian Fox Sports 1
-    // is not FS1. Preserve exact matches, but require region evidence before
-    // adding a differently named service. A playlist that carries only the
-    // unlabelled service ("F-Sports 1" in a plain Sports group) is not a
-    // regional ambiguity: there is no qualified copy to prefer, so it stands.
-    final qualified = aliases.any((alias) =>
-        (_byCanonical[alias] ?? const <int>[]).any((i) => _listingCountryFits(
-            'United States', _names[i], _channelHints(i).group)));
-    final identity = _networkIdentity(name);
-    return aliases.expand((alias) {
-      final channels = _byCanonical[alias] ?? const <int>[];
-      if (alias == key) return channels;
-      return channels.where((i) =>
-          _listingCountryFits(
-              'United States', _names[i], _channelHints(i).group) ||
-          (!qualified &&
-              !_regionTagged(_names[i], _channelHints(i).group) &&
-              _networkIdentity(_names[i]) == identity));
-    });
-  }
+  // A listed broadcaster resolves through the same canonical bucket as the
+  // playlist, so every spelling in [_serviceSpellings] finds its channel.
+  // Regional selection stays in _networkListingFits, which is where a wrong
+  // regional copy is vetoed.
+  Iterable<int> _listedNetworkChannels(String name) =>
+      _byCanonical[_networkKey(name)] ?? const <int>[];
 
   /// A provider that spells one service differently ("F-Sports 1", "ESPN 2")
   /// and files it under a category with no region label must still resolve the
   /// scoreboard's listing. The strict country check exists to choose between
   /// regional copies, not to reject the only copy of an unambiguous service.
   bool _networkListingFits(int i, String listed, String country) {
-    if (_listingCountryFits(country, _names[i], _channelHints(i).group)) {
-      return true;
-    }
-    if (_regionTagged(_names[i], _channelHints(i).group)) return false;
-    if (_networkIdentity(_names[i]) != _networkIdentity(listed)) return false;
+    final name = _names[i];
+    final group = _channelHints(i).group;
+    // An unscoped listing still belongs to its home market: "FS1" must not add
+    // an Australian Fox Sports 1. Other services have no such default.
+    final expected = country.isNotEmpty ? country : _serviceCountry(listed);
+    if (expected.isEmpty) return true;
+    if (_listingCountryFits(expected, name, group)) return true;
+    // A copy labelled with another country is never the same service.
+    if (_regionTagged(name, group)) return false;
+    // The playlist's own spelling of the listing stands as it is; an unlabelled
+    // copy under another spelling only stands when no copy carries the region.
+    if (_networkBase(name) == _networkBase(listed)) return true;
     for (final j in _byCanonical[_networkKey(listed)] ?? const <int>[]) {
       if (j != i &&
-          _listingCountryFits(country, _names[j], _channelHints(j).group)) {
+          _listingCountryFits(expected, _names[j], _channelHints(j).group)) {
         return false;
       }
     }
@@ -3491,6 +3477,12 @@ class SportsChannelMatcher {
     final cached = _manualCache[cacheKey];
     if (cached != null) return cached;
     final words = normalized.split(' ');
+    // One service-table lookup per search instead of one per channel: typing
+    // "BTN" has to reach "Big Ten Network" and "ESPN 2" has to reach "ESPN2".
+    final aliasKey = _networkKey(normalized);
+    final aliasBucket = aliasKey.isEmpty
+        ? const <int>{}
+        : (_byCanonical[aliasKey]?.toSet() ?? const <int>{});
     final known = {for (final match in matches) match.channel.id: match};
     final guide = <String, List<({EpgProgram programme, String title})>>{};
     final found = <({ChannelSearchResult result, int score, int index})>[];
@@ -3554,13 +3546,7 @@ class SportsChannelMatcher {
         // Do not retain tens of thousands of empty guide entries on TV boxes.
         if (slots.isNotEmpty) guide[channel.epgId] = slots;
       }
-      // A broadcaster's own spelling must find the service: typing "FS1" or
-      // "ESPN 2" has to reach "F-Sports 1" and "ESPN2" on the playlist.
-      final nameHit = words.every(name.contains) ||
-          (words.length <= 2 &&
-              name.isNotEmpty &&
-              normalized.isNotEmpty &&
-              _networkIdentity(name) == _networkIdentity(normalized));
+      final nameHit = words.every(name.contains) || aliasBucket.contains(i);
       final slot = slots
           .where((p) =>
               words.any(p.title.contains) &&
@@ -3620,6 +3606,15 @@ class SportsChannelMatcher {
       final n = _names[i];
       if (words.every((w) => n.contains(w))) out.add(_channels[i]);
     }
+    // The same service under its other spelling: "BTN" finds "Big Ten
+    // Network" and the reverse, through the canonical bucket rather than a
+    // second prefix scan.
+    final seen = {for (final channel in out) channel.id};
+    for (final i in _byCanonical[_networkKey(query.trim())] ?? const <int>[]) {
+      if (out.length >= limit) break;
+      if (_excluded.contains(i) || !seen.add(_channels[i].id)) continue;
+      out.add(_channels[i]);
+    }
     _searchCache[key] = out;
     if (_searchCache.length > 24) _searchCache.remove(_searchCache.keys.first);
     return out;
@@ -3634,69 +3629,75 @@ final _formatMarkers = RegExp(
 final _networkNumber = RegExp(
     r'\b((?:fox sports|f[ -]?sports|fs)\s+|(?:espn|tsn|sportsnet|bein sports)\s*)(\d+)\b',
     caseSensitive: false);
+// Bally Sports became FanDuel Sports Network in 2024. Providers moved at
+// different speeds, so a channel and a listing can name the same RSN by either
+// brand. Collapse the brand and the "network" suffix on both sides.
+final _rsnRename = RegExp(r'\b(?:bally|fanduel) sports(?: network)?\b',
+    caseSensitive: false);
+
+/// The channel name with quality labels, the RSN brand and a numbered
+/// family's spelling folded onto one token, but before the service table.
+String _networkBase(String name) => canonicalChannelKey(name
+    .replaceAll(_formatMarkers, '')
+    .replaceAll(_rsnRename, 'fanduel sports')
+    .replaceAllMapped(_networkNumber, (m) {
+  // "F-Sports 1", "F Sports 1" and "Fox Sports 1" are one service spelled
+  // three ways. Collapse the spelling and number onto one token so every
+  // variant produces the same canonical key.
+  final family = m[1]!.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+  return switch (family) {
+    'fs' || 'fsports' || 'foxsports' => 'foxsports${m[2]}',
+    _ => '$family${m[2]}',
+  };
+}));
+
+/// One key per service, whichever way a provider spells it.
 String _networkKey(String name) {
-  final key = canonicalChannelKey(name
-      .replaceAll(_formatMarkers, '')
-      .replaceAllMapped(_networkNumber, (m) {
-    // "F-Sports 1", "F Sports 1" and "Fox Sports 1" are one service spelled
-    // three ways. Collapse the spelling and number onto one token so every
-    // variant produces the same canonical key.
-    final family = m[1]!.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
-    return switch (family) {
-      'fs' || 'fsports' || 'foxsports' => 'foxsports${m[2]}',
-      _ => '$family${m[2]}',
-    };
-  }));
-  // Explicit, unambiguous NHL network abbreviations only. Generic SN and
-  // streaming-only services must not become a guessed regional channel.
-  return _networkAliases[key] ?? key;
+  final base = _networkBase(name);
+  return _networkAliases[base] ?? base;
 }
 
-final _networkAliases = {
-  for (final entry in const {
-    'SNO': 'Sportsnet Ontario',
-    'SNE': 'Sportsnet East',
-    'SNP': 'Sportsnet Pacific',
-    'SNW': 'Sportsnet West',
-    'SN1': 'Sportsnet One',
-    'SPORTSNET1': 'Sportsnet One',
-    'SN360': 'Sportsnet360',
-    'NHLN': 'NHL Network',
-    // ESPN abbreviates the league networks ("NFL Net") while providers spell
-    // them out ("US: NFL Network HD"). These are single global services, so
-    // normalizing the abbreviation here matches either spelling without the
-    // US-region requirement applied to genuinely ambiguous synonyms.
-    'NFL NET': 'NFL Network',
-    'NHL NET': 'NHL Network',
-    'MLB NET': 'MLB Network',
-    'NESN BOSTON': 'NESN',
-    'TVAS': 'TVA Sports',
-    'TVAS2': 'TVA Sports 2',
-  }.entries)
-    canonicalChannelKey(entry.key): canonicalChannelKey(entry.value),
-};
+/// Every spelling of one linear service: the first entry is the identity the
+/// rest collapse onto. A row is only ever compared, never displayed, so adding
+/// a provider's wording cannot change what the viewer sees.
+const _serviceSpellings = <List<String>>[
+  ['ACCN', 'ACC Network'],
+  ['SECN', 'SEC Network'],
+  ['CBSSN', 'CBS Sports Network', 'CBS SN'],
+  ['BTN', 'Big Ten Network', 'BIG 10 NETWORK'],
+  ['BTN Alt', 'Big Ten Network Alternate'],
+  ['FS1', 'Fox Sports 1', 'F-Sports 1', 'F Sports 1'],
+  ['FS2', 'Fox Sports 2', 'F-Sports 2', 'F Sports 2'],
+  ['ESPNU', 'ESPN U'],
+  ['ESPNEWS', 'ESPN News'],
+  ['NFLN', 'NFL Network', 'NFL Net'],
+  ['NFL RedZone', 'NFL Red Zone'],
+  ['NBATV', 'NBA TV', 'NBA-TV'],
+  ['MLBN', 'MLB Network', 'MLB Net'],
+  ['NHLN', 'NHL Network', 'NHL Net'],
+  ['Golf Channel', 'Golf Chnl'],
+  ['USA Network', 'USA Net'],
+  ['LHN', 'Longhorn Network'],
+  ['P12N', 'Pac-12 Network', 'Pac 12 Network'],
+  ['Tennis Channel', 'Tennis Chnl'],
+  ['SNO', 'Sportsnet Ontario'],
+  ['SNE', 'Sportsnet East'],
+  ['SNP', 'Sportsnet Pacific'],
+  ['SNW', 'Sportsnet West'],
+  ['SN1', 'Sportsnet One', 'SPORTSNET1'],
+  ['SN360', 'Sportsnet360'],
+  ['NESN', 'NESN Boston'],
+  ['TVA Sports', 'TVAS'],
+  ['TVA Sports 2', 'TVAS2'],
+];
 
-// Exact linear-service synonyms, never parent networks, streaming products,
-// regional affiliates or alternate feeds. A group is indexed in both directions
-// once, preserving every original key and avoiding per-fixture normalisation.
-final _listedNetworkKeys = _buildListedNetworkKeys();
-Map<String, List<String>> _buildListedNetworkKeys() {
-  final result = <String, List<String>>{};
-  for (final names in const [
-    ['ACCN', 'ACC Network'],
-    ['SECN', 'SEC Network'],
-    ['CBSSN', 'CBS Sports Network'],
-    ['BTN', 'Big Ten Network'],
-    ['FS1', 'Fox Sports 1'],
-    ['FS2', 'Fox Sports 2'],
-    ['ESPNU', 'ESPN U'],
-    ['Golf Chnl', 'Golf Channel'],
-    ['USA Net', 'USA Network'],
-    ['NBA TV', 'NBATV'],
-  ]) {
-    final keys = names.map(_networkKey).toSet().toList();
-    for (final key in keys) {
-      result[key] = keys;
+final _networkAliases = _buildNetworkAliases();
+Map<String, String> _buildNetworkAliases() {
+  final result = <String, String>{};
+  for (final spellings in _serviceSpellings) {
+    final key = _networkBase(spellings.first);
+    for (final spelling in spellings) {
+      result[_networkBase(spelling)] = key;
     }
   }
   return result;
@@ -4587,35 +4588,24 @@ bool _regionTagged(String name, String group) {
       .any((tags) => tags.any((tag) => text.contains(' $tag ')));
 }
 
+/// Services whose shorthand names one home market. A listing without a country
+/// ("FS1") is a US listing; a generic name such as "TNT" says nothing at all.
+final _usServiceKeys = {
+  for (final name in const [
+    'ACCN', 'SECN', 'CBSSN', 'BTN', 'BTN Alt', 'FS1', 'FS2', 'ESPNU',
+    'ESPNEWS', 'NFLN', 'NFL RedZone', 'NBATV', 'MLBN', 'NHLN', 'Golf Channel',
+    'USA Network', 'LHN', 'P12N', 'Tennis Channel',
+  ])
+    _networkKey(name),
+};
+String _serviceCountry(String name) =>
+    _usServiceKeys.contains(_networkKey(name)) ? 'United States' : '';
+
 /// The service behind a spelling: "FS1", "F-Sports 1" and "Fox Sports 1" are
-/// one network, as are "ESPN2" and "ESPN 2". Identity only, never a channel
-/// lookup: aliases still have to resolve through the catalogue.
-final _networkFsIdentity = RegExp(
-    r'\b(?:fox\s*sports?|f[\s-]*sports?|fs)\s*(\d+)\b',
-    caseSensitive: false);
-String _networkIdentity(String name) {
-  var text = name.toLowerCase().replaceAll(_formatMarkers, ' ');
-  final fs = _networkFsIdentity.firstMatch(text);
-  if (fs != null) return 'foxsports${fs[1]}';
-  text = text.replaceAllMapped(_networkNumber, (m) => 'net${m[2]}');
-  final words =
-      text.split(RegExp(r'[^a-z0-9+]+')).where((w) => w.isNotEmpty).toSet();
-  const families = {
-    'accn': 'accnetwork',
-    'acc': 'accnetwork',
-    'secn': 'secnetwork',
-    'sec': 'secnetwork',
-    'btn': 'bigtennetwork',
-    'bigten': 'bigtennetwork',
-    'cbssn': 'cbssportsnetwork',
-    'espnu': 'espnu',
-    'nbatv': 'nbatv',
-  };
-  for (final word in words) {
-    if (families.containsKey(word)) return families[word]!;
-  }
-  return words.join(' ');
-}
+/// one network, as are "ESPN2" and "ESPN 2", and "BTN" is Big Ten Network.
+/// This is the same key the catalogue index and the manual search use, so a
+/// spelling added to [_serviceSpellings] reaches every caller at once.
+String _networkIdentity(String name) => _networkKey(name);
 
 bool _listingCountryFits(String country, String name, String group) {
   if (country.isEmpty) return true;
