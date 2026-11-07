@@ -18,13 +18,21 @@ import 'sports_filter_picker.dart';
 /// it can tune the matched channel.
 class PlayerScoresPanel extends StatefulWidget {
   const PlayerScoresPanel(
-      {super.key, this.focusNode, required this.onClose, required this.onPlay});
+      {super.key,
+      this.focusNode,
+      required this.onClose,
+      required this.onPlay,
+      this.watchingGame});
 
   /// The player owns this node so it can hand the remote over on open and take
   /// it back on close.
   final FocusNode? focusNode;
   final VoidCallback onClose;
   final ValueChanged<SportsGame> onPlay;
+
+  /// The game currently playing, when the viewer tuned it from this app. The
+  /// row opens on that card instead of the first one.
+  final SportsGame? watchingGame;
 
   @override
   State<PlayerScoresPanel> createState() => _PlayerScoresPanelState();
@@ -100,9 +108,14 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
       setState(() {
         _games = ordered;
         _loading = false;
-        // Land on Live when there is something live to watch.
+        // Land on Live when there is something live to watch, then on the game
+        // the viewer is already watching.
         _scope = ordered.any((g) => g.isLive) ? 0 : 1;
         _index = 0;
+        _landOnWatched();
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusCard(_index, _visible);
       });
     } catch (_) {
       if (mounted) {
@@ -114,8 +127,7 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     }
   }
 
-  List<_Scope> get _scopes {
-    final seen = <String>{};
+  List<_Scope> get _scopes {    final seen = <String>{};
     for (final game in _games) {
       seen.add(_Scope._sportOf(game));
     }
@@ -132,6 +144,24 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
   _Scope get _current {
     final scopes = _scopes;
     return scopes[_scope.clamp(0, scopes.length - 1)];
+  }
+
+  /// Opening while watching a game should land on that game's card: the viewer
+  /// already picked it, so walking the row back to it is noise. A class stands
+  /// for a league, so a season-level stand-in can still find the same fixture.
+  void _landOnWatched() {
+    final watched = widget.watchingGame;
+    if (watched == null) return;
+    bool isWatched(SportsGame game) =>
+        game.id == watched.id &&
+        game.league.espnPath == watched.league.espnPath;
+    if (!_games.any(isWatched)) return;
+    final scope =
+        _scopes.indexWhere((s) => _games.any((g) => isWatched(g) && s.accepts(g)));
+    if (scope < 0) return;
+    _scope = scope;
+    final index = _visible.indexWhere(isWatched);
+    if (index >= 0) _index = index;
   }
 
   List<SportsGame> get _visible {
@@ -270,6 +300,10 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Row(children: [
+                // Football and basketball share league names (SEC, Big Ten), so
+                // the sport icon is what tells two concurrent rows apart.
+                Icon(sportIcon(_Scope._sportOf(game)), size: 11, color: muted),
+                const SizedBox(width: 4),
                 Expanded(
                     child: Text(game.league.shortName.toUpperCase(),
                         maxLines: 1,

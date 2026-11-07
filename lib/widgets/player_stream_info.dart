@@ -87,8 +87,17 @@ class _PlayerStreamInfoState extends State<PlayerStreamInfo> {
   void _sample() {
     final controller = _controller;
     final value = controller?.value;
+    final channel = _playback?.currentChannel;
+    final live = channel == null || Channel.isLiveId(channel.rawId);
     int? buffer;
-    if (value != null && value.isInitialized) {
+    final timeline = _timeline;
+    if (live && timeline != null) {
+      // Both readings come from one native snapshot, so they share a clock. The
+      // plugin reports its buffered range from zero to the stream's growing
+      // media position, which on a live channel reads as "counting up" forever.
+      buffer = ((timeline.buffered - timeline.position) / 1000).round();
+      if (buffer < 0) buffer = 0;
+    } else if (value != null && value.isInitialized) {
       for (final range in value.buffered) {
         if (range.start <= value.position && range.end >= value.position) {
           final seconds = (range.end - value.position).inSeconds;

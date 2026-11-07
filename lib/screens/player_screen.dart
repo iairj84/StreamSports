@@ -38,13 +38,20 @@ import '../l10n/l10n.dart';
 /// and the two control bars, which hide after inactivity.
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen(
-      {super.key, required this.channel, this.startInPictureInPicture = false});
+      {super.key,
+      required this.channel,
+      this.startInPictureInPicture = false,
+      this.game});
 
   final Channel channel;
   final bool startInPictureInPicture;
 
+  /// The sports game this channel was tuned for, when it came from the Sports
+  /// hub. The scores panel opens on that game's card.
+  final SportsGame? game;
+
   static Future<void> open(NavigatorState navigator, Channel channel,
-      {bool startInPictureInPicture = false}) {
+      {bool startInPictureInPicture = false, SportsGame? game}) {
     if (!navigator.mounted) return Future.value();
     final playback = navigator.context.read<PlaybackService>();
     final reservation = Object();
@@ -53,7 +60,9 @@ class PlayerScreen extends StatefulWidget {
     return PlayerNavigation.open(
         navigator,
         (_) => PlayerScreen(
-            channel: channel, startInPictureInPicture: startInPictureInPicture),
+            channel: channel,
+            startInPictureInPicture: startInPictureInPicture,
+            game: game),
         onOpening: () => playback.claimFullscreen(reservation),
         onClosed: () => playback.releaseFullscreen(reservation));
   }
@@ -200,6 +209,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   bool _scoresOpen = false;
 
+  /// The game the current channel was tuned for, remembered with the channel
+  /// it belongs to: zapping elsewhere drops the context instead of pointing at
+  /// a card for a game this channel does not show.
+  SportsGame? _watchedGame;
+  String? _watchedGameChannelId;
+
   /// Focus for the scores panel: while it is open the remote belongs to it, so
   /// Left/Right/Up/Down never leak through to the transport shortcuts.
   final FocusNode _scoresFocus = FocusNode(debugLabel: 'player-scores');
@@ -254,6 +269,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         return;
       }
       await _playback.play(channel);
+      _watchedGame = game;
+      _watchedGameChannelId = channel.id;
     } catch (_) {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
@@ -331,6 +348,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    _watchedGame = widget.game;
+    _watchedGameChannelId = widget.game == null ? null : widget.channel.id;
     _playback = context.read<PlaybackService>();
     // The player is reachable from Library/Sports too, where the home screen
     // may not have attached the saved buttons yet.
@@ -1015,6 +1034,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 child: PlayerScoresPanel(
                                     focusNode: _scoresFocus,
                                     onClose: _toggleScores,
+                                    watchingGame: _watchedGameChannelId ==
+                                            channel.id
+                                        ? _watchedGame
+                                        : null,
                                     onPlay: (game) =>
                                         unawaited(_playScoreGame(game)))),
 

@@ -237,7 +237,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     final index = _listKey.currentState?.firstVisibleIndex ?? 0;
     final anchor = index < _visibleGames.length ? _visibleGames[index] : null;
     setState(() {
-      _games = pending;
+      _games = dedupeSportsEvents(pending);
       _pendingGames = null;
       _resultsTouched = false;
       _indexGames();

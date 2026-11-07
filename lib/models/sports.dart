@@ -515,6 +515,21 @@ bool matchesSportsLeague(SportsLeague league, String? filter) =>
     league.id == filter ||
     (filter == 'rugby.live' && league.espnPath.startsWith('rugby/'));
 
+/// One ESPN event can arrive twice: a conference feed and its poll (Top 25)
+/// view publish the same scoreboard row. Keep one card per event, preferring
+/// the conference's own label over the poll view's.
+List<SportsGame> dedupeSportsEvents(Iterable<SportsGame> games) {
+  final byEvent = <String, SportsGame>{};
+  for (final game in games) {
+    final key = '${game.league.espnPath}:${game.id}';
+    final seen = byEvent[key];
+    if (seen == null || (seen.league.rankedOnly && !game.league.rankedOnly)) {
+      byEvent[key] = game;
+    }
+  }
+  return byEvent.values.toList();
+}
+
 /// The base leagues — always available in the League manager, in the
 /// default order. Extra leagues come from [kSportsLeagueBank].
 const List<SportsLeague> kSportsLeagues = [

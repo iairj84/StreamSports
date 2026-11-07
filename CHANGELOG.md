@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.11 — 7 November 2026
+
+- A game that is both in a conference and in its Top 25 poll now gets one card, labelled with the conference, instead of appearing under each league in Events and Schedule. The poll view itself still shows the game when it is the only league selected.
+- Stream info's "Buffered ahead" reports the live cushion the player actually holds. It previously grew with the time watched, because a live stream's media position keeps climbing.
+- Each card in the Scores pane carries its sport's icon beside the league, so a football row and a basketball row are told apart at a glance when both are on.
+- Scores opens on the game already playing when it was tuned from the Sports hub or from the pane, and falls back to the first live card otherwise.
+
 ## 0.2.10 — 7 November 2026
 
 - Settings > Playback & preferences > Live buffer keeps a live channel playing through the short dropouts IPTV providers leave in a stream: Off, a reserve of 1.5, 4, 8 or 12 seconds, or Gradual.

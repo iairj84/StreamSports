@@ -1437,11 +1437,14 @@ class _SportsScreenState extends State<SportsScreen>
   Iterable<SportsGame> get _visibleGames => _scopedGames();
   Iterable<SportsGame> _scopedGames({bool favorites = true}) {
     final now = _now;
-    return _countableGames.where((g) =>
+    final selected = _countableGames.where((g) =>
         (_sportFilter == null || _sportOf(g) == _sportFilter) &&
         matchesSportsLeague(g.league, _leagueFilter) &&
         (!favorites || !_onlyFavorites || _isFavoriteGame(g)) &&
         _timeFilter.accepts(g, now));
+    // A conference and its poll view are one scoreboard: an event selected
+    // through both would otherwise get a card under each league.
+    return dedupeSportsEvents(selected);
   }
 
   void _setTimeFilter(SportsTimeFilter choice) {
@@ -2429,7 +2432,7 @@ class _SportsScreenState extends State<SportsScreen>
         await context.read<PlaybackService>().play(channel);
       }
       if (!mounted || !_canOpenPlayer(selection)) return;
-      await PlayerScreen.open(Navigator.of(context), channel);
+      await PlayerScreen.open(Navigator.of(context), channel, game: game);
     } finally {
       _openingPlayer = false;
     }
