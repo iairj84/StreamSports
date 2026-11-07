@@ -88,8 +88,10 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
       return;
     }
     try {
-      final games =
-          await SportsService.instance.gamesForDay(leagues, DateTime.now());
+      // A conference and its Top 25 poll publish the same scoreboard row: one
+      // game, one card, even though the leagues are both selected.
+      final games = dedupeSportsEvents(
+          await SportsService.instance.gamesForDay(leagues, DateTime.now()));
       if (!mounted) return;
       // Finals stay: they are the end of the running order, not noise.
       final ordered = games.toList()

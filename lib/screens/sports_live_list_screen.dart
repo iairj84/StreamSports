@@ -177,7 +177,9 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
   }
 
   Future<void> _loadOnce({required bool first}) async {
-    final all = await _scores.gamesForDay(widget.leagues, widget.day);
+    // A conference and its Top 25 poll both publish the same event.
+    final all = dedupeSportsEvents(
+        await _scores.gamesForDay(widget.leagues, widget.day));
     if (!_active) return;
     // Upcoming games never appear in this list. Avoid matching the entire day
     // on every poll, while retaining games that finished during this visit.

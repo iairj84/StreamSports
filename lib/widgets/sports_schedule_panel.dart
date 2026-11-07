@@ -237,7 +237,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     final index = _listKey.currentState?.firstVisibleIndex ?? 0;
     final anchor = index < _visibleGames.length ? _visibleGames[index] : null;
     setState(() {
-      _games = dedupeSportsEvents(pending);
+      _games = pending;
       _pendingGames = null;
       _resultsTouched = false;
       _indexGames();
@@ -445,6 +445,9 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
 
   String get _dayKey => '${_overviewLeagues.map((l) => l.id).join(',')}|$_from';
   void _acceptGames(List<SportsGame> games) {
+    // A conference and its Top 25 poll publish the same scoreboard row; one
+    // event, one row, wherever the panel's leagues came from.
+    games = dedupeSportsEvents(games);
     if (listEquals(games, _games)) return;
     // Never insert or reorder fixtures under a remote focus or scrolling finger.
     if (_games.isNotEmpty && (_resultsTouched || _resultsFocus.hasFocus)) {
@@ -663,18 +666,21 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
           : await _service.scheduleGames(league!, _from, _through,
               shouldContinue: () => mounted && token == _request);
       if (!mounted || token != _request) return;
+      // Deduplicate once, at the point the day is stored, so a cached revisit
+      // cannot bring back the copy a poll view publishes beside a conference.
+      final games = dedupeSportsEvents(result.games);
       setState(() {
-        _acceptGames(result.games);
-        _rememberSummaries(result.games, _from, _overview ? 1 : _browse.days,
+        _acceptGames(games);
+        _rememberSummaries(games, _from, _overview ? 1 : _browse.days,
             result.incomplete);
         _incomplete = result.incomplete;
         _loading = false;
         _browse._window = _window;
-        _browse._games = result.games;
+        _browse._games = games;
         if (overview) {
           _browse._days.remove(dayKey);
           _browse._days[dayKey] =
-              (games: result.games, incomplete: result.incomplete, at: _now);
+              (games: games, incomplete: result.incomplete, at: _now);
           while (_browse._days.length > 3) {
             _browse._days.remove(_browse._days.keys.first);
           }

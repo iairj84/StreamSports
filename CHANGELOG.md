@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.12 — 7 November 2026
+
+- Every tray that lists a day's games now shows one card per event: the scores pane in the player, the Live now list, the Schedule panel and the Multiview game picker. A conference feed and its Top 25 poll publish the same scoreboard row, and each tray had its own path to that data.
+- Choosing only the poll still lists the game; the surviving card is labelled with the conference rather than the poll view.
+
 ## 0.2.11 — 7 November 2026
 
 - A game that is both in a conference and in its Top 25 poll now gets one card, labelled with the conference, instead of appearing under each league in Events and Schedule. The poll view itself still shows the game when it is the only league selected.

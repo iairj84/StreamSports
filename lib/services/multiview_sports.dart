@@ -52,7 +52,9 @@ class MultiviewSports {
         if (sportsLeagueById(t.leagueId) case final l?) l.id: l,
     };
     if (leagues.isEmpty) return const [];
-    final games = (await SportsService.instance
+    // One event per conference and poll view, so the grid cannot offer the
+    // same game twice.
+    final games = dedupeSportsEvents(await SportsService.instance
             .gamesForDay(leagues.values.toList(), DateTime.now()))
         .where((g) => g.isLive)
         .toList()
