@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9 — 7 November 2026
+
+- Settings > Playback & preferences > Buffering offers four presets — Automatic, Quick start, Balanced and Smoothest — that set how much the main player buffers before it starts and before it resumes after a rebuffer. Automatic keeps the tuning this build ships with, so nothing changes unless a viewer picks one, and it applies to the next channel opened.
+- The vendored Android player accepts those load-control values through its Pigeon API instead of hardcoding them. Multiview keeps its own smaller buffers, so several grid decoders cannot each reserve a deep one.
+
 ## 0.2.8 — 7 November 2026
 
 - One table now holds every known spelling of a linear network — `BTN`/`Big Ten Network`, `ACCN`/`ACC Network`, `SECN`/`SEC Network`, `CBSSN`/`CBS Sports Network`, `NBATV`/`NBA TV`, `NFLN`/`NFL Network`, `MLBN`, `NHLN`, `LHN`/`Longhorn Network`, `P12N`/`Pac-12 Network`, `ESPNU`/`ESPN U`, `FS1`/`F-Sports 1`, `ESPN2`/`ESPN 2`, and the 2024 Bally/FanDuel rename — so a game listed under one spelling finds a playlist carrying another, in either direction and from the channel search as well.

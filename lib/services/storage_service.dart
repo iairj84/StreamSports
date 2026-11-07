@@ -8,6 +8,7 @@ import '../models/custom_guide_source.dart';
 import '../models/playlist_profile.dart';
 import '../models/sports.dart';
 import '../utils/constants.dart';
+import '../utils/playback_buffer.dart';
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
 /// directory for larger cached payloads (parsed playlist/catalog JSON) —
@@ -273,6 +274,18 @@ class StorageService {
       _prefs.getBool(AppConstants.keyUpdatePlaylistsAtStartup) ?? false;
   Future<void> setUpdatePlaylistsAtStartup(bool value) =>
       _prefs.setBool(AppConstants.keyUpdatePlaylistsAtStartup, value);
+
+  /// Settings > Playback & preferences: buffering preset id for the main
+  /// player. An unknown or absent value falls back to the shipped tuning.
+  String getPlaybackBuffer() {
+    final stored = _prefs.getString(AppConstants.keyPlaybackBuffer);
+    return stored != null && playbackBufferPresetIds.contains(stored)
+        ? stored
+        : 'auto';
+  }
+
+  Future<void> setPlaybackBuffer(String id) =>
+      _prefs.setString(AppConstants.keyPlaybackBuffer, id);
 
   /// Settings > General: Home enters picture-in-picture while something
   /// plays. Off unless asked for; the in-app mini-player button still works.

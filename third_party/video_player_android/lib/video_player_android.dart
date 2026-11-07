@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 export 'src/android_video_player.dart';
+export 'src/buffer_policy.dart';

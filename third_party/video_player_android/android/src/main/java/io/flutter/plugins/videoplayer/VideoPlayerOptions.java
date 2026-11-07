@@ -15,11 +15,25 @@ public class VideoPlayerOptions {
    */
   @Nullable public Long backBufferDurationMs;
 
+  /**
+   * ExoPlayer load-control overrides for the main player, in milliseconds. Null keeps the values
+   * that player is tuned with.
+   */
+  @Nullable public Long minBufferMs;
+
+  @Nullable public Long maxBufferMs;
+  @Nullable public Long bufferForPlaybackMs;
+  @Nullable public Long bufferForPlaybackAfterRebufferMs;
+
   public VideoPlayerOptions() {}
 
   /** Copy constructor to ensure all options are reliably copied. */
   public VideoPlayerOptions(@NonNull VideoPlayerOptions other) {
     this.mixWithOthers = other.mixWithOthers;
     this.backBufferDurationMs = other.backBufferDurationMs;
+    this.minBufferMs = other.minBufferMs;
+    this.maxBufferMs = other.maxBufferMs;
+    this.bufferForPlaybackMs = other.bufferForPlaybackMs;
+    this.bufferForPlaybackAfterRebufferMs = other.bufferForPlaybackAfterRebufferMs;
   }
 }

@@ -67,11 +67,19 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           // unconfirmed attempt to prevent the corruption/discontinuity
           // before it happens, not just recover faster from it) and why
           // the playback-start thresholds are still cut down regardless.
+          // A viewer can trade start-up time for a deeper cushion (Settings >
+          // Playback & preferences > Buffering). Absent values keep the tuned
+          // numbers below, so an install that never touches the preset behaves
+          // exactly as before.
+          final int bufferMin = clampMs(options.minBufferMs, 90_000, 0, 600_000);
+          final int bufferMax =
+              Math.max(bufferMin, clampMs(options.maxBufferMs, 120_000, 0, 600_000));
           loadControlBuilder.setBufferDurationsMs(
-              /* minBufferMs= */ 90_000,
-              /* maxBufferMs= */ 120_000,
-              /* bufferForPlaybackMs= */ 500,
-              /* bufferForPlaybackAfterRebufferMs= */ 500);
+              /* minBufferMs= */ bufferMin,
+              /* maxBufferMs= */ bufferMax,
+              /* bufferForPlaybackMs= */ clampMs(options.bufferForPlaybackMs, 500, 0, bufferMax),
+              /* bufferForPlaybackAfterRebufferMs= */ clampMs(
+                  options.bufferForPlaybackAfterRebufferMs, 500, 0, bufferMax));
           // Upstream's small-device cap prevents high-bitrate video exhausting
           // the heap alongside large playlists and the Sports Hub.
           io.flutter.plugins.videoplayer.BufferBudget.apply(
@@ -170,4 +178,13 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
       @NonNull ExoPlayer exoPlayer, @Nullable SurfaceProducer surfaceProducer) {
     return new PlatformViewExoPlayerEventListener(exoPlayer, videoPlayerEvents);
   }
+
+  /** A requested load-control duration, sanity-clamped; [fallback] when absent. */
+  private static int clampMs(@Nullable Long requested, int fallback, int low, int high) {
+    if (requested == null) {
+      return fallback;
+    }
+    return Math.min(high, Math.max(low, requested.intValue()));
+  }
+
 }

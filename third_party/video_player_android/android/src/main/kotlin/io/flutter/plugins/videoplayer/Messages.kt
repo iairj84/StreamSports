@@ -514,7 +514,16 @@ data class CreationOptions (
   val formatHint: PlatformVideoFormat? = null,
   val httpHeaders: Map<String, String>,
   val userAgent: String? = null,
-  val backBufferDurationMs: Long? = null
+  val backBufferDurationMs: Long? = null,
+  /**
+   * ExoPlayer load-control overrides for the main (platform-view) player.
+   * Null keeps this package's own tuned values; the app offers them as
+   * buffering presets.
+   */
+  val minBufferMs: Long? = null,
+  val maxBufferMs: Long? = null,
+  val bufferForPlaybackMs: Long? = null,
+  val bufferForPlaybackAfterRebufferMs: Long? = null
 )
  {
   companion object {
@@ -524,7 +533,11 @@ data class CreationOptions (
       val httpHeaders = pigeonVar_list[2] as Map<String, String>
       val userAgent = pigeonVar_list[3] as String?
       val backBufferDurationMs = pigeonVar_list[4] as Long?
-      return CreationOptions(uri, formatHint, httpHeaders, userAgent, backBufferDurationMs)
+      val minBufferMs = pigeonVar_list[5] as Long?
+      val maxBufferMs = pigeonVar_list[6] as Long?
+      val bufferForPlaybackMs = pigeonVar_list[7] as Long?
+      val bufferForPlaybackAfterRebufferMs = pigeonVar_list[8] as Long?
+      return CreationOptions(uri, formatHint, httpHeaders, userAgent, backBufferDurationMs, minBufferMs, maxBufferMs, bufferForPlaybackMs, bufferForPlaybackAfterRebufferMs)
     }
   }
   fun toList(): List<Any?> {
@@ -534,6 +547,10 @@ data class CreationOptions (
       httpHeaders,
       userAgent,
       backBufferDurationMs,
+      minBufferMs,
+      maxBufferMs,
+      bufferForPlaybackMs,
+      bufferForPlaybackAfterRebufferMs,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -544,7 +561,7 @@ data class CreationOptions (
       return true
     }
     val other = other as CreationOptions
-    return MessagesPigeonUtils.deepEquals(this.uri, other.uri) && MessagesPigeonUtils.deepEquals(this.formatHint, other.formatHint) && MessagesPigeonUtils.deepEquals(this.httpHeaders, other.httpHeaders) && MessagesPigeonUtils.deepEquals(this.userAgent, other.userAgent) && MessagesPigeonUtils.deepEquals(this.backBufferDurationMs, other.backBufferDurationMs)
+    return MessagesPigeonUtils.deepEquals(this.uri, other.uri) && MessagesPigeonUtils.deepEquals(this.formatHint, other.formatHint) && MessagesPigeonUtils.deepEquals(this.httpHeaders, other.httpHeaders) && MessagesPigeonUtils.deepEquals(this.userAgent, other.userAgent) && MessagesPigeonUtils.deepEquals(this.backBufferDurationMs, other.backBufferDurationMs) && MessagesPigeonUtils.deepEquals(this.minBufferMs, other.minBufferMs) && MessagesPigeonUtils.deepEquals(this.maxBufferMs, other.maxBufferMs) && MessagesPigeonUtils.deepEquals(this.bufferForPlaybackMs, other.bufferForPlaybackMs) && MessagesPigeonUtils.deepEquals(this.bufferForPlaybackAfterRebufferMs, other.bufferForPlaybackAfterRebufferMs)
   }
 
   override fun hashCode(): Int {
@@ -554,10 +571,14 @@ data class CreationOptions (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.httpHeaders)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.userAgent)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.backBufferDurationMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.minBufferMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.maxBufferMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.bufferForPlaybackMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.bufferForPlaybackAfterRebufferMs)
     return result
   }
   override fun toString(): String {
-    return "CreationOptions(uri=$uri, formatHint=$formatHint, httpHeaders=$httpHeaders, userAgent=$userAgent, backBufferDurationMs=$backBufferDurationMs)"
+    return "CreationOptions(uri=$uri, formatHint=$formatHint, httpHeaders=$httpHeaders, userAgent=$userAgent, backBufferDurationMs=$backBufferDurationMs, minBufferMs=$minBufferMs, maxBufferMs=$maxBufferMs, bufferForPlaybackMs=$bufferForPlaybackMs, bufferForPlaybackAfterRebufferMs=$bufferForPlaybackAfterRebufferMs)"
   }
 }
 

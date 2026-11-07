@@ -62,6 +62,10 @@ class AppConstants {
   /// default — a launch update costs provider connections.
   static const String keyUpdatePlaylistsAtStartup =
       'vesper_update_playlists_at_startup';
+
+  /// Settings > Playback & preferences: buffering preset for the main player.
+  /// Device-wide; 'auto' keeps the values this build is tuned with.
+  static const String keyPlaybackBuffer = 'vesper_playback_buffer';
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
   // Stremio-style subtitle add-ons (AddonService), JSON list.
   static const String keyAddons = 'vesper_addons';

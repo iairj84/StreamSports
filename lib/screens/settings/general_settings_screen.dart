@@ -4,6 +4,7 @@ import '../../services/app_preferences.dart';
 import '../../services/picture_in_picture_service.dart';
 import '../../services/playback_service.dart';
 import '../../services/storage_service.dart';
+import '../../utils/playback_buffer.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/live_resume_hint.dart';
 import '../../widgets/section_label.dart';
@@ -37,6 +38,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   late bool _updatePlaylistsAtStartup =
       _storage.getUpdatePlaylistsAtStartup();
   late bool _pipOnHome = _storage.getPictureInPictureOnHome();
+  late String _buffer = _storage.getPlaybackBuffer();
 
   /// Cancel is focused by default so a stray Select can't wipe anything.
   Future<bool> _confirm(String title, String message) async {
@@ -125,6 +127,32 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     await prefs.setLanguage(value);
   }
 
+  Future<void> _pickBuffer() async {
+    final choice = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => SimpleDialog(
+              title: Text(tr('Buffering')),
+              children: [
+                for (final preset in playbackBufferPresets)
+                  TvMenuTile(
+                    icon: Icons.speed,
+                    autofocus: preset.id == _buffer,
+                    title: tr(preset.label),
+                    subtitle: tr(preset.detail),
+                    trailing: preset.id == _buffer
+                        ? Icon(Icons.check,
+                            color: Theme.of(dialogContext).colorScheme.primary)
+                        : null,
+                    onTap: () => Navigator.of(dialogContext).pop(preset.id),
+                  ),
+              ],
+            ));
+    if (choice == null || !mounted) return;
+    setState(() => _buffer = choice);
+    await _storage.setPlaybackBuffer(choice);
+    applyPlaybackBufferPreset(choice);
+  }
+
   String get _startupLabel => _resumeAtStartup
       ? 'Full screen'
       : _resumeInGuide
@@ -206,6 +234,15 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     value: context.watch<AppPreferences>().use24h,
                     onChanged: (v) =>
                         context.read<AppPreferences>().setUse24h(v),
+                  ),
+                  const Divider(height: 24),
+                  SectionLabel(tr('Playback')),
+                  const SizedBox(height: 4),
+                  TvMenuTile(
+                    icon: Icons.speed,
+                    title: tr('Buffering'),
+                    subtitle: tr(playbackBufferPreset(_buffer).detail),
+                    onTap: _pickBuffer,
                   ),
                   const Divider(height: 24),
                   SectionLabel(tr('Startup')),

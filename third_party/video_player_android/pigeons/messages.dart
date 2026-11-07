@@ -84,6 +84,14 @@ class CreationOptions {
   Map<String, String> httpHeaders;
   String? userAgent;
   int? backBufferDurationMs;
+
+  /// ExoPlayer load-control overrides for the main (platform-view) player.
+  /// Null keeps this package's own tuned values; the app offers them as
+  /// buffering presets.
+  int? minBufferMs;
+  int? maxBufferMs;
+  int? bufferForPlaybackMs;
+  int? bufferForPlaybackAfterRebufferMs;
 }
 
 class TexturePlayerIds {

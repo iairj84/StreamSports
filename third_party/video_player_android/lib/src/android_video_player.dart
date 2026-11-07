@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 import 'messages.g.dart' hide videoEvents;
+import 'buffer_policy.dart';
 import 'messages.g.dart' as pigeon show videoEvents;
 import 'platform_view_player.dart';
 
@@ -109,12 +110,23 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
     if (uri == null) {
       throw ArgumentError('Unable to construct a video asset from $options');
     }
+    // Only the main player is a platform view, so only it takes the viewer's
+    // buffering preset. Multiview's texture players keep their own policy.
+    final PlayerBufferPolicy? policy =
+        options.viewType == VideoViewType.platformView
+            ? mainPlayerBufferPolicy
+            : null;
     final pigeonCreationOptions = CreationOptions(
       uri: uri,
       httpHeaders: httpHeaders,
       userAgent: userAgent,
       formatHint: formatHint,
       backBufferDurationMs: options.videoPlayerOptions?.backBufferDurationMs,
+      minBufferMs: policy?.minBufferMs,
+      maxBufferMs: policy?.maxBufferMs,
+      bufferForPlaybackMs: policy?.bufferForPlaybackMs,
+      bufferForPlaybackAfterRebufferMs:
+          policy?.bufferForPlaybackAfterRebufferMs,
     );
 
     final int playerId;

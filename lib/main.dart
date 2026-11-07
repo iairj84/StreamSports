@@ -22,6 +22,7 @@ import 'services/persistent_image_cache.dart';
 import 'services/playback_service.dart';
 import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
+import 'utils/playback_buffer.dart';
 
 import 'utils/constants.dart';
 import 'utils/route_observer.dart';
@@ -142,6 +143,8 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
     try {
       _storage = StorageService();
       await _storage.init();
+      // Applied before the first player exists; Settings re-applies it.
+      applyPlaybackBufferPreset(_storage.getPlaybackBuffer());
       if (mounted) setState(() => _splashStatus = tr('Loading settings...'));
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 
