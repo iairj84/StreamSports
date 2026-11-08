@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.16 — 8 November 2026
+
+- A channel written "Redzone" or "Red Zone" now counts as NFL RedZone, so an NFL RedZone game finds your provider's channel however the playlist spells it — from the game's channel suggestions and from the channel search alike.
+- A provider's own team short codes now match ESPN's: a feed whose guide reads "ARZ @ SEA" finds ESPN's "ARI @ SEA", and the same holds for Washington, Jacksonville, San Francisco, Tampa Bay, New England, Green Bay, New Orleans, Kansas City and Las Vegas. Because the game matches, that feed also carries the fixture title in the guide.
+
 ## 0.2.15 — 8 November 2026
 
 - The player's Scores tray shows one card per game again. A conference feed and its Top 25 poll can publish the same fixture under different event ids, and the old check read those as two different games; the tray now matches on the fixture itself — both teams and the kickoff time, in either order — and falls back to the event id for races, rounds and fight cards, which have no two sides to name. The Live now list, the Schedule panel and the Multiview game picker share the same check.

@@ -153,6 +153,44 @@ void main() {
     expect(guide.queries, 1);
   });
 
+  test('a provider short code names the ESPN fixture', () async {
+    // ESPN says "ARI @ SEA"; the provider's guide row says "ARZ @ SEA".
+    guide.programmes = [
+      EpgProgram(
+          channelId: 'feed',
+          title: 'ARZ @ SEA',
+          start: _start,
+          stop: _start.add(const Duration(hours: 3))),
+      // Same category and the same opponent, but a code that names no club:
+      // only the alias above may accept the first row.
+      EpgProgram(
+          channelId: 'other',
+          title: 'XYZ @ SEA',
+          start: _start,
+          stop: _start.add(const Duration(hours: 3))),
+    ];
+    final result = await match(
+        SportsGame(
+            id: 'cardinals-seahawks',
+            league: sportsLeagueById('nfl')!,
+            start: _start,
+            state: GameState.live,
+            statusText: 'Live',
+            home: const SportsTeam(
+                id: '22',
+                name: 'Arizona Cardinals',
+                shortName: 'Cardinals',
+                abbreviation: 'ARI'),
+            away: const SportsTeam(
+                id: '26',
+                name: 'Seattle Seahawks',
+                shortName: 'Seahawks',
+                abbreviation: 'SEA')),
+        [_channel('feed', 'FB01', group: 'Football'), _channel('other', 'FB02', group: 'Football')]);
+    expect(result.map((m) => m.channel.rawId), contains('feed'));
+    expect(result.map((m) => m.channel.rawId), isNot(contains('other')));
+  });
+
   test('tennis rejects explicit wrong courts, rounds, doubles and juniors',
       () async {
     final result = await match(_game(court: 'Court 2', round: 'Semifinals'), [

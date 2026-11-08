@@ -1091,6 +1091,28 @@ class SportsChannelMatcher {
     }
   }
 
+  /// Clubs that providers shorten differently from ESPN, one line per club.
+  /// Every code on a line stands for the same club: a guide's "ARZ @ SEA"
+  /// and ESPN's "ARI @ SEA" are one fixture.
+  static const _shortCodeGroups = <List<String>>[
+    ['ari', 'arz'], // Arizona Cardinals
+    ['was', 'wsh'], // Washington Commanders
+    ['jax', 'jac'], // Jacksonville Jaguars
+    ['sf', 'sfo'], // San Francisco 49ers
+    ['tb', 'tam'], // Tampa Bay Buccaneers
+    ['ne', 'nep'], // New England Patriots
+    ['gb', 'gbp'], // Green Bay Packers
+    ['no', 'nos'], // New Orleans Saints
+    ['kc', 'kan'], // Kansas City Chiefs
+    ['lv', 'lvr'], // Las Vegas Raiders
+  ];
+
+  static final Map<String, List<String>> _shortCodeAliases = {
+    for (final group in _shortCodeGroups)
+      for (final code in group)
+        code: [for (final other in group) if (other != code) other],
+  };
+
   /// Name phrases a channel or program title may use for [t] — nickname
   /// and full name. City names alone are skipped (two New York teams).
   /// [shortCodes] admits two-letter abbreviations. An event label that pairs
@@ -1111,6 +1133,17 @@ class SportsChannelMatcher {
       if (n.trim().length >=
           (s == t.abbreviation ? codeMin : (college ? 3 : 4))) {
         out.add(n);
+      }
+    }
+    if (!college && !soccer) {
+      // Providers shorten some clubs differently from ESPN, so a guide row
+      // reads "ARZ @ SEA" where the scoreboard says "ARI @ SEA". Either code
+      // names the same club; without this the matchup misses by one letter.
+      final code = sportsNormalize(t.abbreviation).trim();
+      for (final alias in _shortCodeAliases[code] ?? const <String>[]) {
+        if (alias.length >= codeMin) {
+          out.add(sportsClubIdentity(sportsNormalize(alias)));
+        }
       }
     }
     if (soccer) {
@@ -3671,7 +3704,9 @@ const _serviceSpellings = <List<String>>[
   ['ESPNU', 'ESPN U'],
   ['ESPNEWS', 'ESPN News'],
   ['NFLN', 'NFL Network', 'NFL Net'],
-  ['NFL RedZone', 'NFL Red Zone'],
+  // The service is sold as "NFL RedZone", but playlists write the bare name,
+  // with or without the space, so all four spellings have to reach one bucket.
+  ['NFL RedZone', 'NFL Red Zone', 'RedZone', 'Red Zone'],
   ['NBATV', 'NBA TV', 'NBA-TV'],
   ['MLBN', 'MLB Network', 'MLB Net'],
   ['NHLN', 'NHL Network', 'NHL Net'],

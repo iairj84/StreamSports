@@ -181,4 +181,17 @@ void main() {
             .map((r) => r.channel.name),
         contains('BTN'));
   });
+
+  test('the bare RedZone spellings are the same service', () async {
+    for (final spelling in const ['RedZone', 'Red Zone']) {
+      await matcher.prepare([channel(spelling)]);
+      expect((await match(game(['NFL RedZone']))).map((m) => m.channel.name),
+          [spelling],
+          reason: '$spelling should reach an NFL RedZone listing');
+      await matcher.prepare([channel('NFL RedZone')]);
+      expect((await match(game([spelling]))).map((m) => m.channel.name),
+          ['NFL RedZone'],
+          reason: 'an NFL RedZone channel should reach $spelling');
+    }
+  });
 }
