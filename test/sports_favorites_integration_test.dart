@@ -22,6 +22,11 @@ class _EmptyScores extends DayScores {
 }
 
 class _UnorderedScores extends DayScores {
+  // The base fixtures reuse one team pair for every game, so grouping four of
+  // them onto a single kickoff would describe the same fixture four times and
+  // deduplication would rightly collapse them. Keep the followed home club —
+  // the favorites filter below depends on it — and give each game its own
+  // opponent, so equal kickoffs still mean distinct fixtures.
   @override
   List<SportsGame> fixtures(DateTime day, [int count = 1000]) => [
         for (final game in super.fixtures(day, count).reversed)
@@ -32,7 +37,11 @@ class _UnorderedScores extends DayScores {
               state: game.state,
               statusText: game.statusText,
               home: game.home,
-              away: game.away),
+              away: SportsTeam(
+                  id: 'a${game.id}',
+                  name: 'Away ${game.id}',
+                  shortName: 'A${game.id}',
+                  abbreviation: 'A')),
       ];
 }
 
