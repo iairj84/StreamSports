@@ -598,18 +598,35 @@ SportsGame nflRedZoneGame(DateTime day,
 }
 
 /// One ESPN event can arrive twice: a conference feed and its poll (Top 25)
-/// view publish the same scoreboard row. Keep one card per event, preferring
-/// the conference's own label over the poll view's.
+/// view publish the same scoreboard row. Keep one card per game, preferring the
+/// conference's own label over the poll view's.
+///
+/// Keyed on the fixture — both participants and the kickoff time — rather than
+/// on the provider's event id. The two views do not always agree on that id;
+/// when they disagree, an id-keyed dedupe keeps both copies and the same game
+/// renders twice. Entries with no two named sides (a race, a round, a fight
+/// card) have no fixture to compare and fall back to the id.
 List<SportsGame> dedupeSportsEvents(Iterable<SportsGame> games) {
-  final byEvent = <String, SportsGame>{};
+  final kept = <String, SportsGame>{};
   for (final game in games) {
-    final key = '${game.league.espnPath}:${game.id}';
-    final seen = byEvent[key];
+    final key = _fixtureKeyOf(game) ?? '${game.league.espnPath}:${game.id}';
+    final seen = kept[key];
     if (seen == null || (seen.league.rankedOnly && !game.league.rankedOnly)) {
-      byEvent[key] = game;
+      kept[key] = game;
     }
   }
-  return byEvent.values.toList();
+  return kept.values.toList();
+}
+
+/// Two named sides at one kickoff, independent of which feed carried the row.
+/// Team ids are provider-wide, so the league path is deliberately not part of
+/// the key: a fixture reached through a conference and through the sport's own
+/// scoreboard is still one fixture.
+String? _fixtureKeyOf(SportsGame game) {
+  final home = game.home.id, away = game.away.id;
+  if (home.isEmpty || away.isEmpty || home == away) return null;
+  final pair = [home, away]..sort();
+  return '${game.start.toUtc().toIso8601String()}:${pair.first}>${pair.last}';
 }
 
 /// The base leagues — always available in the League manager, in the

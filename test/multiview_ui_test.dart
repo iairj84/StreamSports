@@ -319,6 +319,11 @@ void main() {
             await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
             await tester.pump();
             expect(tester.widget<Opacity>(header).opacity, 0);
+            // Up from the lower screen hands the sound to the upper one, the
+            // same as a sideways move does. Put it back on screen 2 for the
+            // checks below, which are about layout not stealing audio.
+            await session.selectAudio(1);
+            await settle(tester);
           }
           expect(secondRect.top, greaterThanOrEqualTo(firstRect.bottom));
           expect(secondRect.left, firstRect.left);

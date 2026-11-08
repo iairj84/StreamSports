@@ -243,7 +243,13 @@ class _RemoteControlScreenState extends State<RemoteControlScreen> {
 }
 
 /// One line of the guide: a button and what it does.
-class _Reference extends StatelessWidget {
+///
+/// Focusable even though it does nothing when opened. Without that, the remote
+/// can never read the guide: traversal skips straight from the row above it to
+/// the next section's tiles, and the list scrolls this text past the screen on
+/// the way. Being focusable also gives each line a highlight, which is what
+/// tells the viewer where the remote is in a wall of prose.
+class _Reference extends StatefulWidget {
   const _Reference(
       {required this.icon, required this.title, required this.detail});
 
@@ -252,20 +258,62 @@ class _Reference extends StatelessWidget {
   final String detail;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 14),
-          Expanded(
-              child:
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 2),
-            Text(detail, style: Theme.of(context).textTheme.bodySmall),
-          ])),
-        ]),
-      );
+  State<_Reference> createState() => _ReferenceState();
+}
+
+class _ReferenceState extends State<_Reference> {
+  bool _focused = false;
+
+  void _reveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(context,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+      Scrollable.ensureVisible(context,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return RepaintBoundary(
+      child: Focus(
+        onFocusChange: (focused) {
+          setState(() => _focused = focused);
+          if (focused) _reveal();
+        },
+        child: ColoredBox(
+          color: _focused
+              ? scheme.primaryContainer.withValues(alpha: .55)
+              : Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(widget.icon,
+                  size: 20,
+                  color: _focused ? scheme.onPrimaryContainer : scheme.primary),
+              const SizedBox(width: 14),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(widget.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: _focused ? scheme.onPrimaryContainer : null)),
+                    const SizedBox(height: 2),
+                    Text(widget.detail,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: _focused
+                                ? scheme.onPrimaryContainer.withValues(alpha: .85)
+                                : null)),
+                  ])),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// What the capture dialog hands back: a key to bind, or [keyId] null to

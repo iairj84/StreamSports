@@ -577,9 +577,10 @@ class _MultiviewScreenState extends State<MultiviewScreen>
     return i == 0 ? 1 : 0;
   }
 
-  /// Moving onto a screen with Left/Right also gives it the sound, so the
-  /// cursor and the speaker never disagree and Select stays free to mean
-  /// fullscreen. Up/Down remain navigation-only, and mute wins.
+  /// Moving onto a screen gives it the sound, whichever arrow moved the cursor:
+  /// the cursor and the speaker never disagree, and Select stays free to mean
+  /// fullscreen. Mute still wins, and leaving the grid for the chrome never
+  /// changes the sound.
   void _followAudio(int i) {
     if (_dialog || _leaving || _fullscreen != null || _session.muted) return;
     final cell = _session.cells[i];
@@ -599,11 +600,21 @@ class _MultiviewScreenState extends State<MultiviewScreen>
     if (k == LogicalKeyboardKey.arrowUp) {
       final next =
           _fullscreen == null ? _neighbor(i, const Offset(0, -1), slots) : null;
-      (next == null ? _back : _nodes[next]).requestFocus();
+      if (next == null) {
+        _back.requestFocus();
+      } else {
+        _nodes[next].requestFocus();
+        _followAudio(next);
+      }
     } else if (k == LogicalKeyboardKey.arrowDown) {
       final next =
           _fullscreen == null ? _neighbor(i, const Offset(0, 1), slots) : null;
-      (next == null ? _changeNode : _nodes[next]).requestFocus();
+      if (next == null) {
+        _changeNode.requestFocus();
+      } else {
+        _nodes[next].requestFocus();
+        _followAudio(next);
+      }
     } else if (k == LogicalKeyboardKey.arrowLeft) {
       final next = _fullscreen == null ? _sideways(i, -1, slots) : null;
       if (next != null) {

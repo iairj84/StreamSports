@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.15 — 8 November 2026
+
+- The player's Scores tray shows one card per game again. A conference feed and its Top 25 poll can publish the same fixture under different event ids, and the old check read those as two different games; the tray now matches on the fixture itself — both teams and the kickoff time, in either order — and falls back to the event id for races, rounds and fight cards, which have no two sides to name. The Live now list, the Schedule panel and the Multiview game picker share the same check.
+- Settings > Remote control can reach "What your remote does": each line there now takes focus and scrolls itself into view, so a remote stops on the reference instead of skipping past it into Extra buttons.
+- Multiview hands the sound over on Up and Down as well as Left and Right, so a stacked pair of screens changes the voice from the remote without a sideways move.
+
 ## 0.2.13 — 7 November 2026
 
 - NFL RedZone now has a card of its own in the football section on Sundays, carrying your provider's channel artwork, and the same card opens the player's Scores tray. It appears only on Sundays, only when the NFL is one of your leagues, and only while the playlist carries a channel for it.
