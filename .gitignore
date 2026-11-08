@@ -31,6 +31,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Incoming design drops (never committed)
+/incoming/
+
 # Symbolication related
 *.symbols
 
