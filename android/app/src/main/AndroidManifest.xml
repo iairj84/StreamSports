@@ -12,6 +12,11 @@
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
 
+    <!-- Android Auto parked app: appCategory marks this as a video app for
+         cars, and MainActivity's CAR_LAUNCHER category declares the car
+         support. Both are inert on phones and TVs. Video is still an
+         early-access category on Android Auto, so listing there is not
+         guaranteed. -->
     <application
         android:label="StreamSports"
         android:name="${applicationName}"
@@ -19,7 +24,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:banner="@drawable/streamsports_banner"
         android:usesCleartextTraffic="true"
-        android:largeHeap="true">
+        android:largeHeap="true"
+        android:appCategory="video">
         <!-- Impeller (Vulkan) crashes on startup on several budget Amlogic/Mali
              GPU drivers found in Firesticks and Android STBs — those devices
              have no Dart-level stack trace to catch since the crash happens
@@ -54,6 +60,18 @@
                      launch the app at all — without this it can install
                      silently and simply never appear or start. -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
+                <!-- Android Auto parked app. On Android 15 and higher,
+                     Android Auto can run an activity directly on the head
+                     unit, full screen, while the car reports Park, and
+                     exits it as soon as the car reports motion. This is the
+                     category that declares the app supports that; without
+                     it Android Auto never considers the app for the car
+                     display at all. Sideloaded builds do reach this path
+                     when Android Auto's developer "Unknown sources" option
+                     is on (unlike projection apps, which that option does
+                     not admit). Whether Android Auto actually lists a video
+                     app here is a separate, policy-side question. -->
+                <category android:name="android.intent.category.CAR_LAUNCHER"/>
             </intent-filter>
         </activity>
         <service
