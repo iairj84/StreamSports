@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.18 — 8 November 2026
+
+- Settings > Devices & app > Launcher icon saves the transparent artwork into Pictures/StreamSports on the device itself, so Projectivy — or any launcher that takes a picture per app — can pick it with "From picture" without a file being copied onto the television from a computer. Four versions ship: the mark and the 16:9 banner, each in white ink for dark backgrounds and in blue for light ones.
+- The screen repeats where Projectivy keeps that setting and that turning off Tint custom icons leaves the cut-out colors alone, since the launcher otherwise repaints them.
+- Android 10 and later writes the file through MediaStore and asks for no permission at all; older releases ask for storage access at the moment you tap, not at launch.
+
 ## 0.2.17 — 8 November 2026
 
 - Every launcher surface now carries the designed artwork instead of the mark this build used to generate: a TV frame with yard lines and an on-field football, in the app's blue. That covers the phone and tablet icons, the adaptive icon and its themed (monochrome) variant, the television and Fire TV banner, and the transparent logos Projectivy uses on its own background.
