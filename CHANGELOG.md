@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.17 — 8 November 2026
+
+- Every launcher surface now carries the designed artwork instead of the mark this build used to generate: a TV frame with yard lines and an on-field football, in the app's blue. That covers the phone and tablet icons, the adaptive icon and its themed (monochrome) variant, the television and Fire TV banner, and the transparent logos Projectivy uses on its own background.
+- The iOS app icon and the web icons use the same artwork, and so does the logo shown inside the app, so nothing in the build is still wearing the old ring.
+- The television banner now carries the wordmark, so the app is named on the TV row without relying on the label under the icon.
+
 ## 0.2.16 — 8 November 2026
 
 - A channel written "Redzone" or "Red Zone" now counts as NFL RedZone, so an NFL RedZone game finds your provider's channel however the playlist spells it — from the game's channel suggestions and from the channel search alike.
