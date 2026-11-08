@@ -24,6 +24,11 @@ import java.io.File
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import android.Manifest
+import android.content.ContentValues
+import android.media.MediaScannerConnection
+import android.os.Environment
+import android.provider.MediaStore
 
 /**
  * Exposes ActivityManager's real device memory info to Dart — Flutter has
@@ -73,6 +78,12 @@ class MainActivity : FlutterActivity() {
     }
     private val MEMORY_CHANNEL = "com.nox.nox_iptv/device_memory"
     private val DEVICE_CHANNEL = "com.nox.nox_iptv/device_type"
+    private val MEDIA_CHANNEL = "com.nox.nox_iptv/media_library"
+    private val ARTWORK_PERMISSION = 4701
+    private var pendingArtwork: ByteArray? = null
+    private var pendingArtworkName: String? = null
+    private var pendingArtworkType: String? = null
+    private var pendingArtworkResult: MethodChannel.Result? = null
 
     private var pipChannel: MethodChannel? = null
     private var pipEnabled = false
@@ -266,6 +277,37 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Launchers such as Projectivy take a picture per app, and they can
+        // only pick files the device itself can see. The artwork ships in the
+        // app's assets, so the app writes it into Pictures on request instead
+        // of leaving the viewer to copy files onto the television by hand.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MEDIA_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method != "saveImage") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            val bytes = call.argument<ByteArray>("bytes")
+            val name = call.argument<String>("name")
+            val mime = call.argument<String>("mime") ?: "image/png"
+            if (bytes == null || name == null) {
+                result.error("bad_arguments", "Image data and a file name are required", null)
+                return@setMethodCallHandler
+            }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                pendingArtwork = bytes
+                pendingArtworkName = name
+                pendingArtworkType = mime
+                pendingArtworkResult = result
+                requestPermissions(
+                    arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), ARTWORK_PERMISSION)
+                return@setMethodCallHandler
+            }
+            result.success(saveArtwork(bytes, name, mime))
+        }
         systemUiChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger,
             "com.nox.nox_iptv/system_ui").also { channel ->
             channel.setMethodCallHandler { call, result ->
@@ -377,6 +419,72 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+    }
+
+    /** Returns "saved", "permission" or "failed". */
+    private fun saveArtwork(bytes: ByteArray, name: String, mime: String): String {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                    put(MediaStore.Images.Media.MIME_TYPE, mime)
+                    put(
+                        MediaStore.Images.Media.RELATIVE_PATH,
+                        Environment.DIRECTORY_PICTURES + "/StreamSports"
+                    )
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+                val uri = contentResolver
+                    .insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                    ?: return "failed"
+                contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                    ?: return "failed"
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                contentResolver.update(uri, values, null, null)
+                "saved"
+            } else {
+                @Suppress("DEPRECATION")
+                val folder = File(
+                    Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_PICTURES),
+                    "StreamSports"
+                )
+                if (!folder.exists() && !folder.mkdirs()) return "failed"
+                val file = File(folder, name)
+                file.writeBytes(bytes)
+                MediaScannerConnection.scanFile(
+                    this, arrayOf(file.absolutePath), arrayOf(mime), null)
+                "saved"
+            }
+        } catch (_: Exception) {
+            "failed"
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != ARTWORK_PERMISSION) return
+        val result = pendingArtworkResult ?: return
+        val bytes = pendingArtwork
+        val name = pendingArtworkName
+        val mime = pendingArtworkType ?: "image/png"
+        pendingArtworkResult = null
+        pendingArtwork = null
+        pendingArtworkName = null
+        pendingArtworkType = null
+        if (grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+            bytes != null && name != null
+        ) {
+            result.success(saveArtwork(bytes, name, mime))
+        } else {
+            result.success("permission")
+        }
     }
 
     /** Returns "started", "permission", "missing" or "failed". */

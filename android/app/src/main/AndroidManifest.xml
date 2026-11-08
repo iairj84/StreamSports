@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!-- Saving the transparent logo for another launcher writes into the
+         shared Pictures folder. Android 10 and later do that through
+         MediaStore and need no permission; older releases still do. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
     <!-- In-app updates: the downloaded APK is installed through the package
          installer, which Android only allows for an app holding this. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>

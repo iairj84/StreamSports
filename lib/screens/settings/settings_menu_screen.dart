@@ -18,6 +18,7 @@ import 'playlist_manager_screen.dart';
 import 'theme_screen.dart';
 
 import 'library_settings_screen.dart';
+import 'launcher_icon_screen.dart';
 
 enum SettingsAction {
   live,
@@ -127,6 +128,11 @@ class SettingsMenuScreen extends StatelessWidget {
                             SettingsAction.multiview),
                       ]),
                     SettingsSection(title: tr('Devices & app'), children: [
+                      link(
+                          Icons.image_outlined,
+                          'Launcher icon',
+                          'Save the transparent logo for Projectivy and other launchers',
+                          const LauncherIconScreen()),
                       link(
                           Icons.sync_alt,
                           'Transfer to another device',

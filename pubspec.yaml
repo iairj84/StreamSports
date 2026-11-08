@@ -53,6 +53,11 @@ flutter:
   # Original TV/play artwork; native licence text is loaded only from About.
   assets:
     - assets/icon/icon_flat.png
+    # Transparent artwork the app writes into Pictures for Projectivy.
+    - assets/icon/logo_transparent.png
+    - assets/icon/logo_transparent_light.png
+    - assets/icon/banner_transparent.png
+    - assets/icon/banner_transparent_light.png
     - assets/licenses/
     # Phone pairing form, shared by the LAN server and optional relay.
     - assets/pair/pair.html
