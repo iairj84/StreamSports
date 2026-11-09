@@ -619,21 +619,54 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
     final league = _league;
     if (league == null && !_overview) return;
     final overview = _overview, dayKey = _dayKey;
-    final cached = overview ? _browse._days[dayKey] : null;
-    final age = cached == null ? null : _now.difference(cached.at);
-    if (cached != null &&
-        !cached.incomplete &&
+    var cached = overview ? _browse._days[dayKey] : null;
+    // Narrowing the sport keeps the same day, and a day already fetched for a
+    // wider league set holds every game the narrower set can show. Filter it
+    // here instead of asking the feed for games we already have.
+    var narrowed = false;
+    if (overview && cached == null) {
+      final wanted = _overviewLeagues.map((league) => league.id).toSet();
+      for (final entry in _browse._days.entries) {
+        final bar = entry.key.indexOf('|');
+        if (bar < 0 || entry.key.substring(bar + 1) != '$_from') continue;
+        final have = entry.key
+            .substring(0, bar)
+            .split(',')
+            .where((id) => id.isNotEmpty)
+            .toSet();
+        if (!wanted.every(have.contains)) continue;
+        cached = (
+          games: entry.value.games
+              .where((game) => wanted.contains(game.league.id))
+              .toList(),
+          incomplete: entry.value.incomplete,
+          at: entry.value.at,
+        );
+        narrowed = true;
+        break;
+      }
+    }
+    final hit = cached;
+    final age = hit == null ? null : _now.difference(hit.at);
+    if (hit != null &&
+        !hit.incomplete &&
         age != null &&
         !age.isNegative &&
         age < const Duration(minutes: 2)) {
       setState(() {
+        if (narrowed) {
+          _browse._days[dayKey] = hit;
+          while (_browse._days.length > 3) {
+            _browse._days.remove(_browse._days.keys.first);
+          }
+        }
         _pendingGames = null;
         _browse._window = _window;
-        _browse._games = cached.games;
-        _browse._loadedAt = cached.at;
+        _browse._games = hit.games;
+        _browse._loadedAt = hit.at;
         _browse._incomplete = false;
-        _games = cached.games;
-        _rememberSummaries(_games, _from, 1, false, at: cached.at);
+        _games = hit.games;
+        _rememberSummaries(_games, _from, 1, false, at: hit.at);
         _indexGames();
         _loading = false;
         _incomplete = false;
