@@ -251,6 +251,15 @@ class AppConstants {
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
   static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
 
+  /// Sports tab, per viewer: how large each game card is drawn —
+  /// 'small', 'standard' or 'large'.
+  static const String keySportsCardSize = 'vesper_sports_card_size';
+
+  /// Sports tab, per viewer: the playlist whose channels are matched
+  /// first. Absent = whatever playlist is being browsed.
+  static const String keySportsPreferredPlaylist =
+      'vesper_sports_preferred_playlist';
+
   /// Per viewer: the optional opening league, stored under its legacy key.
   static const String keySportsFavoriteLeague = 'vesper_sports_favorite_league';
 

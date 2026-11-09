@@ -163,7 +163,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     final choice = await showDialog<String>(
         context: context,
         builder: (dialogContext) => SimpleDialog(
-              title: Text(tr('Buffering')),
+              title: Text(tr('Start-up buffering')),
               children: [
                 for (final preset in playbackBufferPresets)
                   TvMenuTile(
@@ -272,7 +272,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                   const SizedBox(height: 4),
                   TvMenuTile(
                     icon: Icons.speed,
-                    title: tr('Buffering'),
+                    title: tr('Start-up buffering'),
                     subtitle: tr(playbackBufferPreset(_buffer).detail),
                     onTap: _pickBuffer,
                   ),
@@ -280,8 +280,16 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     icon: Icons.av_timer,
                     title: tr('Live buffer'),
                     subtitle:
-                        '${tr(_liveBufferLabel)}. ${tr('Live channels store this much before playing, so short dropouts from the provider do not show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.')}',
+                        '${tr(_liveBufferLabel)} · ${tr('extra live video kept on hand so short dropouts pass unnoticed. Applies from the next channel.')}',
                     onTap: _pickLiveBuffer,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                    child: Text(
+                      tr('These are two different settings, not two versions of one. Start-up buffering decides how much a stream collects before it plays; the live buffer only applies to live channels and holds extra video so provider dropouts do not interrupt the picture. Change either on its own.'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
                   ),
                   const Divider(height: 24),
                   SectionLabel(tr('Startup')),

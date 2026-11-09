@@ -504,6 +504,31 @@ class StorageService {
   Future<void> setSportsHideScores(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsHideScores), value);
 
+  static const sportsCardSizes = {'small', 'standard', 'large'};
+
+  /// Sports options: 'small', 'standard' (default) or 'large'.
+  String getSportsCardSize() {
+    final stored = _prefs.getString(_vk(AppConstants.keySportsCardSize));
+    return stored != null && sportsCardSizes.contains(stored)
+        ? stored
+        : 'standard';
+  }
+
+  Future<void> setSportsCardSize(String value) =>
+      _prefs.setString(_vk(AppConstants.keySportsCardSize), value);
+
+  /// Sports options: playlist id to match first, or null for the browsed
+  /// playlist.
+  String? getSportsPreferredPlaylistId() {
+    final stored =
+        _prefs.getString(_vk(AppConstants.keySportsPreferredPlaylist));
+    return stored == null || stored.isEmpty ? null : stored;
+  }
+
+  Future<void> setSportsPreferredPlaylistId(String? id) => id == null
+      ? _prefs.remove(_vk(AppConstants.keySportsPreferredPlaylist))
+      : _prefs.setString(_vk(AppConstants.keySportsPreferredPlaylist), id);
+
   /// Raw JSON of the user's game/team -> channel picks; parsed by
   /// `SportsChannelPicks` (null = none yet).
   String? getSportsChannelPicks() =>

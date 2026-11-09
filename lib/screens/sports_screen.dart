@@ -428,6 +428,7 @@ class _SportsScreenState extends State<SportsScreen>
 
   Object get _browseCacheKey => (
         _storage,
+        _preferredPlaylistId,
         context.read<PlaylistManager>(),
         context.read<EpgService>(),
         widget.scores ?? SportsService.instance,
@@ -474,6 +475,13 @@ class _SportsScreenState extends State<SportsScreen>
   Object? _lastMatchSignature;
   DateTime? _lastProgressSnapshot;
   int _indexedPlaylistRevision = -1;
+
+  /// Sports options: 'small', 'standard' or 'large' game cards.
+  String _cardSize = 'standard';
+
+  /// Sports options: the playlist matched first, or null for the one
+  /// being browsed.
+  String? _preferredPlaylistId;
   bool _loading = true;
   bool _matching = false;
   String? _error;
@@ -738,6 +746,8 @@ class _SportsScreenState extends State<SportsScreen>
         : favoriteSportsLeague(_storage)?.id;
     _hideScores = _storage.getSportsHideScores();
     _onlineExtras = _storage.getSportsOnlineExtras();
+    _cardSize = _storage.getSportsCardSize();
+    _preferredPlaylistId = _storage.getSportsPreferredPlaylistId();
     _channelFilter = SportsChannelFilter.values.firstWhere(
         (v) => v.name == _storage.getSportsChannelFilter(),
         orElse: () => SportsChannelFilter.possible);
@@ -1151,7 +1161,7 @@ class _SportsScreenState extends State<SportsScreen>
       await playlist.ensureLiveChannelsLoaded();
       if (!_currentMatchScope(scope)) return null;
       final revision = playlist.liveRevision;
-      await _matcher.prepare(playlist.visibleLiveChannels,
+      await _matcher.prepare(_matchChannels(playlist),
           onStatus: status,
           onGuideProgress: _dayOffset != 0
               ? null
@@ -1806,13 +1816,13 @@ class _SportsScreenState extends State<SportsScreen>
       if (index >= 0) {
         if (_verticalScroll.hasClients) {
           _verticalScroll.jumpTo(
-              (offset + index * (_GameCard.compactHeight + 6))
+              (offset + index * _verticalCardExtent)
                   .clamp(0.0, _verticalScroll.position.maxScrollExtent));
         }
         WidgetsBinding.instance.addPostFrameCallback((_) => focus());
         return;
       }
-      offset += section.games.length * (_GameCard.compactHeight + 6);
+      offset += section.games.length * _verticalCardExtent;
     }
   }
 
@@ -1964,16 +1974,32 @@ class _SportsScreenState extends State<SportsScreen>
   /// Portrait layout: vertical games and persistent bottom navigation.
   bool get _landscape => sportsLandscape(context);
   bool get _compactCards => _narrow || _landscape;
-  double get _rowCardWidth => _landscape
-      ? _GameCard.landscapeWidth
-      : _narrow
-          ? _GameCard.compactWidth
-          : _GameCard.width;
-  double get _rowCardHeight => _landscape
-      ? _GameCard.landscapeHeight
-      : _narrow
-          ? _GameCard.compactHeight
-          : _GameCard.height;
+
+  /// Sports options card size, applied to the card and to the layout
+  /// arithmetic that slides rows and lists to a focused card.
+  double get _cardScale => switch (_cardSize) {
+        'small' => 0.9,
+        'large' => 1.15,
+        _ => 1.0,
+      };
+
+  double get _rowCardWidth =>
+      (_landscape
+              ? _GameCard.landscapeWidth
+              : _narrow
+                  ? _GameCard.compactWidth
+                  : _GameCard.width) *
+          _cardScale;
+  double get _rowCardHeight =>
+      (_landscape
+              ? _GameCard.landscapeHeight
+              : _narrow
+                  ? _GameCard.compactHeight
+                  : _GameCard.height) *
+          _cardScale;
+
+  /// One compact card plus its gap in the vertical phone list.
+  double get _verticalCardExtent => _GameCard.compactHeight * _cardScale + 6;
   bool get _narrow => MediaQuery.sizeOf(context).width < 600;
 
   void _ensureRowVisible(String sectionId) {
@@ -2145,7 +2171,7 @@ class _SportsScreenState extends State<SportsScreen>
       {bool includePossible = false}) async {
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
-    await _matcher.prepare(playlist.visibleLiveChannels);
+    await _matcher.prepare(_matchChannels(playlist));
     return _matcher.matchDay(games, _picks, includePossible: includePossible);
   }
 
@@ -3251,6 +3277,79 @@ class _SportsScreenState extends State<SportsScreen>
     if (offset != null && mounted) _setDay(offset);
   }
 
+  String get _cardSizeLabel => switch (_cardSize) {
+        'small' => 'Small',
+        'large' => 'Large',
+        _ => 'Standard',
+      };
+
+  String get _preferredPlaylistLabel {
+    final id = _preferredPlaylistId;
+    final match = id == null
+        ? null
+        : _storage.getPlaylists().where((p) => p.id == id).firstOrNull;
+    return 'Preferred playlist: ${match?.name ?? 'Browsed playlist'}';
+  }
+
+  /// Channels the matcher indexes: the preferred playlist first, then the
+  /// browsed one, so a game missing from the preferred playlist still finds
+  /// a channel.
+  List<Channel> _matchChannels(PlaylistManager playlist) {
+    final preferred = _preferredPlaylistId;
+    if (preferred == null) return playlist.visibleLiveChannels;
+    final first =
+        playlist.visibleChannels(playlistId: preferred, category: 'tv');
+    if (first.isEmpty) return playlist.visibleLiveChannels;
+    final seen = {for (final c in first) c.id};
+    return [
+      ...first,
+      for (final c in playlist.visibleLiveChannels)
+        if (!seen.contains(c.id)) c,
+    ];
+  }
+
+  Future<void> _pickCardSize() async {
+    final choice = await showSportsChoices(context,
+        title: tr('Game card size'),
+        selected: _cardSize,
+        showSelection: true,
+        choices: const [
+          SportsChoice('small', 'Small', 'More cards on screen.'),
+          SportsChoice('standard', 'Standard', 'The size so far.'),
+          SportsChoice('large', 'Large', 'Bigger cards and text.'),
+        ]);
+    if (choice == null || !mounted || choice == _cardSize) return;
+    setState(() => _cardSize = choice);
+    await _storage.setSportsCardSize(choice);
+  }
+
+  Future<void> _pickPreferredPlaylist() async {
+    final enabled = _storage.getPlaylists().where((p) => p.enabled).toList();
+    final choice = await showSportsChoices(context,
+        title: tr('Preferred playlist'),
+        selected: _preferredPlaylistId ?? '',
+        showSelection: true,
+        choices: [
+          const SportsChoice('', 'Browsed playlist',
+              'Match whatever playlist is open.'),
+          for (final p in enabled)
+            SportsChoice(p.id, p.name,
+                'Games are matched against this playlist first.'),
+        ]);
+    if (choice == null || !mounted) return;
+    final id = choice.isEmpty ? null : choice;
+    if (id == _preferredPlaylistId) return;
+    setState(() {
+      _preferredPlaylistId = id;
+      // Reindex and forget results scored against the old channel list.
+      _indexedPlaylistRevision = -1;
+      _matchSession = SportsMatchSession();
+    });
+    await _storage.setSportsPreferredPlaylistId(id);
+    _releaseBrowse();
+    if (mounted) unawaited(_load());
+  }
+
   Future<void> _openOptions() async {
     final detailsGame = _events ? (_heroFocus.value ?? _heroGame) : null;
     final choice = await showSportsChoices(context,
@@ -3281,6 +3380,12 @@ class _SportsScreenState extends State<SportsScreen>
               'Online extras: ${_onlineExtras ? 'On' : 'Off'}',
               'Extra schedules and broadcast information.',
               icon: Icons.public),
+          SportsChoice('cards', 'Game card size: $_cardSizeLabel',
+              'Small, standard or large cards in Events.',
+              icon: Icons.grid_view_outlined),
+          SportsChoice('preferred', _preferredPlaylistLabel,
+              "Match this playlist's channels first.",
+              icon: Icons.playlist_play),
           const SportsChoice('sources', 'About sports data',
               'Where events and channel hints come from.',
               icon: Icons.info_outline),
@@ -3329,6 +3434,10 @@ class _SportsScreenState extends State<SportsScreen>
         await _toggleScores();
       case 'leagues':
         await _editLeagues();
+      case 'cards':
+        await _pickCardSize();
+      case 'preferred':
+        await _pickPreferredPlaylist();
       case 'extras':
         setState(() {
           _onlineExtras = !_onlineExtras;
@@ -3587,7 +3696,7 @@ class _SportsScreenState extends State<SportsScreen>
                         headingOnly: true))),
             SliverFixedExtentList(
               key: ValueKey('events-${sections[i].id}'),
-              itemExtent: _GameCard.compactHeight + 6,
+              itemExtent: _verticalCardExtent,
               delegate: SliverChildBuilderDelegate(
                   (context, index) => _buildGameCard(
                       sections[i].games[index],
@@ -3745,6 +3854,7 @@ class _SportsScreenState extends State<SportsScreen>
       _GameCard(
         fillWidth: _verticalGames,
         compact: _compactCards,
+        scale: _cardScale,
         key: ValueKey('card-${_gameKey(g)}'),
         focusNode: _cardNode(_gameKey(g)),
         game: g,
@@ -4398,10 +4508,14 @@ class _GameCard extends StatefulWidget {
     required this.onHold,
     this.fillWidth = false,
     this.compact = false,
+    this.scale = 1,
   });
 
   final bool fillWidth;
   final bool compact;
+
+  /// Card size multiplier from Sports options (1 = standard).
+  final double scale;
   static const double landscapeWidth = 216;
   static const double landscapeHeight = 102;
   static const double compactHeight = 110;
@@ -4524,7 +4638,11 @@ class _GameCardState extends State<_GameCard> {
       );
     }
 
-    return Padding(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(
+              MediaQuery.textScalerOf(context).scale(1) * widget.scale)),
+      child: Padding(
       padding:
           EdgeInsets.only(right: widget.fillWidth ? 0 : 12, top: 2, bottom: 4),
       child: Column(
@@ -4553,16 +4671,18 @@ class _GameCardState extends State<_GameCard> {
                 child: Container(
                   width: widget.fillWidth
                       ? double.infinity
-                      : dense
-                          ? _GameCard.landscapeWidth
+                      : (dense
+                              ? _GameCard.landscapeWidth
+                              : widget.compact
+                                  ? _GameCard.compactWidth
+                                  : _GameCard.width) *
+                          widget.scale,
+                  height: (dense
+                          ? _GameCard.landscapeHeight
                           : widget.compact
-                              ? _GameCard.compactWidth
-                              : _GameCard.width,
-                  height: dense
-                      ? _GameCard.landscapeHeight
-                      : widget.compact
-                          ? _GameCard.compactHeight
-                          : _GameCard.height,
+                              ? _GameCard.compactHeight
+                              : _GameCard.height) *
+                      widget.scale,
                   // A thicker focus outline must not squeeze/reflow the text.
                   padding: EdgeInsets.symmetric(
                       horizontal: (dense
@@ -4795,6 +4915,7 @@ class _GameCardState extends State<_GameCard> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
