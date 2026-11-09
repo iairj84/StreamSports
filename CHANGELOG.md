@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.24 — 9 November 2026
+
+- Channel names can now be edited from your phone: Settings > Channel names shows a QR code, and scanning it opens a searchable list of your channels where new names go straight to the TV.
+- College games whose channel shortens each team to three letters, such as "GRA @ 7 TEX", now match the game on the scoreboard.
+
 ## 0.2.23 — 9 November 2026
 
 - A transfer or a backup restore now reloads the playlists in place, so the app no longer has to be closed and reopened afterwards.
