@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.23 — 9 November 2026
+
+- A transfer or a backup restore now reloads the playlists in place, so the app no longer has to be closed and reopened afterwards.
+- Restored channel names are applied in the same pass, so renamed channels show their new names straight away.
+
 ## 0.2.22 — 9 November 2026
 
 - Settings, Devices & app adds Backup & restore: save a copy of this device's playlists, settings, sports picks, favorites and channel names, and put one back later.
