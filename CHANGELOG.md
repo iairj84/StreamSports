@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.19 — 9 November 2026
+
+- Beta releases now publish through one command that bumps the version, builds, audits, tags, uploads the versioned release and refreshes the rolling download.
+- The TV installation guide documents the Downloader code for that rolling download, so a box can install without typing an address.
+- No app screens or playback changed in this build; the download address and update checks stay the same.
+
 ## 0.2.18 — 8 November 2026
 
 - Settings > Devices & app > Launcher icon saves the transparent artwork into Pictures/StreamSports on the device itself, so Projectivy — or any launcher that takes a picture per app — can pick it with "From picture" without a file being copied onto the television from a computer. Four versions ship: the mark and the 16:9 banner, each in white ink for dark backgrounds and in blue for light ones.
