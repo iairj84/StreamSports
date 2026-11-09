@@ -13,7 +13,7 @@ extension TransferSectionLabel on TransferSection {
         TransferSection.settings => 'Settings, theme and startup',
         TransferSection.sports => 'Sports picks and followed teams',
         TransferSection.lists =>
-          'Favorites, hidden channels, group order and channel links',
+          'Favorites, hidden channels, group order, channel links and channel names',
       };
 }
 
@@ -82,7 +82,16 @@ const Set<String> _listKeys = {
   AppConstants.keyAutoPairedEpgOverrides,
   AppConstants.keyFavoritedGroups,
   AppConstants.keyGroupOrder,
+  // Only ever stored per playlist; classified here so a bare copy is still a
+  // list and never falls through to the settings section.
+  AppConstants.keyChannelNames,
 };
+
+/// Per-viewer curation that carries one suffix per playlist, so a plain set
+/// membership test cannot recognize it: `vesper_channel_names_<playlistId>`.
+const List<String> _listPrefixes = [
+  '${AppConstants.keyChannelNames}_',
+];
 
 /// Preference keys may be per-viewer (`…__vp_<id>`); classify by the base key
 /// so a transfer carries every viewer, not just the active one.
@@ -101,7 +110,9 @@ TransferSection? transferSectionOf(String key) {
   if (isDeviceOnlyPreference(base) || isDeviceOnlyPreference(key)) return null;
   if (_playlistKeys.contains(base)) return TransferSection.playlists;
   if (base.startsWith('vesper_sports_')) return TransferSection.sports;
-  if (_listKeys.contains(base)) return TransferSection.lists;
+  if (_listKeys.contains(base) || _listPrefixes.any(base.startsWith)) {
+    return TransferSection.lists;
+  }
   return TransferSection.settings;
 }
 

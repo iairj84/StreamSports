@@ -20,6 +20,7 @@ import 'theme_screen.dart';
 import 'library_settings_screen.dart';
 import 'launcher_icon_screen.dart';
 import 'channel_names_screen.dart';
+import 'backup_screen.dart';
 
 enum SettingsAction {
   live,
@@ -144,6 +145,11 @@ class SettingsMenuScreen extends StatelessWidget {
                           'Transfer to another device',
                           'Copy playlists, settings and sports picks over Wi-Fi',
                           const DeviceTransferScreen()),
+                      link(
+                          Icons.settings_backup_restore,
+                          'Backup & restore',
+                          'Save a copy on this device, and put one back',
+                          const BackupScreen()),
                       link(
                           Icons.info_outline,
                           'About StreamSports',
