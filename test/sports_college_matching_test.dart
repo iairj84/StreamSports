@@ -370,4 +370,33 @@ void main() {
       skip: labels.isEmpty
           ? 'Optional sanitized offline playlist labels.'
           : false);
+
+  test('three-letter school codes in a short label match a ranked opponent',
+      () async {
+    final fixture = SportsGame(
+      id: 'grambling-texas',
+      league: sportsLeagueById('basketball.mens-college-basketball')!,
+      start: DateTime.now().subtract(const Duration(minutes: 20)),
+      state: GameState.live,
+      statusText: 'Live',
+      home: const SportsTeam(
+          id: 'tex',
+          name: 'Texas Longhorns',
+          shortName: 'Texas',
+          location: 'Austin',
+          abbreviation: 'TEX'),
+      away: const SportsTeam(
+          id: 'gram',
+          name: 'Grambling State Tigers',
+          shortName: 'Grambling',
+          location: 'Grambling',
+          abbreviation: 'GRAM'),
+    );
+    final result = await match(fixture, [
+      channel('label', 'NCAAB: GRA @ 7 TEX'),
+      channel('full', 'College Basketball: Grambling at #7 Texas'),
+      channel('wrong', 'NCAAB: GRA @ 7 BAY'),
+    ]);
+    expect(result.map((m) => m.channel.rawId).toSet(), {'label', 'full'});
+  });
 }

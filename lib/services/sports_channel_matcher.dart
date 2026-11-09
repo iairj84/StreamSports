@@ -1181,6 +1181,19 @@ class SportsChannelMatcher {
         out.add(sportsNormalize(alias));
       }
     }
+    if (shortCodes) {
+      // Providers squeeze each side of a matchup into its first three letters
+      // ("GRA @ 7 TEX" for Grambling at Texas), which is shorter than any
+      // abbreviation ESPN publishes for a school. A code that opens the name
+      // or abbreviation still names that side. These phrases are only built
+      // for fixture labels, where both sides must appear together.
+      for (final s in [t.abbreviation, t.shortName, t.location ?? '']) {
+        final n = sportsNormalize(s).trim();
+        if (n.length > 3 && !n.contains(' ')) {
+          out.add(' ${n.substring(0, 3)} ');
+        }
+      }
+    }
     if (college) {
       // Exact normalized identities only. Lookup cost stays proportional to
       // this team's phrases as the verified school vocabulary grows.
