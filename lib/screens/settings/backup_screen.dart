@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
 import '../../services/backup_service.dart';
-import '../../services/channel_names.dart';
+import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
@@ -96,14 +96,15 @@ class _BackupScreenState extends State<BackupScreen> {
       _result = null;
     });
     try {
+      final manager = context.read<PlaylistManager>();
       final report = await BackupService.restore(_storage, backup);
-      // The playlists just changed underneath the loaded channels; re-read the
-      // stored names so the next load uses the restored ones.
-      ChannelRenames.bind(_storage);
+      // The playlists just changed underneath the loaded channels, so reload
+      // them here instead of asking the viewer to close and reopen the app.
+      await manager.reloadFromStorage();
       await _reload();
       if (!mounted) return;
       setState(() => _result =
-          '${report.values} settings were restored from ${_describe(backup)}. Close and reopen the app to load them.');
+          '${report.values} settings were restored from ${_describe(backup)}, and the playlists were reloaded.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e is StateError

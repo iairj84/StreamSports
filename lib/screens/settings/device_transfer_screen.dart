@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
 import '../../services/device_transfer_service.dart';
+import '../../services/playlist_manager.dart';
 import '../../services/settings_bundle.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
@@ -33,6 +34,8 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
   TransferPeer? _peer;
   SenderHandshake? _handshake;
   bool _busy = false;
+  bool _reloading = false;
+  bool _reloaded = false;
   String? _error;
   String? _result;
 
@@ -51,6 +54,8 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
     setState(() {
       _role = _Role.receive;
       _busy = true;
+      _reloaded = false;
+      _reloading = false;
       _error = null;
       _result = null;
     });
@@ -58,6 +63,10 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
         deviceName: 'This device');
     _statusSub = receiver.status.listen((status) {
       if (mounted) setState(() => _status = status);
+      if (status.phase == TransferPhase.done && !_reloaded) {
+        _reloaded = true;
+        _reloadPlaylists();
+      }
     });
     try {
       await receiver.start();
@@ -151,6 +160,19 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
     }
   }
 
+  /// A transfer replaces the playlists in storage; load them in place so the
+  /// guide and the tabs show the new ones without closing the app.
+  Future<void> _reloadPlaylists() async {
+    setState(() => _reloading = true);
+    try {
+      await context.read<PlaylistManager>().reloadFromStorage();
+    } catch (_) {
+      // The settings are saved either way; the next launch loads them too.
+    } finally {
+      if (mounted) setState(() => _reloading = false);
+    }
+  }
+
   /// Show progress the moment the button is tapped; the sender can take a
   /// few seconds to encrypt and upload a large playlist bundle.
   Future<void> _approve() async {
@@ -173,6 +195,8 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       _peers = const [];
       _peer = null;
       _handshake = null;
+      _reloaded = false;
+      _reloading = false;
       _error = null;
       _result = null;
     });
@@ -284,7 +308,10 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(tr('Transfer complete'), style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              Text(tr('${status.report?.values ?? 0} settings were copied. Close and reopen the app to load the new playlists.'),
+              Text(
+                  tr(_reloading
+                      ? '${status.report?.values ?? 0} settings were copied. Reloading this device’s playlists…'
+                      : '${status.report?.values ?? 0} settings were copied, and this device’s playlists were reloaded.'),
                   style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 16),
               FilledButton(onPressed: _reset, child: Text(tr('Done'))),

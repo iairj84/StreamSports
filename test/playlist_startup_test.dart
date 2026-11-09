@@ -289,4 +289,39 @@ void main() {
     expect(store.getPlaylists(), hasLength(1));
     playlist.dispose();
   });
+
+  test('a transfer or restore reloads the playlists in place', () async {
+    final dir = await Directory.systemTemp.createTemp('iptv-reload-test-');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}/cache.json');
+    await file.writeAsString(jsonEncode([
+      Channel(
+              id: 'fixture::one',
+              rawId: 'one',
+              playlistId: 'fixture',
+              name: 'Provider name',
+              group: 'TV',
+              url: 'https://example.invalid/never-play')
+          .toJson(),
+    ]));
+    final store = await storage();
+    store.cache.complete(file.path);
+    final manager = PlaylistManager(store, CatalogDatabase());
+    await manager.init();
+    expect(manager.channels.single.name, 'Provider name');
+
+    // What a restore leaves behind: new playlist metadata and a channel name
+    // the already-loaded channel has never seen.
+    await store.setChannelNames('fixture', {'one': 'ESPN2'});
+    await store.setPlaylists([
+      store.getPlaylists().single.copyWith(name: 'Restored playlist'),
+    ]);
+    await manager.reloadFromStorage();
+
+    expect(manager.profiles.single.name, 'Restored playlist');
+    expect(manager.channels.single.name, 'ESPN2');
+    expect(manager.channels.single.originalName, 'Provider name');
+    expect(manager.isLoading, isFalse);
+    manager.dispose();
+  });
 }

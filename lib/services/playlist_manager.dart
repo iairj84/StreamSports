@@ -173,6 +173,19 @@ class PlaylistManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Re-read what a device transfer or a backup restore replaced and load the
+  /// playlists again, in place.
+  ///
+  /// The playlist *list* itself can differ, so the sessions are rebuilt from
+  /// storage rather than patched — `init` already clears and recreates them.
+  /// Channel names are re-read too: the stored overrides changed underneath
+  /// whatever map `ChannelRenames` was holding.
+  Future<void> reloadFromStorage() async {
+    ChannelRenames.bind(_storage);
+    _foregroundSession = null;
+    await init();
+  }
+
   String categoryLayoutFor(String playlistId) {
     final session = _sessionFor(playlistId);
     return resolveLiveCategoryLayout(session?.profile.categoryLayout ?? 'auto',
