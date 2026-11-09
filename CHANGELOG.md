@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.26 — 9 November 2026
+
+- Clean up names can now be reached with a remote: Apply sits above the preview, moving down walks the list of changes, and selecting a row leaves that channel alone.
+
 ## 0.2.25 — 9 November 2026
 
 - Channel names can be cleaned up in one pass: Settings > Channel names > Clean up names strips region tags, quality markers and slot numbers, shows exactly what would change, and can undo the whole batch.
