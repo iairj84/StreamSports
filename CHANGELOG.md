@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.25 — 9 November 2026
+
+- Channel names can be cleaned up in one pass: Settings > Channel names > Clean up names strips region tags, quality markers and slot numbers, shows exactly what would change, and can undo the whole batch.
+- Backups can now travel by phone: Backup & restore > Set up another device saves a backup onto your phone and sends it to another device, which restores it after asking — no computer or account needed.
+
 ## 0.2.24 — 9 November 2026
 
 - Channel names can now be edited from your phone: Settings > Channel names shows a QR code, and scanning it opens a searchable list of your channels where new names go straight to the TV.
