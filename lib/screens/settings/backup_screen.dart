@@ -1,10 +1,16 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
 import '../../services/backup_service.dart';
+import '../../services/phone_pairing_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
 
@@ -43,6 +49,7 @@ class _BackupScreenState extends State<BackupScreen> {
   bool _busy = false;
   String? _error;
   String? _result;
+  final _phoneFocus = FocusNode(debugLabel: 'backup-phone');
 
   StorageService get _storage => context.read<StorageService>();
 
@@ -50,6 +57,12 @@ class _BackupScreenState extends State<BackupScreen> {
   void initState() {
     super.initState();
     _reload();
+  }
+
+  @override
+  void dispose() {
+    _phoneFocus.dispose();
+    super.dispose();
   }
 
   Future<void> _reload() async {
@@ -133,6 +146,103 @@ class _BackupScreenState extends State<BackupScreen> {
     }
   }
 
+  /// The phone page that moves backups in both directions: it lists this
+  /// device's backups for download, and accepts a file to restore.
+  Future<void> _phoneTransfer() => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          child: SizedBox(
+            width: 760,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: PhonePairPanel(
+                kind: PairingKind.backup,
+                toggleFocusNode: _phoneFocus,
+                backupList: _phoneBackups,
+                backupBytes: _phoneBackupBytes,
+                onResult: (result) {
+                  Navigator.of(dialogContext).pop();
+                  unawaited(_receiveFromPhone(result));
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+  String _fileName(BackupFile backup) =>
+      backup.path.split(Platform.pathSeparator).last;
+
+  Future<List<Map<String, Object>>> _phoneBackups() async => [
+        for (final backup in await BackupService.list())
+          {
+            'name': _fileName(backup),
+            'bytes': backup.bytes,
+            'at': backup.createdAt.toIso8601String(),
+          }
+      ];
+
+  Future<List<int>?> _phoneBackupBytes(String name) async {
+    for (final backup in await BackupService.list()) {
+      if (_fileName(backup) == name) return BackupService.read(backup);
+    }
+    return null;
+  }
+
+  Future<void> _receiveFromPhone(PairingResult result) async {
+    List<int> bytes;
+    try {
+      bytes = base64Decode(result.backupData);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'The backup your phone sent could not be read.');
+      return;
+    }
+    if (!mounted) return;
+    // The phone already tapped Send, but replacing everything stays the TV's
+    // decision: a mis-tap on the phone must not wipe a box.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(tr('Restore the backup from your phone?')),
+        content: Text(tr(
+            'This replaces this device’s playlists, settings, sports picks, favorites, channel links and channel names with the copy the phone sent. Anything saved since that copy was made is lost.')),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(tr('Cancel'))),
+          FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(tr('Restore'))),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _result = null;
+    });
+    try {
+      final manager = context.read<PlaylistManager>();
+      final backup = await BackupService.importBytes(bytes);
+      final report = await BackupService.restore(_storage, backup);
+      await manager.reloadFromStorage();
+      await _reload();
+      if (!mounted) return;
+      setState(() => _result =
+          '${report.values} settings were restored from the backup your phone sent, and the playlists were reloaded.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e is StateError
+          ? e.message
+          : 'The backup your phone sent could not be restored.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   /// One dialog for the row: restoring replaces everything, so it is never a
   /// single tap.
   Future<void> _open(BackupFile backup) async {
@@ -183,7 +293,7 @@ class _BackupScreenState extends State<BackupScreen> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-                tr('A backup is a copy of this device’s playlists, settings, sports picks, favorites, channel links and channel names. It is kept inside the app, so it outlasts a mistake but not an uninstall.'),
+                tr('A backup is a copy of this device’s playlists, settings, sports picks, favorites, channel links and channel names. It is kept inside the app; use your phone below to keep a copy somewhere else.'),
                 style: Theme.of(context).textTheme.bodyMedium),
           ),
           ListTile(
@@ -225,10 +335,27 @@ class _BackupScreenState extends State<BackupScreen> {
                 onTap: _busy ? null : () => _open(backup),
               ),
         ]),
+        SettingsSection(title: tr('Set up another device'), children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+                tr('Scan a code with your phone to keep a backup there, or to send one to this device. This is how a backup reaches a new box without a computer or an account.'),
+                style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          ListTile(
+            leading: const Icon(Icons.qr_code_2),
+            title: Text(tr('Move a backup with my phone')),
+            subtitle: Text(tr(
+                'Download this device’s backups to the phone, or restore one the phone already has')),
+            enabled: !_busy,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _busy ? null : _phoneTransfer,
+          ),
+        ]),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-              tr('To move a configuration to another device, use Transfer to another device. That copy travels encrypted over your own Wi-Fi and carries the same data.'),
+              tr('A backup file holds your playlist logins, so keep it somewhere private. For a direct copy between two boxes, Transfer to another device sends the same data encrypted over your Wi-Fi.'),
               style: Theme.of(context).textTheme.bodySmall),
         ),
       ]),

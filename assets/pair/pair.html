@@ -41,6 +41,9 @@
   .msg.err { border-color:var(--err); }
   .msg.ok { border-color:var(--ok); }
   .done { text-align:center; padding:48px 8px; display:none; }
+  .sub { font-size:16px; margin:22px 0 6px; }
+  .file-row { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:13px 12px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:var(--card); }
+  .file-row a { color:var(--accent); font-weight:600; text-decoration:none; }
   .name-row { margin-bottom: 14px; }
   .done .big { font-size:48px; }
   [hidden] { display:none !important; }
@@ -105,6 +108,19 @@
     <div class="msg" id="names-msg"></div>
   </section>
 
+  <section id="backup-view" hidden>
+    <h1>Move a backup to or from <span>iptv-app</span></h1>
+    <p class="lead">Save this device's backup onto your phone, then open this page on another device and send it there to set that device up.</p>
+    <h2 class="sub">On this device</h2>
+    <div id="backup-list">Loading…</div>
+    <h2 class="sub">Send a backup to this device</h2>
+    <label for="backup-file">Backup file (.json)</label>
+    <input id="backup-file" type="file" accept="application/json,.json">
+    <button class="send" id="backup-send" type="button">Send to TV</button>
+    <div class="msg" id="backup-msg"></div>
+    <p class="hint">The file holds your playlist logins, so keep it somewhere private.</p>
+  </section>
+
   <section class="done" id="done-view">
     <div class="big">✓</div>
     <h1>Sent to your TV</h1>
@@ -122,17 +138,26 @@
   var frag = (location.hash || "").replace(/^#/, "");
   var parts = frag.split(".");
   // "link" kind: "#<id>.<key>.link" (relay) or "#link" (Wi-Fi).
+  var backupKind = parts[parts.length - 1] === "backup";
+  if (backupKind) parts.pop();
   var namesKind = parts[parts.length - 1] === "names";
   if (namesKind) parts.pop();
   var linkKind = parts[parts.length - 1] === "link";
   if (linkKind) parts.pop();
-  var relay = !namesKind && parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
+  var relay = !namesKind && !backupKind && parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
   if (namesKind) {
     // The channel list only exists on the TV itself, so this form is Wi-Fi only.
     $("form-view").hidden = true;
     $("names-view").hidden = false;
     document.title = "iptv-app · Rename channels";
     loadChannels();
+  }
+  if (backupKind) {
+    // A backup is a file on the TV, so this page is Wi-Fi only too.
+    $("form-view").hidden = true;
+    $("backup-view").hidden = false;
+    document.title = "iptv-app · Move a backup";
+    loadBackups();
   }
   if (linkKind) {
     $("form-view").hidden = true;
@@ -151,7 +176,7 @@
   $("tab-m3u").onclick = function () { setMode("m3u"); };
 
   function show(text, kind) {
-    var el = $(linkKind ? "link-msg" : namesKind ? "names-msg" : "msg");
+    var el = $(linkKind ? "link-msg" : namesKind ? "names-msg" : backupKind ? "backup-msg" : "msg");
     el.textContent = text;
     el.className = "msg " + (kind || "");
     el.style.display = "block";
@@ -326,6 +351,84 @@
       });
   }
   $("names-send").onclick = submitNames;
+
+  // --------------------------------------------------------------- backups
+  function sizeText(bytes) {
+    if (!bytes) return "";
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + " MB";
+    if (bytes >= 1024) return Math.round(bytes / 1024) + " KB";
+    return bytes + " bytes";
+  }
+
+  function loadBackups() {
+    var list = $("backup-list");
+    fetch(location.pathname + "/backups", { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("(" + res.status + ")");
+        return res.json();
+      })
+      .then(function (data) {
+        list.textContent = "";
+        var backups = (data && data.backups) || [];
+        if (!backups.length) {
+          var none = document.createElement("p");
+          none.className = "hint";
+          none.textContent = "This device has no backups yet. Create one on the TV first.";
+          list.appendChild(none);
+          return;
+        }
+        backups.forEach(function (b) {
+          var row = document.createElement("div");
+          row.className = "file-row";
+          var label = document.createElement("div");
+          var at = b.at ? new Date(b.at) : null;
+          label.textContent =
+            (at && !isNaN(at.getTime()) ? at.toLocaleString() : "Backup") +
+            (b.bytes ? " · " + sizeText(b.bytes) : "");
+          var a = document.createElement("a");
+          a.href = location.pathname + "/backup?name=" + encodeURIComponent(b.name);
+          a.setAttribute("download", b.name);
+          a.textContent = "Download";
+          row.appendChild(label);
+          row.appendChild(a);
+          list.appendChild(row);
+        });
+      })
+      .catch(function (err) {
+        list.textContent = "Couldn't load this device's backups " +
+          (err && err.message ? err.message : "") +
+          ". Check that the TV still shows the code.";
+      });
+  }
+
+  function bytesToBase64(bytes) {
+    var bin = "";
+    for (var i = 0; i < bytes.length; i += 8192) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    }
+    return btoa(bin);
+  }
+
+  $("backup-send").onclick = function () {
+    var input = $("backup-file");
+    if (!input.files || !input.files.length) { show("Choose a backup file first.", "err"); return; }
+    var file = input.files[0];
+    if (file.size > 16 * 1024 * 1024) { show("That file is too large to be a backup.", "err"); return; }
+    var btn = $("backup-send");
+    btn.disabled = true; btn.textContent = "Sending…";
+    file.text().then(function (text) {
+      try { JSON.parse(text); } catch (e) { throw new Error("That file is not a StreamSports backup."); }
+      var data = bytesToBase64(new TextEncoder().encode(text));
+      return sendLocal(JSON.stringify({ v: 1, mode: "backup", name: file.name, data: data }));
+    }).then(function () {
+      $("backup-view").hidden = true;
+      $("done-hint").textContent = "Confirm the restore on the TV. You can close this page.";
+      $("done-view").style.display = "block";
+    }).catch(function (err) {
+      show(err && err.message ? err.message : "Something went wrong. Try again.", "err");
+      btn.disabled = false; btn.textContent = "Send to TV";
+    });
+  };
 })();
 </script>
 </body>

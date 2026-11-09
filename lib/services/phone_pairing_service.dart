@@ -14,11 +14,16 @@ const String kPairRelayBase = String.fromEnvironment('PAIR_RELAY_BASE');
 /// Protocol marker understood by the bundled relay implementation; not a secret.
 const Map<String, String> kRelayAppHeaders = {'X-VesperTV-App': '1'};
 
+/// Base64 of [SettingsBundle.maxBytes] is about 21 MB. Anything past this cap
+/// is not a backup file this app wrote.
+const int _maxBackupChars = 24 * 1024 * 1024;
+
 /// What a pairing session asks the phone for: the Add Playlist form, one
-/// long link (Settings > Archive sources' manifest URL), or a batch of channel
-/// names (Settings > Channel names). pair.html picks its form from a `.link` /
-/// `#link` or `.names` / `#names` suffix on the URL fragment.
-enum PairingKind { playlist, link, names }
+/// long link (Settings > Archive sources' manifest URL), a batch of channel
+/// names (Settings > Channel names), or moving a backup file (Settings >
+/// Backup & restore). pair.html picks its form from a `.link` / `#link`,
+/// `.names` / `#names` or `.backup` / `#backup` suffix on the URL fragment.
+enum PairingKind { playlist, link, names, backup }
 
 /// What the phone sent: the same fields Add Playlist has, one [link], or the
 /// channel names it edited.
@@ -33,6 +38,8 @@ class PairingResult {
     this.m3uUrl = '',
     this.epgUrl = '',
     this.renames = const [],
+    this.backupName = '',
+    this.backupData = '',
   });
 
   /// 'xtream', 'm3u' or 'link'.
@@ -49,6 +56,10 @@ class PairingResult {
 
   /// Set when [mode] is 'names': what the phone typed for each channel id.
   final List<({String id, String name})> renames;
+
+  /// Set when [mode] is 'backup': the file's name and its base64 contents.
+  final String backupName;
+  final String backupData;
 
   /// Null when the payload isn't something the form could have produced.
   static PairingResult? fromJson(Object? json) {
@@ -82,6 +93,16 @@ class PairingResult {
       return renames.isEmpty
           ? null
           : PairingResult(mode: 'names', renames: renames);
+    }
+    if (mode == 'backup') {
+      final name = s('name', 120);
+      final raw = json['data'];
+      final data = raw is String ? raw.trim() : '';
+      // Base64 of SettingsBundle.maxBytes is about 21 MB; anything beyond the
+      // hard cap is not a backup this app wrote.
+      if (data.isEmpty || data.length > _maxBackupChars) return null;
+      return PairingResult(
+          mode: 'backup', backupName: name, backupData: data);
     }
     final r = PairingResult(
       mode: mode,
@@ -123,7 +144,9 @@ class PhonePairingSession {
   PhonePairingSession(
       {this.lifetime = const Duration(minutes: 10),
       this.kind = PairingKind.playlist,
-      this.channels});
+      this.channels,
+      this.backupList,
+      this.backupBytes});
 
   final Duration lifetime;
 
@@ -135,17 +158,29 @@ class PhonePairingSession {
   /// can carry a phone's upload but cannot hand it this list.
   final List<Map<String, String>> Function()? channels;
 
+  /// [PairingKind.backup]: one entry per saved backup, as `{name, bytes, at}`.
+  /// Served over the TV's LAN server only, like [channels], because the relay
+  /// cannot hand files back to a phone.
+  final Future<List<Map<String, Object>>> Function()? backupList;
+
+  /// [PairingKind.backup]: the bytes of one listed backup, or null when the
+  /// name is not one this device just offered.
+  final Future<List<int>?> Function(String name)? backupBytes;
+
   /// The URL-fragment suffix pair.html reads (see [PairingKind]).
   String get _kindSuffix => switch (kind) {
         PairingKind.link => 'link',
         PairingKind.names => 'names',
+        PairingKind.backup => 'backup',
         PairingKind.playlist => '',
       };
 
   bool _accepts(PairingResult r) => switch (kind) {
         PairingKind.link => r.mode == 'link',
         PairingKind.names => r.mode == 'names',
-        PairingKind.playlist => r.mode != 'link' && r.mode != 'names',
+        PairingKind.backup => r.mode == 'backup',
+        PairingKind.playlist =>
+          r.mode != 'link' && r.mode != 'names' && r.mode != 'backup',
       };
 
   final _results = StreamController<PairingResult>.broadcast();
@@ -239,6 +274,39 @@ class PhonePairingSession {
         res.write(jsonEncode({'channels': channels?.call() ?? const []}));
         return;
       }
+      if (kind == PairingKind.backup &&
+          req.uri.path == '/p/$_token/backups') {
+        if (req.method != 'GET') {
+          res.statusCode = HttpStatus.methodNotAllowed;
+          return;
+        }
+        res.headers.contentType = ContentType.json;
+        res.write(jsonEncode({'backups': await backupList?.call() ?? const []}));
+        return;
+      }
+      if (kind == PairingKind.backup &&
+          req.uri.path == '/p/$_token/backup') {
+        if (req.method != 'GET') {
+          res.statusCode = HttpStatus.methodNotAllowed;
+          return;
+        }
+        final name = req.uri.queryParameters['name'] ?? '';
+        // Only a name this device just listed, and never anything that could
+        // walk out of the backups folder.
+        final usable = name.isNotEmpty &&
+            !name.contains('/') &&
+            !name.contains(r'\') &&
+            !name.contains('..');
+        final bytes = usable ? await backupBytes?.call(name) : null;
+        if (bytes == null) {
+          res.statusCode = HttpStatus.notFound;
+          return;
+        }
+        res.headers.contentType = ContentType.binary;
+        res.headers.set('Content-Disposition', 'attachment; filename="$name"');
+        res.add(bytes);
+        return;
+      }
       if (req.uri.path != '/p/$_token') {
         res.statusCode = HttpStatus.notFound;
         return;
@@ -256,7 +324,8 @@ class PhonePairingSession {
         res.statusCode = HttpStatus.methodNotAllowed;
         return;
       }
-      final body = await _readLimited(req, 16 * 1024);
+      final body = await _readLimited(req,
+          kind == PairingKind.backup ? _maxBackupChars : 16 * 1024);
       final result = body == null ? null : _decodeResult(body);
       if (result == null || !_accepts(result)) {
         res.statusCode = HttpStatus.badRequest;

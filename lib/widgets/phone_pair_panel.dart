@@ -16,6 +16,8 @@ class PhonePairPanel extends StatefulWidget {
     required this.onResult,
     this.kind = PairingKind.playlist,
     this.channels,
+    this.backupList,
+    this.backupBytes,
   });
 
   /// [PairingKind.link]: the phone shows one link box instead of the
@@ -26,6 +28,11 @@ class PhonePairPanel extends StatefulWidget {
   /// the TV's own Wi-Fi. The relay cannot carry the list, so that kind is
   /// LAN-only and its toggle is hidden.
   final List<Map<String, String>> Function()? channels;
+
+  /// [PairingKind.backup]: the backups the phone may download, and how to read
+  /// one. Both travel over the TV's own Wi-Fi, never the relay.
+  final Future<List<Map<String, Object>>> Function()? backupList;
+  final Future<List<int>?> Function(String name)? backupBytes;
 
   /// The "Phone not on this Wi-Fi?" button — the screen's Right-arrow
   /// target into this pane.
@@ -56,8 +63,11 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
   Future<void> _start() async {
     await _sub?.cancel();
     await _session?.stop();
-    final session =
-        PhonePairingSession(kind: widget.kind, channels: widget.channels);
+    final session = PhonePairingSession(
+        kind: widget.kind,
+        channels: widget.channels,
+        backupList: widget.backupList,
+        backupBytes: widget.backupBytes);
     _session = session;
     setState(() {
       _starting = true;
@@ -76,7 +86,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
       // names editor has no relay path.
       if (session.lanUrl == null &&
           kPairRelayBase.isNotEmpty &&
-          widget.kind != PairingKind.names) {
+          widget.kind != PairingKind.names &&
+          widget.kind != PairingKind.backup) {
         _relay = true;
       }
     });
@@ -156,24 +167,33 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
 
     final isLink = widget.kind == PairingKind.link;
     final isNames = widget.kind == PairingKind.names;
+    final isBackup = widget.kind == PairingKind.backup;
+    // The relay can carry a phone's upload but cannot hand a list or a file
+    // back, so these pages only work on the same Wi-Fi.
+    final lanOnly = isNames || isBackup;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
             isNames
                 ? tr('Rename channels from your phone')
-                : tr('Add from your phone'),
+                : isBackup
+                    ? tr('Move a backup with your phone')
+                    : tr('Add from your phone'),
             style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
           isNames
               ? tr(
                   'Renaming with a remote is painful. Scan this code with your phone camera, edit the names there and they appear on the TV straight away.')
-              : isLink
+              : isBackup
                   ? tr(
-                      'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
-                  : tr(
-                      'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+                      'Save this device’s backup to your phone, or send a backup the phone already has to set this device up.')
+                  : isLink
+                      ? tr(
+                          'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
+                      : tr(
+                          'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -196,17 +216,21 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                       n: 2,
                       text: isNames
                           ? tr('Search your channels and type the new names.')
-                          : isLink
-                              ? tr('Paste the link and tap Send to TV.')
-                              : tr('Fill in the form and tap Send to TV.')),
+                          : isBackup
+                              ? tr('Download a backup to keep, or choose a file to send.')
+                              : isLink
+                                  ? tr('Paste the link and tap Send to TV.')
+                                  : tr('Fill in the form and tap Send to TV.')),
                   _Step(
                       n: 3,
                       text: isNames
                           ? tr('Tap Send to TV — the names change here.')
-                          : isLink
-                              ? tr('Check the link here, then press Add.')
-                              : tr(
-                                  'Check the details here, then press Add Playlist.')),
+                          : isBackup
+                              ? tr('Confirm on the TV before anything is replaced.')
+                              : isLink
+                                  ? tr('Check the link here, then press Add.')
+                                  : tr(
+                                      'Check the details here, then press Add Playlist.')),
                   const SizedBox(height: 12),
                   if (!_starting && !_expired && url != null)
                     Row(
@@ -245,7 +269,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
               tr('Use the same Wi-Fi or local network on both devices. If a VPN is enabled, allow local network (LAN) access in its settings.'),
               style: muted),
         ],
-        if (!isNames) ...[
+        if (!lanOnly) ...[
           const SizedBox(height: 16),
           OutlinedButton.icon(
             focusNode: widget.toggleFocusNode,

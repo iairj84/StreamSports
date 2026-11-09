@@ -120,6 +120,44 @@ class BackupService {
     return bundle.applyTo(storage);
   }
 
+  /// A backup's bytes, for handing the file to a phone on the LAN.
+  static Future<List<int>> read(BackupFile backup) =>
+      File(backup.path).readAsBytes();
+
+  /// Saves a backup a phone sent us as a new backup file, so it joins the list
+  /// and can be deleted or restored like any other. The bytes are validated
+  /// before a file is written, so a stray file never appears as a backup.
+  static Future<BackupFile> importBytes(List<int> bytes,
+      {Directory? directory}) async {
+    if (bytes.length > SettingsBundle.maxBytes) {
+      throw StateError('That file is too large to be one of ours.');
+    }
+    Object? json;
+    try {
+      json = jsonDecode(utf8.decode(bytes));
+    } catch (_) {
+      json = null;
+    }
+    if (SettingsBundle.fromJson(json) == null) {
+      throw StateError('That file is not a backup this version can read.');
+    }
+    final dir = directory ?? await BackupService.directory();
+    if (!await dir.exists()) await dir.create(recursive: true);
+    final file = File('${dir.path}${Platform.pathSeparator}'
+        '$prefix${_stamp(DateTime.now())}$suffix');
+    final partial = File('${file.path}.part');
+    await partial.writeAsBytes(bytes, flush: true);
+    await partial.rename(file.path);
+    final saved = BackupFile(
+      path: file.path,
+      createdAt: _stampTime(file.path.split(Platform.pathSeparator).last) ??
+          DateTime.now(),
+      bytes: bytes.length,
+    );
+    await _prune(dir);
+    return saved;
+  }
+
   static Future<void> delete(BackupFile backup) async {
     final file = File(backup.path);
     if (await file.exists()) await file.delete();
