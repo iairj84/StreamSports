@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +10,7 @@ import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
+import '../../widgets/tv_text_field_gate.dart';
 
 /// Settings > Channel names > Clean up names: strip the provider's padding from
 /// every name in one pass, with a preview of exactly what will change.
@@ -34,6 +37,37 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
   /// back. Cleared by Undo, replaced by the next Apply.
   List<ChannelCleanupRow>? _applied;
   bool _busy = false;
+
+  final _wordsController = TextEditingController();
+  final _wordsFocus = FocusNode(debugLabel: 'channel-cleanup-words');
+  Timer? _saveWords;
+
+  @override
+  void initState() {
+    super.initState();
+    _wordsController.text =
+        context.read<StorageService>().getChannelCleanupWords().join(', ');
+  }
+
+  @override
+  void dispose() {
+    _saveWords?.cancel();
+    _wordsController.dispose();
+    _wordsFocus.dispose();
+    super.dispose();
+  }
+
+  /// The preview follows every keystroke; only the save waits, so typing does
+  /// not write a preference per character.
+  void _wordsChanged() {
+    setState(() {});
+    _saveWords?.cancel();
+    _saveWords = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      unawaited(context.read<StorageService>().setChannelCleanupWords(
+          ChannelNameCleanup.parseWords(_wordsController.text)));
+    });
+  }
 
   Future<void> _apply(List<ChannelCleanupRow> rows) async {
     if (_busy || rows.isEmpty) return;
@@ -72,7 +106,8 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
     final channels = playlist.visibleChannels(category: 'tv');
-    final plan = ChannelNameCleanup.plan(channels, _rules);
+    final plan = ChannelNameCleanup.plan(channels, _rules,
+        words: ChannelNameCleanup.parseWords(_wordsController.text));
     // Keeping the skipped rows in the list (dimmed) means a mistake is one tap
     // to undo, instead of a row that silently disappears.
     final rows = [
@@ -106,8 +141,8 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
                         ? tr('1 channel cleaned up.')
                         : tr('{n} channels cleaned up.',
                             {'n': '${applied.length}'}),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.colorScheme.onPrimaryContainer),
                   ),
                 ),
                 TextButton(
@@ -133,6 +168,24 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
                         }
                       }),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: TvTextFieldGate(
+              focusNode: _wordsFocus,
+              builder: (context, readOnly) => TextField(
+                controller: _wordsController,
+                focusNode: _wordsFocus,
+                readOnly: readOnly,
+                decoration: InputDecoration(
+                  labelText: tr('Your own words'),
+                  helperText: tr(
+                      'Comma-separated, for labels the rules miss: SPT, MOVIE, 24/7. Each one is removed wherever it appears.'),
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (_) => _wordsChanged(),
+              ),
+            ),
+          ),
         ]),
         // The summary and Apply sit above the preview: a remote reaches them
         // before the long list rather than only after walking it.
@@ -144,7 +197,8 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
               children: [
                 Text(
                   plan.isEmpty
-                      ? tr('Nothing to change with these rules. Try turning one back on, or rename channels by hand.')
+                      ? tr(
+                          'Nothing to change with these rules. Try turning one back on, or rename channels by hand.')
                       : _summary(plan, rows.length),
                   style: theme.textTheme.bodyMedium,
                 ),
@@ -156,7 +210,8 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
                       ? tr('Applying…')
                       : rows.isEmpty
                           ? tr('Nothing to apply')
-                          : tr('Apply to {n} channels', {'n': '${rows.length}'})),
+                          : tr('Apply to {n} channels',
+                              {'n': '${rows.length}'})),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -208,8 +263,10 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
                   decoration: TextDecoration.lineThrough,
                   color: theme.colorScheme.onSurfaceVariant)
               : null),
-      subtitle: Text(skipped ? tr('Left alone: {name}', {'name': row.before}) : row.before,
-          maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+          skipped ? tr('Left alone: {name}', {'name': row.before}) : row.before,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis),
       // Focusable on purpose: it is what lets a remote walk the preview, and
       // Flutter scrolls the list as focus moves.
       onTap: () => setState(() {
@@ -229,6 +286,8 @@ class _ChannelNameCleanupScreenState extends State<ChannelNameCleanupScreen> {
           });
     if (plan.skippedRenamed == 0) return changed;
     return '$changed '
-        '${tr('{n} named by hand are left alone.', {'n': '${plan.skippedRenamed}'})}';
+        '${tr('{n} named by hand are left alone.', {
+          'n': '${plan.skippedRenamed}'
+        })}';
   }
 }

@@ -265,6 +265,10 @@ class AppConstants {
   /// refresh. See `ChannelRenames`.
   static const String keyChannelNames = 'vesper_channel_names';
 
+  /// Words the viewer asked the clean-up rules to strip from channel names
+  /// wherever they appear. Empty until they add one.
+  static const String keyChannelCleanupWords = 'vesper_channel_cleanup_words';
+
   /// Per viewer: the optional opening league, stored under its legacy key.
   static const String keySportsFavoriteLeague = 'vesper_sports_favorite_league';
 

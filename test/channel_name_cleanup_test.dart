@@ -26,27 +26,73 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('region tags, quality markers and slot numbers come off', () {
-    expect(ChannelNameCleanup.clean('US: 001 | ESPN HD', ChannelNameCleanup.defaults),
+    expect(
+        ChannelNameCleanup.clean(
+            'US: 001 | ESPN HD', ChannelNameCleanup.defaults),
         'ESPN');
-    expect(ChannelNameCleanup.clean('Sky Sports F1 | UK', ChannelNameCleanup.defaults),
+    expect(
+        ChannelNameCleanup.clean(
+            'Sky Sports F1 | UK', ChannelNameCleanup.defaults),
         'Sky Sports F1');
-    expect(ChannelNameCleanup.clean('[US] BT Sport 1 UHD', ChannelNameCleanup.defaults),
+    expect(
+        ChannelNameCleanup.clean(
+            '[US] BT Sport 1 UHD', ChannelNameCleanup.defaults),
         'BT Sport 1');
   });
 
   test('only the selected rules run', () {
-    expect(ChannelNameCleanup.clean('US: ESPN HD', {ChannelCleanupRule.quality}),
+    expect(
+        ChannelNameCleanup.clean('US: ESPN HD', {ChannelCleanupRule.quality}),
         'US: ESPN');
     expect(ChannelNameCleanup.clean('US: ESPN HD', {ChannelCleanupRule.region}),
         'ESPN HD');
-    expect(ChannelNameCleanup.clean('US: ESPN HD', const <ChannelCleanupRule>{}),
+    expect(
+        ChannelNameCleanup.clean('US: ESPN HD', const <ChannelCleanupRule>{}),
         'US: ESPN HD');
   });
 
+  test('type labels come off only where a separator marks them', () {
+    expect(
+        ChannelNameCleanup.clean(
+            'US | NEWS | CNN', ChannelNameCleanup.defaults),
+        'CNN');
+    expect(ChannelNameCleanup.clean('SPT: ESPN', ChannelNameCleanup.defaults),
+        'ESPN');
+    expect(
+        ChannelNameCleanup.clean('ESPN | SPT | 2', ChannelNameCleanup.defaults),
+        'ESPN | 2');
+    // A brand word keeps its channel.
+    expect(
+        ChannelNameCleanup.clean('Sky Sports F1', ChannelNameCleanup.defaults),
+        'Sky Sports F1');
+    expect(ChannelNameCleanup.clean('Fox News', ChannelNameCleanup.defaults),
+        'Fox News');
+  });
+
+  test('the viewer can add words the built-in rules miss', () {
+    expect(
+        ChannelNameCleanup.clean('ESPN SPT', ChannelNameCleanup.defaults,
+            words: ['spt']),
+        'ESPN');
+    expect(
+        ChannelNameCleanup.clean(
+            'US: MOVIE: The Thing', ChannelNameCleanup.defaults,
+            words: ['movie']),
+        'The Thing');
+    // Whole words only: a custom "spt" cannot eat SPORTS.
+    expect(
+        ChannelNameCleanup.clean('Fox Sports 1', ChannelNameCleanup.defaults,
+            words: ['spt']),
+        'Fox Sports 1');
+    expect(ChannelNameCleanup.parseWords('SPT, movie , , x'), ['spt', 'movie']);
+  });
+
   test('names that are already clean are left alone', () {
-    expect(ChannelNameCleanup.clean('ESPN2', ChannelNameCleanup.defaults), 'ESPN2');
+    expect(ChannelNameCleanup.clean('ESPN2', ChannelNameCleanup.defaults),
+        'ESPN2');
     // A whole word only: HDTV is a name, not a quality marker.
-    expect(ChannelNameCleanup.clean('HDTV', {ChannelCleanupRule.quality}), 'HDTV');
+    expect(
+        ChannelNameCleanup.clean('HDTV', {ChannelCleanupRule.quality}), 'HDTV');
   });
 
   test('the plan skips channels named by hand', () async {
@@ -59,7 +105,8 @@ void main() {
     final renamed = _channel('one', 'My ESPN');
     final plain = _channel('two', 'US: 002 | ESPN HD');
 
-    final plan = ChannelNameCleanup.plan([renamed, plain], ChannelNameCleanup.defaults);
+    final plan =
+        ChannelNameCleanup.plan([renamed, plain], ChannelNameCleanup.defaults);
 
     expect(plan.examined, 2);
     expect(plan.skippedRenamed, 1);

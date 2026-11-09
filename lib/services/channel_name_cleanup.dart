@@ -3,11 +3,12 @@ import 'channel_names.dart';
 
 /// Optional passes over a provider's channel names, applied as rename
 /// overrides so the playlist itself is never edited.
-enum ChannelCleanupRule { region, quality, numbering, separators }
+enum ChannelCleanupRule { region, category, quality, numbering, separators }
 
 extension ChannelCleanupRuleLabel on ChannelCleanupRule {
   String get label => switch (this) {
         ChannelCleanupRule.region => 'Region tags',
+        ChannelCleanupRule.category => 'Type labels',
         ChannelCleanupRule.quality => 'Quality markers',
         ChannelCleanupRule.numbering => 'Channel numbers',
         ChannelCleanupRule.separators => 'Leftover separators',
@@ -16,9 +17,12 @@ extension ChannelCleanupRuleLabel on ChannelCleanupRule {
   String get description => switch (this) {
         ChannelCleanupRule.region =>
           'US:, [UK], | CA and similar labels at either end of the name',
+        ChannelCleanupRule.category =>
+          'MOVIE, NEWS, SPT, SPORTS and similar labels between separators',
         ChannelCleanupRule.quality =>
           'HD, FHD, 4K, HEVC, 1080p and other stream markers',
-        ChannelCleanupRule.numbering => 'Leading numbers such as "001 | " or "23. "',
+        ChannelCleanupRule.numbering =>
+          'Leading numbers such as "001 | " or "23. "',
         ChannelCleanupRule.separators =>
           'Pipes, dashes and spacing a removed label leaves behind',
       };
@@ -48,23 +52,52 @@ class ChannelCleanupPlan {
 
 /// The rules behind Settings > Channel names > Clean up names.
 ///
-/// Providers pad names with region tags, quality markers and slot numbers
-/// ("US: 001 | ESPN HD"), and the same text also feeds Sports matching, so
-/// cleaning it up helps the guide read better and the matcher line up.
+/// Providers pad names with region tags, programme-type labels, quality
+/// markers and slot numbers ("US | NEWS | 001 | ESPN HD"), and the same text
+/// also feeds Sports matching, so cleaning it up helps the guide read better
+/// and the matcher line up. No list of labels is ever complete, so the viewer
+/// can add their own words beside the built-in rules.
 class ChannelNameCleanup {
   const ChannelNameCleanup._();
 
   static const Set<ChannelCleanupRule> defaults = {
     ChannelCleanupRule.region,
+    ChannelCleanupRule.category,
     ChannelCleanupRule.quality,
     ChannelCleanupRule.numbering,
     ChannelCleanupRule.separators,
   };
 
+  /// Programme-type words providers hang off a channel name. They are only
+  /// removed where a separator or the end of the name marks them as a label,
+  /// so "Fox News" and "Sky Sports" keep their brand.
+  static const List<String> categoryWords = [
+    'movie',
+    'movies',
+    'news',
+    'spt',
+    'sport',
+    'sports',
+    'vod',
+    'series',
+    'kids',
+    'ppv',
+    'doc',
+    'docs',
+    'music',
+    'entertainment',
+  ];
+
+  static List<String> parseWords(String text) => {
+        for (final part in text.split(','))
+          if (part.trim().length >= 2) part.trim().toLowerCase()
+      }.take(50).toList();
+
   /// Builds the preview. Channels the viewer named by hand are counted and
   /// left alone: a rule must never overwrite a deliberate rename.
   static ChannelCleanupPlan plan(
-      Iterable<Channel> channels, Set<ChannelCleanupRule> rules) {
+      Iterable<Channel> channels, Set<ChannelCleanupRule> rules,
+      {List<String> words = const []}) {
     final rows = <ChannelCleanupRow>[];
     var skipped = 0;
     var examined = 0;
@@ -74,7 +107,7 @@ class ChannelNameCleanup {
         skipped++;
         continue;
       }
-      final after = clean(channel.name, rules);
+      final after = clean(channel.name, rules, words: words);
       if (after.isEmpty || after == channel.name) continue;
       rows.add((channel: channel, before: channel.name, after: after));
     }
@@ -84,8 +117,9 @@ class ChannelNameCleanup {
 
   /// Runs the selected rules over one name. Returns the name unchanged when
   /// nothing applies, and never an empty string unless the name was only tags.
-  static String clean(String name, Set<ChannelCleanupRule> rules) {
-    if (rules.isEmpty) return name;
+  static String clean(String name, Set<ChannelCleanupRule> rules,
+      {List<String> words = const []}) {
+    if (rules.isEmpty && words.isEmpty) return name;
     var value = name;
     // A name can be padded at both ends ("001 | US: ESPN"), so the passes that
     // work from the edges repeat until they stop finding something.
@@ -98,18 +132,40 @@ class ChannelNameCleanup {
         value = value.replaceFirst(_leadingRegion, '');
         value = value.replaceFirst(_trailingRegion, '');
       }
+      if (rules.contains(ChannelCleanupRule.category)) {
+        value = value.replaceAll(_categoryLabel, ' ');
+      }
       if (value == before) break;
     }
     if (rules.contains(ChannelCleanupRule.quality)) {
       value = value.replaceAll(_quality, ' ');
     }
+    if (words.isNotEmpty) {
+      for (final word in words) {
+        final parts = word
+            .trim()
+            .split(RegExp(r'\s+'))
+            .where((part) => part.isNotEmpty)
+            .map(RegExp.escape)
+            .join(r'\s+');
+        if (parts.isEmpty) continue;
+        // Whole words only, so a custom "SPT" cannot eat "SPORTS".
+        value = value.replaceAll(
+            RegExp('(?<![a-z0-9])$parts(?![a-z0-9])', caseSensitive: false),
+            ' ');
+      }
+    }
     if (rules.contains(ChannelCleanupRule.separators)) {
       value = value
           .replaceAll(_repeatedSeparators, ' | ')
-          .replaceAll(_paddedSeparator, ' | ')
-          .replaceAll(_edgeSeparators, '');
+          .replaceAll(_paddedSeparator, ' | ');
     }
-    return value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    // Whatever removed something leaves its separator behind; trim the ends
+    // and collapse the spaces in every case, rule or not.
+    return value
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(_edgeSeparators, '')
+        .trim();
   }
 
   static const String _regionCodes =
@@ -122,6 +178,12 @@ class ChannelNameCleanup {
 
   static final _trailingRegion = RegExp(
       '\\s*(?:\\|\\s*(?:$_regionCodes)\\s*\\||\\[\\s*(?:$_regionCodes)\\s*\\]|\\(\\s*(?:$_regionCodes)\\s*\\)|\\s[|:]\\s*(?:$_regionCodes))\\s*\$',
+      caseSensitive: false);
+
+  /// A programme-type word fenced by separators, or alone at either end:
+  /// `| SPT |`, `NEWS:`, `MOVIES |`.
+  static final _categoryLabel = RegExp(
+      r'(^|[\|:•·])\s*\b(?:' + categoryWords.join('|') + r')\b\s*(?=[\|:•·]|$)',
       caseSensitive: false);
 
   /// "001 | ", "23. ", "7 - " in front of the real name.

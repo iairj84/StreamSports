@@ -749,6 +749,17 @@ class StorageService {
       _prefs.setString(
           '${AppConstants.keyChannelNames}_$playlistId', jsonEncode(names));
 
+  /// The viewer's own clean-up words — see
+  /// [AppConstants.keyChannelCleanupWords]. Empty by default.
+  List<String> getChannelCleanupWords() =>
+      (_prefs.getStringList(AppConstants.keyChannelCleanupWords) ?? const [])
+          .map((word) => word.trim())
+          .where((word) => word.isNotEmpty)
+          .toList();
+
+  Future<void> setChannelCleanupWords(List<String> words) => _prefs
+      .setStringList(AppConstants.keyChannelCleanupWords, words);
+
   /// See [AppConstants.keyAutoPairedChannelLinks]'s doc comment.
   Set<String> getAutoPairedChannelLinks(String playlistId) =>
       (_prefs.getStringList(
