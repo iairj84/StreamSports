@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from publish_beta_mirror import (ASSET_NAME, MIRROR_TAG, latest_download_url,
+from publish_beta_mirror import (ASSET_NAME, DOWNLOADER_CODE, MIRROR_TAG, latest_download_url,
                                  mirror_body, parse_pubspec_version, repository_slug)
 
 
@@ -51,6 +51,8 @@ class BetaMirrorTests(unittest.TestCase):
         self.assertIn('54014889 bytes', body)
         self.assertIn(latest_download_url('iairj84/StreamSports'), body)
         self.assertIn('beta-latest', body)
+        self.assertIn(DOWNLOADER_CODE, body)
+        self.assertIn('docs/install.md', body)
 
 
 if __name__ == '__main__':

@@ -36,6 +36,7 @@ from local_config import local_setting
 
 MIRROR_TAG = 'beta-latest'
 ASSET_NAME = 'StreamSports-beta.apk'
+DOWNLOADER_CODE = '1976156'
 RELEASE_NAME = 'StreamSports beta, always the newest build'
 API = 'https://api.github.com'
 CHUNK = 1024 * 1024
@@ -76,6 +77,9 @@ def mirror_body(repository, version, build, size, digest):
         f'- SHA-256: {digest}',
         '',
         latest_download_url(repository),
+        '',
+        f'Downloader code for a TV: {DOWNLOADER_CODE}',
+        f'Installation notes: https://github.com/{repository}/blob/main/docs/install.md',
         '',
         'Do not edit the `beta-latest` tag or its asset name. The app ranks '
         'updates by the build number in the tag, so this one carries none, and '

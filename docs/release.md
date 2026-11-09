@@ -70,6 +70,8 @@ That creates or refreshes a non-prerelease release tagged `beta-latest` holding 
 
 `https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk`
 
+The Downloader code `1976156` resolves to that address and is what the installation guide uses. A code cannot be repointed once created, so keep the asset name and the `beta-latest` release in place and refresh it with the tool rather than publishing under a new name.
+
 The tag carries no version number on purpose. The app's updater ranks releases by the build number in the tag, so `beta-latest` is never offered as an update; keep it digit-free and keep the asset name fixed. The tool republishes the exact bytes it was given and then downloads the address again to compare checksums. It does not audit or sign the APK, so run `tools/audit_apk.py` and the signature checks first, and do not point the rolling release at bytes different from the versioned release's `app-release.apk`. A normal release with `app-release.apk` keeps resolving at `.../releases/latest/download/app-release.apk`. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
 
 ## Distribution

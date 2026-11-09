@@ -4,7 +4,9 @@ A free IPTV player for Android phones, TV boxes and Android TV. Live TV with a g
 
 ## Download
 
-Grab the latest APK from [Releases](https://github.com/iairj84/StreamSports/releases) and open it on the device. The app is distributed as `app-release.apk`; the same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7.0 or newer.
+**[Download StreamSports-beta.apk](https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk)** and open it on the device. That address always serves the newest beta, so it keeps working after every build. On a TV box, install [Downloader by AFTVnews](https://play.google.com/store/apps/details?id=com.esaba.downloader) and enter code **1976156** instead.
+
+The same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7.0 or newer. Older builds stay on [Releases](https://github.com/iairj84/StreamSports/releases) under their own names, and **Settings → Devices & app → App updates** checks for a newer build hourly.
 
 [Installation help](docs/install.md) · [Changelog](CHANGELOG.md) · [Build instructions](docs/development.md)
 
@@ -20,6 +22,7 @@ Grab the latest APK from [Releases](https://github.com/iairj84/StreamSports/rele
 - **Sports** across leagues, college conferences, Top 25 polls, motorsport and regional feeds — events, schedules, standings, team pages, replays and highlights, matched against your own channels.
 - **Movies and series** with category browsing, search, favorites and watch history.
 - **Multiview** for watching several live channels side by side.
+- **Launcher artwork**: **Settings → Devices & app → Launcher icon** writes the designed artwork into the device's Pictures folder, ready to choose in Projectivy or another launcher.
 - **Per-playlist guide sources**, including custom XMLTV guides, with per-playlist user-agent settings.
 - **Device transfer** over the local network, with no account and no server in the middle.
 
