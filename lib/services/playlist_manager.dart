@@ -20,6 +20,7 @@ import 'epg_database.dart' show EpgRow;
 import 'playlist_session.dart';
 import 'stalker_portal_service.dart';
 import 'storage_service.dart';
+import 'channel_names.dart';
 
 /// Combines playlist sessions and dispatches catalogue, visibility and favorite
 /// changes. M3U playlists supply live channels; Xtream libraries load categories
@@ -160,6 +161,16 @@ class PlaylistManager extends ChangeNotifier {
       if (s.profile.id == playlistId) return s;
     }
     return null;
+  }
+
+  /// Re-stamps channel display names after a rename, so the guide, Sports
+  /// and the player picker all rebuild with the new name.
+  void applyChannelNames() {
+    for (final session in _sessions) {
+      ChannelRenames.apply(session.channels);
+      ChannelRenames.apply(session.liveChannels);
+    }
+    notifyListeners();
   }
 
   String categoryLayoutFor(String playlistId) {

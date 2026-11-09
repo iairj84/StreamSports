@@ -35,6 +35,7 @@ import 'widgets/update_prompt.dart';
 import 'widgets/live_resume_hint.dart';
 import 'widgets/preview_pip_launcher.dart';
 import 'l10n/l10n.dart';
+import 'services/channel_names.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -145,6 +146,7 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
       await _storage.init();
       // Applied before the first player exists; Settings re-applies it.
       applyPlaybackBufferPreset(_storage.getPlaybackBuffer());
+      ChannelRenames.bind(_storage);
       if (mounted) setState(() => _splashStatus = tr('Loading settings...'));
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 

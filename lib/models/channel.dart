@@ -13,6 +13,7 @@ class Channel {
     required this.rawId,
     required this.playlistId,
     required this.name,
+    this.originalName,
     required this.group,
     required this.url,
     this.httpHeaders = const {},
@@ -60,7 +61,12 @@ class Channel {
   /// Playlist B's groups), and to scope Group Management/favorites-group
   /// lookups.
   final String playlistId;
-  final String name;
+  /// Shown everywhere. A user rename (`ChannelRenames`) writes the display
+  /// name here; [originalName] keeps the provider's so it can be restored.
+  String name;
+
+  /// The provider's own name, kept only while a rename is active.
+  String? originalName;
   final String group;
   final String url;
 
@@ -193,6 +199,7 @@ class Channel {
         epgKey: epgKey ?? this.epgKey,
         playlistId: playlistId,
         name: name,
+        originalName: originalName,
         group: group,
         url: url ?? this.url,
         httpHeaders: httpHeaders ?? this.httpHeaders,
@@ -219,6 +226,7 @@ class Channel {
         if (epgKey != null) 'epgKey': epgKey,
         'playlistId': playlistId,
         'name': name,
+        if (originalName != null) 'originalName': originalName,
         'group': group,
         'url': url,
         'logoUrl': logoUrl,
@@ -250,6 +258,7 @@ class Channel {
         epgKey: json['epgKey'] as String?,
         playlistId: json['playlistId'] as String? ?? 'migrated_default',
         name: json['name'] as String,
+        originalName: json['originalName'] as String?,
         group: json['group'] as String,
         url: json['url'] as String,
         logoUrl: json['logoUrl'] as String?,

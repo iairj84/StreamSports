@@ -725,6 +725,30 @@ class StorageService {
           jsonEncode(links.map((k, v) =>
               MapEntry(k, {'playlistId': v.playlistId, 'rawId': v.rawId}))));
 
+  /// The viewer's display names for one playlist (`rawId` -> name). Empty
+  /// when nothing is renamed; a corrupt blob reads back empty.
+  Map<String, String> getChannelNames(String playlistId) {
+    final raw = _prefs.getString('${AppConstants.keyChannelNames}_$playlistId');
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return {
+        for (final e in decoded.entries)
+          if (e.key.isNotEmpty &&
+              e.value is String &&
+              (e.value as String).isNotEmpty)
+            e.key: e.value as String,
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setChannelNames(
+          String playlistId, Map<String, String> names) =>
+      _prefs.setString(
+          '${AppConstants.keyChannelNames}_$playlistId', jsonEncode(names));
+
   /// See [AppConstants.keyAutoPairedChannelLinks]'s doc comment.
   Set<String> getAutoPairedChannelLinks(String playlistId) =>
       (_prefs.getStringList(

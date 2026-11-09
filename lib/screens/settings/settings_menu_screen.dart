@@ -19,6 +19,7 @@ import 'theme_screen.dart';
 
 import 'library_settings_screen.dart';
 import 'launcher_icon_screen.dart';
+import 'channel_names_screen.dart';
 
 enum SettingsAction {
   live,
@@ -94,6 +95,11 @@ class SettingsMenuScreen extends StatelessWidget {
                           'Playlists & guide',
                           'Channels, categories and program listings',
                           const PlaylistManagerScreen()),
+                      link(
+                          Icons.drive_file_rename_outline,
+                          'Channel names',
+                          'Rename channels; the new names survive updates',
+                          const ChannelNamesScreen()),
                     ]),
                     SettingsSection(title: tr('Movies & series'), children: [
                       link(

@@ -260,6 +260,11 @@ class AppConstants {
   static const String keySportsPreferredPlaylist =
       'vesper_sports_preferred_playlist';
 
+  /// Per playlist: the viewer's display names for channels (`rawId` -> name),
+  /// stamped on top of whatever the provider sends so a rename survives a
+  /// refresh. See `ChannelRenames`.
+  static const String keyChannelNames = 'vesper_channel_names';
+
   /// Per viewer: the optional opening league, stored under its legacy key.
   static const String keySportsFavoriteLeague = 'vesper_sports_favorite_league';
 

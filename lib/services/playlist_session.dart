@@ -21,6 +21,7 @@ import 'xtream_api_service.dart';
 import 'catalog_api.dart';
 import 'stalker_portal_service.dart';
 import '../l10n/l10n.dart';
+import 'channel_names.dart';
 
 /// Catalogue state for one playlist. Live data and on-demand library metadata
 /// notify independently so library activity does not invalidate live matching.
@@ -131,6 +132,7 @@ class PlaylistSession {
   List<Channel> _channels = [];
   List<Channel> get channels => _channels;
   set channels(List<Channel> value) {
+    ChannelRenames.apply(value);
     _channels = value;
     _m3uIndex = null;
   }
@@ -177,6 +179,7 @@ class PlaylistSession {
   List<Channel> _liveChannels = [];
   List<Channel> get liveChannels => _liveChannels;
   set liveChannels(List<Channel> value) {
+    ChannelRenames.apply(value);
     _liveChannels = value;
     _liveIndex = null;
   }
