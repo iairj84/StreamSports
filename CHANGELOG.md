@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.21 — 9 November 2026
+
+- Settings, Your TV adds Channel names: search your live channels and give any of them the name you want to see.
+- A renamed channel shows the new name in the guide, the channel picker and Sports, and the name survives a playlist refresh or a provider update.
+- Renaming never changes the playlist itself, and Use provider name puts the original back.
+- Sports matching uses the name you gave a channel, so a renamed channel lines up with its games.
+
 ## 0.2.20 — 9 November 2026
 
 - Sports options adds a game card size: small, standard or large. The size changes the cards and the rows around them, so remote navigation still lands on the right card.
