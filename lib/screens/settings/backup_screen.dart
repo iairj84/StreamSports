@@ -95,8 +95,8 @@ class _BackupScreenState extends State<BackupScreen> {
       setState(() => _result = 'Backup saved: ${_describe(backup)}.');
     } catch (e) {
       if (!mounted) return;
-      setState(() =>
-          _error = 'The backup could not be saved. Check that this device has free storage.');
+      setState(() => _error =
+          'The backup could not be saved. Check that this device has free storage.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -120,9 +120,8 @@ class _BackupScreenState extends State<BackupScreen> {
           '${report.values} settings were restored from ${_describe(backup)}, and the playlists were reloaded.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e is StateError
-          ? e.message
-          : 'The backup could not be restored.');
+      setState(() => _error =
+          e is StateError ? e.message : 'The backup could not be restored.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -147,8 +146,9 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   /// The phone page that moves backups in both directions: it lists this
-  /// device's backups for download, and accepts a file to restore.
-  Future<void> _phoneTransfer() => showDialog<void>(
+  /// device's backups for download, and accepts a file to restore. [restore]
+  /// opens the page on the side this device actually needs.
+  Future<void> _phoneTransfer({required bool restore}) => showDialog<void>(
         context: context,
         builder: (dialogContext) => Dialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -159,6 +159,7 @@ class _BackupScreenState extends State<BackupScreen> {
               child: PhonePairPanel(
                 kind: PairingKind.backup,
                 toggleFocusNode: _phoneFocus,
+                backupRestore: restore,
                 backupList: _phoneBackups,
                 backupBytes: _phoneBackupBytes,
                 onResult: (result) {
@@ -343,13 +344,22 @@ class _BackupScreenState extends State<BackupScreen> {
                 style: Theme.of(context).textTheme.bodyMedium),
           ),
           ListTile(
-            leading: const Icon(Icons.qr_code_2),
-            title: Text(tr('Move a backup with my phone')),
+            leading: const Icon(Icons.download_outlined),
+            title: Text(tr('Save a backup to my phone')),
             subtitle: Text(tr(
-                'Download this device’s backups to the phone, or restore one the phone already has')),
+                'Download a copy to the phone, to keep it somewhere off this device')),
             enabled: !_busy,
             trailing: const Icon(Icons.chevron_right),
-            onTap: _busy ? null : _phoneTransfer,
+            onTap: _busy ? null : () => _phoneTransfer(restore: false),
+          ),
+          ListTile(
+            leading: const Icon(Icons.restore_page_outlined),
+            title: Text(tr('Restore from my phone')),
+            subtitle: Text(tr(
+                'Send a backup the phone holds to this device, then confirm here')),
+            enabled: !_busy,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _busy ? null : () => _phoneTransfer(restore: true),
           ),
         ]),
         Padding(

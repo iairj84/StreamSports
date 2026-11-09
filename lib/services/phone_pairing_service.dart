@@ -101,8 +101,7 @@ class PairingResult {
       // Base64 of SettingsBundle.maxBytes is about 21 MB; anything beyond the
       // hard cap is not a backup this app wrote.
       if (data.isEmpty || data.length > _maxBackupChars) return null;
-      return PairingResult(
-          mode: 'backup', backupName: name, backupData: data);
+      return PairingResult(mode: 'backup', backupName: name, backupData: data);
     }
     final r = PairingResult(
       mode: mode,
@@ -146,7 +145,8 @@ class PhonePairingSession {
       this.kind = PairingKind.playlist,
       this.channels,
       this.backupList,
-      this.backupBytes});
+      this.backupBytes,
+      this.backupRestore = false});
 
   final Duration lifetime;
 
@@ -166,6 +166,10 @@ class PhonePairingSession {
   /// [PairingKind.backup]: the bytes of one listed backup, or null when the
   /// name is not one this device just offered.
   final Future<List<int>?> Function(String name)? backupBytes;
+
+  /// Opens the phone page on its Restore side instead of Save, which is what a
+  /// new device needs.
+  final bool backupRestore;
 
   /// The URL-fragment suffix pair.html reads (see [PairingKind]).
   String get _kindSuffix => switch (kind) {
@@ -213,7 +217,9 @@ class PhonePairingSession {
     try {
       final server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
       _server = server;
-      _lanUrl = 'http://${ip.address}:${server.port}/p/$_token'
+      final query =
+          kind == PairingKind.backup && backupRestore ? '?b=restore' : '';
+      _lanUrl = 'http://${ip.address}:${server.port}/p/$_token$query'
           '${_kindSuffix.isEmpty ? '' : '#$_kindSuffix'}';
       server.listen(_handle, onError: (Object e) {
         debugPrint('PhonePairing: server error ${e.runtimeType}');
@@ -274,18 +280,17 @@ class PhonePairingSession {
         res.write(jsonEncode({'channels': channels?.call() ?? const []}));
         return;
       }
-      if (kind == PairingKind.backup &&
-          req.uri.path == '/p/$_token/backups') {
+      if (kind == PairingKind.backup && req.uri.path == '/p/$_token/backups') {
         if (req.method != 'GET') {
           res.statusCode = HttpStatus.methodNotAllowed;
           return;
         }
         res.headers.contentType = ContentType.json;
-        res.write(jsonEncode({'backups': await backupList?.call() ?? const []}));
+        res.write(
+            jsonEncode({'backups': await backupList?.call() ?? const []}));
         return;
       }
-      if (kind == PairingKind.backup &&
-          req.uri.path == '/p/$_token/backup') {
+      if (kind == PairingKind.backup && req.uri.path == '/p/$_token/backup') {
         if (req.method != 'GET') {
           res.statusCode = HttpStatus.methodNotAllowed;
           return;
@@ -302,7 +307,9 @@ class PhonePairingSession {
           res.statusCode = HttpStatus.notFound;
           return;
         }
-        res.headers.contentType = ContentType.binary;
+        // A JSON content type and the file name together let Android's file
+        // picker keep this as a .json the restore side will offer back.
+        res.headers.contentType = ContentType.json;
         res.headers.set('Content-Disposition', 'attachment; filename="$name"');
         res.add(bytes);
         return;
@@ -324,8 +331,8 @@ class PhonePairingSession {
         res.statusCode = HttpStatus.methodNotAllowed;
         return;
       }
-      final body = await _readLimited(req,
-          kind == PairingKind.backup ? _maxBackupChars : 16 * 1024);
+      final body = await _readLimited(
+          req, kind == PairingKind.backup ? _maxBackupChars : 16 * 1024);
       final result = body == null ? null : _decodeResult(body);
       if (result == null || !_accepts(result)) {
         res.statusCode = HttpStatus.badRequest;

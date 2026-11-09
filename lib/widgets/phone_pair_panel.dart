@@ -18,6 +18,7 @@ class PhonePairPanel extends StatefulWidget {
     this.channels,
     this.backupList,
     this.backupBytes,
+    this.backupRestore = false,
   });
 
   /// [PairingKind.link]: the phone shows one link box instead of the
@@ -33,6 +34,9 @@ class PhonePairPanel extends StatefulWidget {
   /// one. Both travel over the TV's own Wi-Fi, never the relay.
   final Future<List<Map<String, Object>>> Function()? backupList;
   final Future<List<int>?> Function(String name)? backupBytes;
+
+  /// [PairingKind.backup]: open the phone page on Restore rather than Save.
+  final bool backupRestore;
 
   /// The "Phone not on this Wi-Fi?" button — the screen's Right-arrow
   /// target into this pane.
@@ -67,7 +71,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         kind: widget.kind,
         channels: widget.channels,
         backupList: widget.backupList,
-        backupBytes: widget.backupBytes);
+        backupBytes: widget.backupBytes,
+        backupRestore: widget.backupRestore);
     _session = session;
     setState(() {
       _starting = true;
@@ -188,7 +193,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                   'Renaming with a remote is painful. Scan this code with your phone camera, edit the names there and they appear on the TV straight away.')
               : isBackup
                   ? tr(
-                      'Save this device’s backup to your phone, or send a backup the phone already has to set this device up.')
+                      'Download this device’s backup onto your phone, or pick a backup the phone already has and send it here to set this device up.')
                   : isLink
                       ? tr(
                           'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
@@ -217,7 +222,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                       text: isNames
                           ? tr('Search your channels and type the new names.')
                           : isBackup
-                              ? tr('Download a backup to keep, or choose a file to send.')
+                              ? tr(
+                                  'Choose Save to phone or Restore from phone.')
                               : isLink
                                   ? tr('Paste the link and tap Send to TV.')
                                   : tr('Fill in the form and tap Send to TV.')),
@@ -226,7 +232,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                       text: isNames
                           ? tr('Tap Send to TV — the names change here.')
                           : isBackup
-                              ? tr('Confirm on the TV before anything is replaced.')
+                              ? tr(
+                                  'Confirm on the TV before anything is replaced.')
                               : isLink
                                   ? tr('Check the link here, then press Add.')
                                   : tr(

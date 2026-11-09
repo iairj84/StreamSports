@@ -110,15 +110,22 @@
 
   <section id="backup-view" hidden>
     <h1>Move a backup to or from <span>iptv-app</span></h1>
-    <p class="lead">Save this device's backup onto your phone, then open this page on another device and send it there to set that device up.</p>
-    <h2 class="sub">On this device</h2>
-    <div id="backup-list">Loading…</div>
-    <h2 class="sub">Send a backup to this device</h2>
-    <label for="backup-file">Backup file (.json)</label>
-    <input id="backup-file" type="file" accept="application/json,.json">
-    <button class="send" id="backup-send" type="button">Send to TV</button>
-    <div class="msg" id="backup-msg"></div>
-    <p class="hint">The file holds your playlist logins, so keep it somewhere private.</p>
+    <p class="lead">Save this device's backup onto your phone, then open this code on the new device and choose Restore from phone.</p>
+    <div class="tabs" role="group" aria-label="Backup action">
+      <button type="button" id="backup-tab-save" aria-pressed="true">Save to phone</button>
+      <button type="button" id="backup-tab-restore" aria-pressed="false">Restore from phone</button>
+    </div>
+    <section id="backup-save">
+      <div id="backup-list">Loading…</div>
+      <p class="hint">Download a copy into this phone's Downloads. It holds your playlist logins, so keep it private.</p>
+    </section>
+    <section id="backup-restore" hidden>
+      <label for="backup-file">Backup file</label>
+      <input id="backup-file" type="file">
+      <div class="hint">Pick the file you downloaded from the other device. It is a .json file.</div>
+      <button class="send" id="backup-send" type="button">Send to TV</button>
+      <div class="msg" id="backup-msg"></div>
+    </section>
   </section>
 
   <section class="done" id="done-view">
@@ -140,6 +147,7 @@
   // "link" kind: "#<id>.<key>.link" (relay) or "#link" (Wi-Fi).
   var backupKind = parts[parts.length - 1] === "backup";
   if (backupKind) parts.pop();
+  var backupRestore = (location.search || "").indexOf("b=restore") >= 0;
   var namesKind = parts[parts.length - 1] === "names";
   if (namesKind) parts.pop();
   var linkKind = parts[parts.length - 1] === "link";
@@ -157,7 +165,6 @@
     $("form-view").hidden = true;
     $("backup-view").hidden = false;
     document.title = "iptv-app · Move a backup";
-    loadBackups();
   }
   if (linkKind) {
     $("form-view").hidden = true;
@@ -408,6 +415,23 @@
     }
     return btoa(bin);
   }
+
+  var backupsLoaded = false;
+
+  function setBackupTab(which) {
+    var restore = which === "restore";
+    $("backup-tab-save").setAttribute("aria-pressed", String(!restore));
+    $("backup-tab-restore").setAttribute("aria-pressed", String(restore));
+    $("backup-save").hidden = restore;
+    $("backup-restore").hidden = !restore;
+    if (!restore && !backupsLoaded) {
+      backupsLoaded = true;
+      loadBackups();
+    }
+  }
+  $("backup-tab-save").onclick = function () { setBackupTab("save"); };
+  $("backup-tab-restore").onclick = function () { setBackupTab("restore"); };
+  if (backupKind) setBackupTab(backupRestore ? "restore" : "save");
 
   $("backup-send").onclick = function () {
     var input = $("backup-file");
