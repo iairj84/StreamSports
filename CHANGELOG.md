@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.27 — 9 November 2026
+
+- Clean up names now strips type labels too, such as MOVIE, NEWS or SPT, and Settings > Channel names > Clean up names takes words you add yourself for labels it misses.
+- Restoring a backup from your phone works now: the phone page has Save to phone and Restore from phone sides, Backup & restore has a tile for each, and the file you saved shows up in the phone's file picker.
+
 ## 0.2.26 — 9 November 2026
 
 - Clean up names can now be reached with a remote: Apply sits above the preview, moving down walks the list of changes, and selecting a row leaves that channel alone.
