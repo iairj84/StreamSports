@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.28 — 9 November 2026
+
+- Sports options adds Show betting lines: the book's spread and total from the scoreboard sit on each game card under the matchup and above the channel, and the preview and game details follow the same switch. It is on until you turn it off.
+- Narrowing Schedule to a sport now shows that day's games from the day already loaded instead of requesting it again, so switching between All sports and Basketball is instant; widening still fetches the leagues it is missing.
+
 ## 0.2.27 — 9 November 2026
 
 - Clean up names now strips type labels too, such as MOVIE, NEWS or SPT, and Settings > Channel names > Clean up names takes words you add yourself for labels it misses.
