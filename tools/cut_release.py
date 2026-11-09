@@ -7,7 +7,8 @@ Steps, stopping at the first failure:
   2. Add the notes as a new CHANGELOG.md section.
   3. flutter build apk --release --target-platform android-arm,android-arm64
   4. Audit the APK with tools/audit_apk.py; findings need --accept-audit-findings.
-  5. Commit the two edited files, create the annotated tag, push both.
+  5. Commit the two edited files, push the commit to the default branch, create and
+     push the annotated tag.
   6. Publish a prerelease holding the versioned APK.
   7. Refresh the rolling beta-latest release (tools/publish_beta_mirror.py).
 
@@ -97,6 +98,26 @@ def release_title(version):
 
 def version_label(version, build):
     return f'{version} ({build})'
+
+
+def branch_from_remote_head(text):
+    """`ref: refs/heads/main	HEAD` -> `main`; anything unusable -> `main`."""
+    match = re.search(r'ref:\s*refs/heads/(\S+)', text)
+    return match.group(1) if match else 'main'
+
+
+def release_branch(root):
+    """The branch the release commit belongs on: the remote's default branch.
+
+    Releases ship from that branch, so pushing only the checked-out branch would
+    leave the version bump and changelog off it while the release tag pointed at a
+    commit nobody could find there.
+    """
+    result = subprocess.run(['git', 'ls-remote', '--symref', 'origin', 'HEAD'],
+                            cwd=root, capture_output=True, text=True, check=False)
+    if result.returncode == 0:
+        return branch_from_remote_head(result.stdout)
+    return 'main'
 
 
 def note_bullets(text):
@@ -307,7 +328,9 @@ def cut(root, args):
         print('Stopped before pushing; push the branch and the tag when you are ready.')
         return 0
 
-    git(root, 'push', 'origin', 'HEAD')
+    branch = release_branch(root)
+    git(root, 'push', 'origin', f'HEAD:{branch}')
+    print(f'Pushed the release commit to {branch}.')
     git(root, 'push', 'origin', tag)
     token = github_token(root)
     body = release_body(repository, version, build_number, notes, asset, size, digest)

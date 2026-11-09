@@ -85,5 +85,14 @@ class CutReleaseTests(unittest.TestCase):
                       'StreamSports-beta.apk', body)
 
 
+class ReleaseBranchTests(unittest.TestCase):
+    def test_default_branch_comes_from_the_remote_head(self):
+        from cut_release import branch_from_remote_head
+        tab = chr(9)
+        self.assertEqual(branch_from_remote_head('ref: refs/heads/main' + tab + 'HEAD'), 'main')
+        self.assertEqual(branch_from_remote_head('ref: refs/heads/trunk' + tab + 'HEAD'), 'trunk')
+        self.assertEqual(branch_from_remote_head(''), 'main')
+        self.assertEqual(branch_from_remote_head('garbage'), 'main')
+
 if __name__ == '__main__':
     unittest.main()
