@@ -78,6 +78,7 @@ class SportsSchedulePanel extends StatefulWidget {
       this.onManageLeagues,
       this.onFavoritesChanged,
       this.hideScores = false,
+      this.showOdds = true,
       this.keyboardOpen,
       this.clock});
   final SportsScheduleBrowseState browseState;
@@ -101,6 +102,9 @@ class SportsSchedulePanel extends StatefulWidget {
   final Future<void> Function()? onManageLeagues;
   final ValueChanged<SportsFavoritesFilter>? onFavoritesChanged;
   final bool hideScores;
+
+  /// Sports options: the book's line on each fixture row.
+  final bool showOdds;
   final bool? keyboardOpen;
   final DateTime Function()? clock;
   final Widget Function(Widget filters, Widget actions, Widget content)
@@ -1268,6 +1272,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                   game: game,
                   time: _scheduleTime(game, _clockFormat),
                   hideScores: widget.hideScores,
+                  showOdds: widget.showOdds,
                   use24h: use24h,
                   favorite: widget.follows?.involves(game) ?? false,
                   showLeague: _overview && !_browse.groupBySport,

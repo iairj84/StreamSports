@@ -1693,7 +1693,55 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     situation: state == GameState.live
         ? _situationOf(comp['situation'], league)
         : null,
+    odds: _oddsOf(comp['odds']),
   );
+}
+
+/// The book's line for this game. ESPN keeps the current prices on the
+/// scoreboard, so no second request is needed; a game without a published
+/// line simply carries none.
+SportsOdds? _oddsOf(Object? raw) {
+  if (raw is! List) return null;
+  for (final entry in raw) {
+    if (entry is! Map) continue;
+    final details = entry['details']?.toString().trim() ?? '';
+    final overUnder = (entry['overUnder'] as num?)?.toDouble();
+    final moneyline = entry['moneyline'] as Map?;
+    String? close(String side) {
+      final row = moneyline?[side] as Map?;
+      return _moneyLine((row?['close'] as Map?)?['odds'] ??
+          (row?['current'] as Map?)?['odds']);
+    }
+
+    final home = close('home') ??
+        _moneyLine((entry['homeTeamOdds'] as Map?)?['moneyLine']);
+    final away = close('away') ??
+        _moneyLine((entry['awayTeamOdds'] as Map?)?['moneyLine']);
+    final draw = close('draw') ??
+        _moneyLine((entry['drawOdds'] as Map?)?['moneyLine']);
+    if (details.isEmpty && overUnder == null && home == null && away == null) {
+      continue;
+    }
+    return SportsOdds(
+      provider: ((entry['provider'] as Map?)?['name'] ?? '').toString(),
+      details: details,
+      overUnder: overUnder,
+      homeMoneyLine: home,
+      awayMoneyLine: away,
+      drawMoneyLine: draw,
+    );
+  }
+  return null;
+}
+
+/// "+150" for 150 and "-110" for -110; already-signed strings pass through.
+String? _moneyLine(Object? value) {
+  if (value == null) return null;
+  if (value is num) return value > 0 ? '+${value.round()}' : '${value.round()}';
+  final text = value.toString().trim();
+  if (text.isEmpty) return null;
+  final number = num.tryParse(text);
+  return number == null ? text : _moneyLine(number);
 }
 
 /// ESPN's "rating" leader repeats another line ("29 PTS").

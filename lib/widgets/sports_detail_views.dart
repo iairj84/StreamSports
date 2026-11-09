@@ -6,9 +6,11 @@ import 'package:provider/provider.dart';
 import '../models/sports.dart';
 import '../models/sports_details.dart';
 import '../services/app_preferences.dart';
+import '../services/storage_service.dart';
 import '../services/sports_standings_service.dart';
 import '../utils/sports_detail_presentation.dart';
 import '../utils/sports_fixture_presentation.dart';
+import '../utils/sports_odds_presentation.dart';
 import '../utils/time_format.dart';
 import 'compact_choice_list.dart';
 import 'sports_header_controls.dart';
@@ -40,6 +42,10 @@ class SportsDetailSummary extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final profile = sportsDetailProfile(league);
     final g = game;
+    final oddsToShow =
+        (context.read<StorageService?>()?.getSportsShowOdds() ?? true)
+            ? g?.odds
+            : null;
     final snapshot =
         data != null && !data!.unsupported && (!data!.failed || data!.stale);
     final comparison = sections
@@ -133,6 +139,29 @@ class SportsDetailSummary extends StatelessWidget {
               Text(session,
                   style:
                       TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+            if (oddsToShow case final odds?)
+              Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(children: [
+                    Icon(Icons.show_chart, size: 14, color: colors.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                        child: Text(
+                            [
+                              if (odds.provider.isNotEmpty) odds.provider,
+                              if (sportsOddsLine(odds) case final line?) line,
+                              if (sportsOddsMoneyLine(odds, g)
+                                  case final moneyLine?)
+                                'ML $moneyLine',
+                            ].join(' · '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 11.5,
+                                height: 1.25,
+                                fontWeight: FontWeight.w600,
+                                color: colors.onSurfaceVariant))),
+                  ])),
           ],
           if (team != null)
             _TeamOverview(

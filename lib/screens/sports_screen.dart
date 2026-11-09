@@ -34,6 +34,7 @@ import '../widgets/sports_channel_picker.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/channel_now_label.dart';
 import '../utils/sports_presentation.dart';
+import '../utils/sports_odds_presentation.dart';
 import '../widgets/sports_filter_picker.dart';
 import '../widgets/sports_refresh_control.dart';
 import '../widgets/sports_replays_panel.dart';
@@ -164,6 +165,7 @@ class _SportsScreenState extends State<SportsScreen>
   DateTime? _nextGame;
   bool _nextGameLooked = false;
   bool _hideScores = false;
+  bool _showOdds = true;
   SportsChannelFilter _channelFilter = SportsChannelFilter.possible;
   bool get _withChannel => _channelFilter != SportsChannelFilter.all;
   Set<String> get _checkedGames => _matchSession.checked;
@@ -745,6 +747,7 @@ class _SportsScreenState extends State<SportsScreen>
         ? remembered[1]
         : favoriteSportsLeague(_storage)?.id;
     _hideScores = _storage.getSportsHideScores();
+    _showOdds = _storage.getSportsShowOdds();
     _onlineExtras = _storage.getSportsOnlineExtras();
     _cardSize = _storage.getSportsCardSize();
     _preferredPlaylistId = _storage.getSportsPreferredPlaylistId();
@@ -2074,6 +2077,11 @@ class _SportsScreenState extends State<SportsScreen>
     await _storage.setSportsHideScores(_hideScores);
   }
 
+  Future<void> _toggleOdds() async {
+    setState(() => _showOdds = !_showOdds);
+    await _storage.setSportsShowOdds(_showOdds);
+  }
+
   /// Shown leagues from storage: base leagues plus bank leagues the user
   /// added (a bank id that was sent back is dropped).
   List<SportsLeague> _savedLeagues() => savedSportsLeagues(_storage);
@@ -2592,6 +2600,7 @@ class _SportsScreenState extends State<SportsScreen>
                         : _matches[_gameKey(hero)],
                 matching: hero != null && _pending(hero),
                 hideScores: _hideScores,
+                showOdds: _showOdds,
                 playing: playing,
                 touch: _touch,
                 narrow: _narrow,
@@ -2717,6 +2726,7 @@ class _SportsScreenState extends State<SportsScreen>
                                 onWatchGame: (game, match) =>
                                     _activateGame(game, [match]),
                                 hideScores: _hideScores,
+                                showOdds: _showOdds,
                                 clock: widget.clock,
                                 layoutBuilder: (filters, actions, content) =>
                                     SportsHubLayout(
@@ -3365,6 +3375,11 @@ class _SportsScreenState extends State<SportsScreen>
               _hideScores ? tr('Show scores') : tr('Hide scores'),
               'Control score visibility while browsing.',
               icon: Icons.visibility_outlined),
+          SportsChoice(
+              'odds',
+              _showOdds ? tr('Hide betting lines') : tr('Show betting lines'),
+              'The book\'s spread and total on game cards.',
+              icon: Icons.show_chart),
           const SportsChoice('teams', 'Favorite teams & athletes',
               'Manage the teams and athletes highlighted in Sports.',
               icon: Icons.star_border),
@@ -3432,6 +3447,8 @@ class _SportsScreenState extends State<SportsScreen>
                 ));
       case 'scores':
         await _toggleScores();
+      case 'odds':
+        await _toggleOdds();
       case 'leagues':
         await _editLeagues();
       case 'cards':
@@ -3864,6 +3881,7 @@ class _SportsScreenState extends State<SportsScreen>
         matchError: _channelError,
         hasCheckedCandidates: _matches.containsKey(_gameKey(g)),
         hideScores: _hideScores,
+        showOdds: _showOdds,
         starred: _follows.involves(g),
         previewing: preview != null && _gameKey(preview) == _gameKey(g),
         onFocus: () {
@@ -4025,6 +4043,7 @@ class _SportsScreenState extends State<SportsScreen>
                             hasCheckedCandidates:
                                 _matches.containsKey(_gameKey(g)),
                             hideScores: _hideScores,
+                            showOdds: _showOdds,
                             starred: _follows.involves(g),
                             previewing: preview != null &&
                                 _gameKey(preview) == _gameKey(g),
@@ -4215,6 +4234,7 @@ class _Hero extends StatelessWidget {
       required this.matches,
       required this.matching,
       required this.hideScores,
+      this.showOdds = true,
       required this.playing,
       this.touch = false,
       this.narrow = false,
@@ -4226,7 +4246,14 @@ class _Hero extends StatelessWidget {
   final bool replays, standings;
   final SportsGame? game;
   final List<ChannelMatch>? matches;
-  final bool matching, hideScores, playing, touch, narrow, sidebar, compact;
+  final bool matching,
+      hideScores,
+      showOdds,
+      playing,
+      touch,
+      narrow,
+      sidebar,
+      compact;
   final VoidCallback? onVideoTap;
   final Widget? activity;
 
@@ -4414,7 +4441,9 @@ class _Hero extends StatelessWidget {
                           Padding(
                               padding: const EdgeInsets.only(top: 10),
                               child: SportsHeroDetails(
-                                  game: g, hideScores: hideScores)),
+                                  game: g,
+                                  hideScores: hideScores,
+                                  showOdds: showOdds)),
                         if (agenda != null)
                           Padding(
                               key: const ValueKey('sports-preview-agenda-slot'),
@@ -4501,6 +4530,7 @@ class _GameCard extends StatefulWidget {
     this.matchError,
     this.hasCheckedCandidates = false,
     required this.hideScores,
+    this.showOdds = true,
     required this.starred,
     required this.previewing,
     required this.onFocus,
@@ -4532,6 +4562,10 @@ class _GameCard extends StatefulWidget {
   final bool hasCheckedCandidates;
   final bool hideScores;
 
+  /// Sports options: the book's line, drawn between the matchup and the
+  /// channel line, where it can never push those two apart.
+  final bool showOdds;
+
   /// One of My Teams plays.
   final bool starred;
 
@@ -4562,6 +4596,7 @@ class _GameCardState extends State<_GameCard> {
     final g = widget.game;
     final live = g.isLive;
     final showScore = g.state != GameState.pre && !widget.hideScores;
+    final oddsLine = widget.showOdds ? sportsOddsLine(g.odds) : null;
     final status = switch (g.state) {
       GameState.pre => _preLabel(g),
       GameState.live =>
@@ -4850,6 +4885,16 @@ class _GameCardState extends State<_GameCard> {
                                       : 2),
                           teamLine(g.second, leading: false),
                         ],
+                        if (oddsLine != null)
+                          Text(oddsLine,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: dense ? 9.5 : 10,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w500,
+                                  color: interfaceColor(
+                                      context, Colors.white60))),
                         const Spacer(),
                         Divider(
                             height: 5,

@@ -504,6 +504,12 @@ class StorageService {
   Future<void> setSportsHideScores(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsHideScores), value);
 
+  /// Sports options: show the betting line on game cards (on by default).
+  bool getSportsShowOdds() =>
+      _prefs.getBool(_vk(AppConstants.keySportsShowOdds)) ?? true;
+  Future<void> setSportsShowOdds(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keySportsShowOdds), value);
+
   static const sportsCardSizes = {'small', 'standard', 'large'};
 
   /// Sports options: 'small', 'standard' (default) or 'large'.

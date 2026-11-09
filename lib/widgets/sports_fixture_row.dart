@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/sports.dart';
 import '../utils/sports_detail_presentation.dart';
 import '../utils/sports_fixture_presentation.dart';
+import '../utils/sports_odds_presentation.dart';
 import 'sports_widgets.dart';
 import 'sports_filter_picker.dart' show sportLabel, shortSportLabel;
 
@@ -18,6 +19,7 @@ class SportsFixtureRow extends StatelessWidget {
       this.showSport = false,
       this.channelName,
       this.possibleChannel = false,
+      this.showOdds = true,
       this.onDetails});
   final SportsGame game;
   final String time;
@@ -25,6 +27,10 @@ class SportsFixtureRow extends StatelessWidget {
   final bool favorite;
   final String? channelName;
   final bool possibleChannel;
+
+  /// Sports options: the book's line, drawn between the matchup and the
+  /// channel so it never moves those two apart.
+  final bool showOdds;
   final VoidCallback? onDetails;
   @override
   Widget build(BuildContext context) {
@@ -68,6 +74,7 @@ class SportsFixtureRow extends StatelessWidget {
                   color:
                       showScore ? colors.onSurface : colors.onSurfaceVariant)),
         ]);
+    final oddsLine = showOdds ? sportsOddsLine(game.odds) : null;
     final status = game.isLive ? 'LIVE' : sportsFixtureStatus(game);
     final progress =
         game.isLive && !hideScores ? sportsFixtureStatus(game) : null;
@@ -166,6 +173,15 @@ class SportsFixtureRow extends StatelessWidget {
                         height: 1.2,
                         color: colors.onSurfaceVariant)),
             ],
+            if (oddsLine != null)
+              Text(oddsLine,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 10,
+                      height: 1.2,
+                      fontWeight: FontWeight.w500,
+                      color: colors.onSurfaceVariant)),
             if (channelName != null)
               Tooltip(
                   message: '${possibleChannel ? 'Possible channel' : 'Watch'}: '

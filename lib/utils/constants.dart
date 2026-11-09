@@ -248,6 +248,9 @@ class AppConstants {
   /// The Sports tab's "When" filter (`SportsTimeFilter.name`).
   static const String keySportsTimeFilter = 'vesper_sports_time_filter';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
+
+  /// Sports tab, per viewer: show the book's line on game cards.
+  static const String keySportsShowOdds = 'vesper_sports_show_odds';
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
   static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
 

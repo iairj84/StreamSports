@@ -2326,6 +2326,31 @@ class SportsTeam {
   String get rankLabel => rank == null ? '' : '#$rank';
 }
 
+/// The sportsbook line ESPN carries for a game. One book at a time (usually
+/// DraftKings); the numbers are the provider's own, never calculated here.
+class SportsOdds {
+  const SportsOdds({
+    this.provider = '',
+    this.details = '',
+    this.overUnder,
+    this.homeMoneyLine,
+    this.awayMoneyLine,
+    this.drawMoneyLine,
+  });
+
+  /// The book that published the line ("DraftKings").
+  final String provider;
+
+  /// The provider's own wording of the handicap ("BUF -3.5").
+  final String details;
+
+  /// Total points or goals for the over/under (45.5, 2.5).
+  final double? overUnder;
+
+  /// American moneyline for each side ("-175", "+150", "+450").
+  final String? homeMoneyLine, awayMoneyLine, drawMoneyLine;
+}
+
 class SportsGame {
   const SportsGame({
     required this.id,
@@ -2341,6 +2366,7 @@ class SportsGame {
     this.end,
     this.leaders = const [],
     this.situation,
+    this.odds,
     this.source = 'ESPN',
     this.onlineBroadcasts = const [],
     this.guideProgrammes = const [],
@@ -2352,6 +2378,10 @@ class SportsGame {
 
   /// Football: down & distance / red zone; baseball: count, outs, bases.
   final SportsSituation? situation;
+
+  /// The published betting line, when this game has one. Most games do;
+  /// some (far-future fixtures, leagues without a book) never will.
+  final SportsOdds? odds;
 
   final String id;
   final SportsLeague league;
@@ -2403,6 +2433,7 @@ class SportsGame {
       end: end,
       leaders: leaders,
       situation: situation,
+      odds: odds,
       source: source,
       onlineBroadcasts: listings,
       guideProgrammes: guideProgrammes);
