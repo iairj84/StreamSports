@@ -12,6 +12,7 @@ import '../../services/storage_service.dart';
 import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
+import 'channel_name_cleanup_screen.dart';
 
 /// Settings > Channel names: rename a channel once and every screen uses that
 /// name — the guide, Sports matching, the channel picker and the player. The
@@ -168,11 +169,19 @@ class _ChannelNamesScreenState extends State<ChannelNamesScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: _renameFromPhone,
-                icon: const Icon(Icons.qr_code_2),
-                label: Text(tr('Rename from my phone')),
-              ),
+              child: Wrap(spacing: 12, runSpacing: 8, children: [
+                OutlinedButton.icon(
+                  onPressed: _renameFromPhone,
+                  icon: const Icon(Icons.qr_code_2),
+                  label: Text(tr('Rename from my phone')),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(SettingsRoute(
+                      builder: (_) => const ChannelNameCleanupScreen())),
+                  icon: const Icon(Icons.auto_fix_high),
+                  label: Text(tr('Clean up names')),
+                ),
+              ]),
             ),
           ),
           Padding(
