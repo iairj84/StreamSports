@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.22 — 9 November 2026
+
+- Settings, Devices & app adds Backup & restore: save a copy of this device's playlists, settings, sports picks, favorites and channel names, and put one back later.
+- Up to five backups are kept on the device; older ones are removed as new ones are written, and restoring asks before it replaces anything.
+- Transfer to another device now carries channel names with favourites, hidden channels and channel links.
+
 ## 0.2.21 — 9 November 2026
 
 - Settings, Your TV adds Channel names: search your live channels and give any of them the name you want to see.
