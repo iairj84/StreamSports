@@ -14,12 +14,14 @@ const String kPairRelayBase = String.fromEnvironment('PAIR_RELAY_BASE');
 /// Protocol marker understood by the bundled relay implementation; not a secret.
 const Map<String, String> kRelayAppHeaders = {'X-VesperTV-App': '1'};
 
-/// What a pairing session asks the phone for: the Add Playlist form, or one
-/// long link (Settings > Archive sources' manifest URL). pair.html picks its
-/// form from a `.link` / `#link` suffix on the URL fragment.
-enum PairingKind { playlist, link }
+/// What a pairing session asks the phone for: the Add Playlist form, one
+/// long link (Settings > Archive sources' manifest URL), or a batch of channel
+/// names (Settings > Channel names). pair.html picks its form from a `.link` /
+/// `#link` or `.names` / `#names` suffix on the URL fragment.
+enum PairingKind { playlist, link, names }
 
-/// What the phone sent: the same fields Add Playlist has, or one [link].
+/// What the phone sent: the same fields Add Playlist has, one [link], or the
+/// channel names it edited.
 class PairingResult {
   const PairingResult({
     required this.mode,
@@ -30,6 +32,7 @@ class PairingResult {
     this.password = '',
     this.m3uUrl = '',
     this.epgUrl = '',
+    this.renames = const [],
   });
 
   /// 'xtream', 'm3u' or 'link'.
@@ -44,6 +47,9 @@ class PairingResult {
   final String m3uUrl;
   final String epgUrl;
 
+  /// Set when [mode] is 'names': what the phone typed for each channel id.
+  final List<({String id, String name})> renames;
+
   /// Null when the payload isn't something the form could have produced.
   static PairingResult? fromJson(Object? json) {
     if (json is! Map) return null;
@@ -55,6 +61,28 @@ class PairingResult {
     }
 
     final mode = s('mode', 10);
+    if (mode == 'names') {
+      final raw = json['renames'];
+      if (raw is! List) return null;
+      final renames = <({String id, String name})>[];
+      for (final entry in raw.take(500)) {
+        if (entry is! Map) continue;
+        final id = entry['id'];
+        final name = entry['name'];
+        if (id is! String || name is! String) continue;
+        final trimmedId = id.trim();
+        final trimmedName = name.trim();
+        if (trimmedId.isEmpty ||
+            trimmedId.length > 200 ||
+            trimmedName.length > 80) {
+          continue;
+        }
+        renames.add((id: trimmedId, name: trimmedName));
+      }
+      return renames.isEmpty
+          ? null
+          : PairingResult(mode: 'names', renames: renames);
+    }
     final r = PairingResult(
       mode: mode,
       name: s('name', 80),
@@ -94,18 +122,31 @@ class PairingResult {
 class PhonePairingSession {
   PhonePairingSession(
       {this.lifetime = const Duration(minutes: 10),
-      this.kind = PairingKind.playlist});
+      this.kind = PairingKind.playlist,
+      this.channels});
 
   final Duration lifetime;
 
   /// Which form the phone shows; results of the other kind are refused.
   final PairingKind kind;
 
-  /// The URL-fragment suffix pair.html reads (see [PairingKind]).
-  String get _kindSuffix => kind == PairingKind.link ? 'link' : '';
+  /// The channels the phone may rename, served to it over the TV's own LAN
+  /// server. Only used by [PairingKind.names], which is Wi-Fi only: the relay
+  /// can carry a phone's upload but cannot hand it this list.
+  final List<Map<String, String>> Function()? channels;
 
-  bool _accepts(PairingResult r) =>
-      (r.mode == 'link') == (kind == PairingKind.link);
+  /// The URL-fragment suffix pair.html reads (see [PairingKind]).
+  String get _kindSuffix => switch (kind) {
+        PairingKind.link => 'link',
+        PairingKind.names => 'names',
+        PairingKind.playlist => '',
+      };
+
+  bool _accepts(PairingResult r) => switch (kind) {
+        PairingKind.link => r.mode == 'link',
+        PairingKind.names => r.mode == 'names',
+        PairingKind.playlist => r.mode != 'link' && r.mode != 'names',
+      };
 
   final _results = StreamController<PairingResult>.broadcast();
   Stream<PairingResult> get results => _results.stream;
@@ -187,6 +228,17 @@ class PhonePairingSession {
       ..set('Referrer-Policy', 'no-referrer')
       ..set('X-Content-Type-Options', 'nosniff');
     try {
+      // The names editor reads the channel list through the same one-session
+      // server, so the list never leaves the home network.
+      if (req.uri.path == '/p/$_token/channels') {
+        if (req.method != 'GET') {
+          res.statusCode = HttpStatus.methodNotAllowed;
+          return;
+        }
+        res.headers.contentType = ContentType.json;
+        res.write(jsonEncode({'channels': channels?.call() ?? const []}));
+        return;
+      }
       if (req.uri.path != '/p/$_token') {
         res.statusCode = HttpStatus.notFound;
         return;

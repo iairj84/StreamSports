@@ -15,11 +15,17 @@ class PhonePairPanel extends StatefulWidget {
     required this.toggleFocusNode,
     required this.onResult,
     this.kind = PairingKind.playlist,
+    this.channels,
   });
 
   /// [PairingKind.link]: the phone shows one link box instead of the
   /// playlist form (Settings > Archive sources).
   final PairingKind kind;
+
+  /// [PairingKind.names]: the channels the phone may rename, served to it over
+  /// the TV's own Wi-Fi. The relay cannot carry the list, so that kind is
+  /// LAN-only and its toggle is hidden.
+  final List<Map<String, String>> Function()? channels;
 
   /// The "Phone not on this Wi-Fi?" button — the screen's Right-arrow
   /// target into this pane.
@@ -50,7 +56,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
   Future<void> _start() async {
     await _sub?.cancel();
     await _session?.stop();
-    final session = PhonePairingSession(kind: widget.kind);
+    final session =
+        PhonePairingSession(kind: widget.kind, channels: widget.channels);
     _session = session;
     setState(() {
       _starting = true;
@@ -65,8 +72,13 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     if (!mounted || !identical(_session, session)) return;
     setState(() {
       _starting = false;
-      // No LAN address (unusual) — only the relay can work.
-      if (session.lanUrl == null && kPairRelayBase.isNotEmpty) _relay = true;
+      // No LAN address (unusual) — only the relay can work, and the channel
+      // names editor has no relay path.
+      if (session.lanUrl == null &&
+          kPairRelayBase.isNotEmpty &&
+          widget.kind != PairingKind.names) {
+        _relay = true;
+      }
     });
     if (_relay) session.startRelayPolling();
   }
@@ -143,17 +155,25 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     }
 
     final isLink = widget.kind == PairingKind.link;
+    final isNames = widget.kind == PairingKind.names;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(tr('Add from your phone'), style: theme.textTheme.titleLarge),
+        Text(
+            isNames
+                ? tr('Rename channels from your phone')
+                : tr('Add from your phone'),
+            style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
-          isLink
+          isNames
               ? tr(
-                  'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
-              : tr(
-                  'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+                  'Renaming with a remote is painful. Scan this code with your phone camera, edit the names there and they appear on the TV straight away.')
+              : isLink
+                  ? tr(
+                      'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
+                  : tr(
+                      'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -174,15 +194,19 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                               'Connect your phone to the same Wi-Fi as this TV, then scan.')),
                   _Step(
                       n: 2,
-                      text: isLink
-                          ? tr('Paste the link and tap Send to TV.')
-                          : tr('Fill in the form and tap Send to TV.')),
+                      text: isNames
+                          ? tr('Search your channels and type the new names.')
+                          : isLink
+                              ? tr('Paste the link and tap Send to TV.')
+                              : tr('Fill in the form and tap Send to TV.')),
                   _Step(
                       n: 3,
-                      text: isLink
-                          ? tr('Check the link here, then press Add.')
-                          : tr(
-                              'Check the details here, then press Add Playlist.')),
+                      text: isNames
+                          ? tr('Tap Send to TV — the names change here.')
+                          : isLink
+                              ? tr('Check the link here, then press Add.')
+                              : tr(
+                                  'Check the details here, then press Add Playlist.')),
                   const SizedBox(height: 12),
                   if (!_starting && !_expired && url != null)
                     Row(
@@ -221,19 +245,21 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
               tr('Use the same Wi-Fi or local network on both devices. If a VPN is enabled, allow local network (LAN) access in its settings.'),
               style: muted),
         ],
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          focusNode: widget.toggleFocusNode,
-          onPressed: _starting ? null : _toggle,
-          icon: Icon(_expired || kPairRelayBase.isEmpty
-              ? Icons.refresh
-              : (_relay ? Icons.wifi : Icons.signal_cellular_alt)),
-          label: Text(_expired || kPairRelayBase.isEmpty
-              ? tr('New code')
-              : (_relay
-                  ? tr('Phone on this Wi-Fi? Use the Wi-Fi code')
-                  : tr('Phone not on this Wi-Fi? Use the other code'))),
-        ),
+        if (!isNames) ...[
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            focusNode: widget.toggleFocusNode,
+            onPressed: _starting ? null : _toggle,
+            icon: Icon(_expired || kPairRelayBase.isEmpty
+                ? Icons.refresh
+                : (_relay ? Icons.wifi : Icons.signal_cellular_alt)),
+            label: Text(_expired || kPairRelayBase.isEmpty
+                ? tr('New code')
+                : (_relay
+                    ? tr('Phone on this Wi-Fi? Use the Wi-Fi code')
+                    : tr('Phone not on this Wi-Fi? Use the other code'))),
+          ),
+        ],
       ],
     );
   }

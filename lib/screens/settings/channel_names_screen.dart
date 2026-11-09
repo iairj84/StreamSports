@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
 import '../../models/channel.dart';
 import '../../services/channel_names.dart';
+import '../../services/phone_pairing_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
 
@@ -22,12 +26,67 @@ class ChannelNamesScreen extends StatefulWidget {
 class _ChannelNamesScreenState extends State<ChannelNamesScreen> {
   final _search = TextEditingController();
   final _searchFocus = FocusNode(debugLabel: 'channel-names-search');
+  final _phoneFocus = FocusNode(debugLabel: 'channel-names-phone');
 
   @override
   void dispose() {
     _search.dispose();
     _searchFocus.dispose();
+    _phoneFocus.dispose();
     super.dispose();
+  }
+
+  /// The same QR pairing Add Playlist uses, with a channel list instead of a
+  /// form: the phone searches and types names, and the TV applies the batch.
+  Future<void> _renameFromPhone() async {
+    final playlist = context.read<PlaylistManager>();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        child: SizedBox(
+          width: 760,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: PhonePairPanel(
+              kind: PairingKind.names,
+              toggleFocusNode: _phoneFocus,
+              channels: () => [
+                for (final channel
+                    in playlist.visibleChannels(category: 'tv'))
+                  {
+                    'id': channel.id,
+                    'name': channel.name,
+                    'group': channel.group,
+                    'was': channel.originalName ?? '',
+                  }
+              ],
+              onResult: (result) {
+                Navigator.of(dialogContext).pop();
+                unawaited(_applyPhoneNames(result));
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _applyPhoneNames(PairingResult result) async {
+    final playlist = context.read<PlaylistManager>();
+    final storage = context.read<StorageService>();
+    final byId = {for (final channel in playlist.channels) channel.id: channel};
+    final changed = await ChannelRenames.renameMany(storage, [
+      for (final rename in result.renames)
+        if (byId[rename.id] != null) (byId[rename.id]!, rename.name),
+    ]);
+    if (!mounted || changed == 0) return;
+    playlist.applyChannelNames();
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(changed == 1
+            ? tr('1 channel renamed from your phone.')
+            : tr('{n} channels renamed from your phone.', {'n': '$changed'}))));
   }
 
   Future<void> _rename(Channel channel) async {
@@ -103,6 +162,17 @@ class _ChannelNamesScreenState extends State<ChannelNamesScreen> {
             child: Text(
               tr('Rename a channel and every screen uses the new name: the guide, Sports matching, the channel picker and the player. Your playlist is never edited, so updates cannot undo it.'),
               style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: _renameFromPhone,
+                icon: const Icon(Icons.qr_code_2),
+                label: Text(tr('Rename from my phone')),
+              ),
             ),
           ),
           Padding(

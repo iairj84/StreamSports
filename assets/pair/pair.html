@@ -41,6 +41,7 @@
   .msg.err { border-color:var(--err); }
   .msg.ok { border-color:var(--ok); }
   .done { text-align:center; padding:48px 8px; display:none; }
+  .name-row { margin-bottom: 14px; }
   .done .big { font-size:48px; }
   [hidden] { display:none !important; }
 </style>
@@ -94,6 +95,16 @@
     </form>
   </section>
 
+  <section id="names-view" hidden>
+    <h1>Rename channels on <span>iptv-app</span></h1>
+    <p class="lead">Search for a channel, type the name you want and send them all at once. Your playlist itself is never changed.</p>
+    <label for="names-search">Find a channel</label>
+    <input id="names-search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. ESPN">
+    <div id="names-list" style="margin-top:16px">Loading your channels…</div>
+    <button class="send" id="names-send" type="button">Send to TV</button>
+    <div class="msg" id="names-msg"></div>
+  </section>
+
   <section class="done" id="done-view">
     <div class="big">✓</div>
     <h1>Sent to your TV</h1>
@@ -111,9 +122,18 @@
   var frag = (location.hash || "").replace(/^#/, "");
   var parts = frag.split(".");
   // "link" kind: "#<id>.<key>.link" (relay) or "#link" (Wi-Fi).
+  var namesKind = parts[parts.length - 1] === "names";
+  if (namesKind) parts.pop();
   var linkKind = parts[parts.length - 1] === "link";
   if (linkKind) parts.pop();
-  var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
+  var relay = !namesKind && parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
+  if (namesKind) {
+    // The channel list only exists on the TV itself, so this form is Wi-Fi only.
+    $("form-view").hidden = true;
+    $("names-view").hidden = false;
+    document.title = "iptv-app · Rename channels";
+    loadChannels();
+  }
   if (linkKind) {
     $("form-view").hidden = true;
     $("link-view").hidden = false;
@@ -131,7 +151,7 @@
   $("tab-m3u").onclick = function () { setMode("m3u"); };
 
   function show(text, kind) {
-    var el = $(linkKind ? "link-msg" : "msg");
+    var el = $(linkKind ? "link-msg" : namesKind ? "names-msg" : "msg");
     el.textContent = text;
     el.className = "msg " + (kind || "");
     el.style.display = "block";
@@ -214,6 +234,98 @@
   }
   $("form").addEventListener("submit", submit);
   $("link-form").addEventListener("submit", submit);
+
+  // ---------------------------------------------------------- channel names
+  var channels = [];
+  var draft = {};
+
+  function loadChannels() {
+    fetch(location.pathname + "/channels", { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("(" + res.status + ")");
+        return res.json();
+      })
+      .then(function (data) {
+        channels = (data && data.channels) || [];
+        renderNames();
+      })
+      .catch(function (err) {
+        $("names-list").textContent = "Couldn't load your channels " +
+          (err && err.message ? err.message : "") +
+          ". Check that the TV still shows the code and that this phone is on its Wi-Fi.";
+      });
+  }
+
+  function renderNames() {
+    var list = $("names-list");
+    list.textContent = "";
+    var q = $("names-search").value.trim().toLowerCase();
+    var matches = channels.filter(function (c) {
+      return !q ||
+        (c.name || "").toLowerCase().indexOf(q) >= 0 ||
+        (c.group || "").toLowerCase().indexOf(q) >= 0;
+    });
+    if (!matches.length) {
+      var none = document.createElement("p");
+      none.className = "hint";
+      none.textContent = channels.length
+        ? "No channel matches that search."
+        : "This TV has no channels to rename yet.";
+      list.appendChild(none);
+      return;
+    }
+    if (matches.length > 80) {
+      var more = document.createElement("p");
+      more.className = "hint";
+      more.textContent = "Showing the first 80 of " + matches.length +
+        " channels. Type more of the name to narrow it down.";
+      list.appendChild(more);
+    }
+    matches.slice(0, 80).forEach(function (c) {
+      var row = document.createElement("div");
+      row.className = "name-row";
+      var input = document.createElement("input");
+      input.value = draft[c.id] !== undefined ? draft[c.id] : (c.name || "");
+      input.maxLength = 80;
+      input.setAttribute("autocapitalize", "off");
+      input.setAttribute("spellcheck", "false");
+      input.setAttribute("aria-label", "Name for " + (c.name || "channel"));
+      input.addEventListener("input", function () { draft[c.id] = input.value; });
+      var hint = document.createElement("div");
+      hint.className = "hint";
+      var was = c.was || c.name || "";
+      hint.textContent = [c.group, was ? "provider: " + was : ""]
+        .filter(Boolean).join(" · ");
+      row.appendChild(input);
+      row.appendChild(hint);
+      list.appendChild(row);
+    });
+  }
+  $("names-search").oninput = renderNames;
+
+  function submitNames() {
+    var renames = [];
+    channels.forEach(function (c) {
+      if (draft[c.id] === undefined) return;
+      var value = draft[c.id].trim();
+      if (!value || value === (c.name || "")) return;
+      renames.push({ id: c.id, name: value });
+    });
+    if (!renames.length) { show("No names changed yet.", "err"); return; }
+    var btn = $("names-send");
+    btn.disabled = true; btn.textContent = "Sending…";
+    sendLocal(JSON.stringify({ v: 1, mode: "names", renames: renames }))
+      .then(function () {
+        $("names-view").hidden = true;
+        $("done-hint").textContent = "The names are already updated. You can close this page.";
+        $("done-view").style.display = "block";
+      })
+      .catch(function (err) {
+        show(err && err.message ? err.message : "Something went wrong. Try again.", "err");
+        btn.disabled = false; btn.textContent = "Send to TV";
+      });
+  }
+  $("names-send").onclick = submitNames;
 })();
 </script>
 </body>

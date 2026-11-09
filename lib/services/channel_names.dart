@@ -63,6 +63,37 @@ class ChannelRenames {
     channel.name = trimmed;
   }
 
+  /// Saves a batch of display names at once — what the phone editor sends —
+  /// with one storage write per playlist instead of one per channel. Empty
+  /// names clear an override, like [rename]. Returns how many channels changed.
+  static Future<int> renameMany(
+      StorageService storage, Iterable<(Channel, String)> renames) async {
+    bind(storage);
+    final byPlaylist = <String, Map<String, String>>{};
+    final changed = <Channel>[];
+    for (final (channel, name) in renames) {
+      final names = byPlaylist.putIfAbsent(channel.playlistId,
+          () => {...storage.getChannelNames(channel.playlistId)});
+      final trimmed = name.trim();
+      if (trimmed.isEmpty) {
+        if (names.remove(channel.rawId) == null) continue;
+      } else {
+        if (names[channel.rawId] == trimmed) continue;
+        names[channel.rawId] = trimmed;
+      }
+      changed.add(channel);
+    }
+    if (changed.isEmpty) return 0;
+    for (final entry in byPlaylist.entries) {
+      await storage.setChannelNames(entry.key, entry.value);
+    }
+    _cache = null;
+    for (final channel in changed) {
+      applyTo(channel, nameFor(channel.playlistId, channel.rawId));
+    }
+    return changed.length;
+  }
+
   /// Saves one channel's display name, or clears it with an empty [name].
   /// Returns true when something changed.
   static Future<bool> rename(
