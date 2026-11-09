@@ -28,6 +28,14 @@ Set a public commit identity, such as a GitHub noreply address, before the first
 
 ## Android APK
 
+For a beta, one command performs the steps below in order: bump, changelog entry, build, audit, commit, tag, push, the versioned prerelease and the rolling beta download.
+
+```sh
+python3 tools/cut_release.py --notes-file release-notes.txt
+```
+
+Notes are one bullet per line and become both the changelog section and the release body. The script refuses to start while tracked source changes are uncommitted, restores the generated desktop registrant files a build rewrites, and stops on audit findings unless `--accept-audit-findings` says they were reviewed. `--dry-run` prints the plan, `--skip-build` reuses the APK already under `build/`, `--local` stops after the commit and tag, and `--version`/`--build` override the automatic bump. If only the mirror step fails, rerun `tools/publish_beta_mirror.py`; the versioned release is already published by then. The manual steps that follow describe the same release.
+
 1. Set the four signing values from `.env.example`; keep the keystore outside source. Preserve the certificate for updates. Without these values, local release builds fall back to debug signing and are not distribution builds.
 2. Increase the version/build number in `pubspec.yaml`. Build from a neutral directory such as `/workspace/StreamSports` so generated source paths do not expose a personal home directory.
 3. Build and verify:
@@ -52,7 +60,17 @@ Create a version tag from the reviewed source and prepare a draft release. Attac
 - `android-native-sources.zip`: the pinned decoder build project, Media3 and FFmpeg source trees, licences and build instructions.
 - `SHA256SUMS.txt`: SHA-256 checksums of the three files above.
 
-Verify the draft assets before publishing. The stable APK address is `https://github.com/iairj84/StreamSports/releases/latest/download/app-release.apk`, which only resolves for a normal release — GitHub excludes prereleases from `latest`, so link a beta by its tag (`.../releases/tag/vX.Y.Z-NNNN-beta`) instead. Keep experimental prereleases separate. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
+Verify the draft assets before publishing. Keep betas marked as prereleases, which GitHub excludes from `latest`, and publish the stable address from a second, rolling release:
+
+```sh
+python3 tools/publish_beta_mirror.py build/app/outputs/flutter-apk/app-release.apk
+```
+
+That creates or refreshes a non-prerelease release tagged `beta-latest` holding one fixed-name asset, `StreamSports-beta.apk`, and marks it as GitHub's latest release. Run it after every build: the previous asset is replaced, so this address never changes and is safe to shorten for Downloader or Projectivy.
+
+`https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk`
+
+The tag carries no version number on purpose. The app's updater ranks releases by the build number in the tag, so `beta-latest` is never offered as an update; keep it digit-free and keep the asset name fixed. The tool republishes the exact bytes it was given and then downloads the address again to compare checksums. It does not audit or sign the APK, so run `tools/audit_apk.py` and the signature checks first, and do not point the rolling release at bytes different from the versioned release's `app-release.apk`. A normal release with `app-release.apk` keeps resolving at `.../releases/latest/download/app-release.apk`. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
 
 ## Distribution
 
