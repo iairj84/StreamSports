@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.20 — 9 November 2026
+
+- Sports options adds a game card size: small, standard or large. The size changes the cards and the rows around them, so remote navigation still lands on the right card.
+- Sports options adds a preferred playlist. Games are matched against its channels first; the playlist you browse still covers games it does not carry.
+- Playback and preferences now calls the two buffering settings Start-up buffering and Live buffer, with a line explaining that they do different jobs.
+
 ## 0.2.19 — 9 November 2026
 
 - Beta releases now publish through one command that bumps the version, builds, audits, tags, uploads the versioned release and refreshes the rolling download.
