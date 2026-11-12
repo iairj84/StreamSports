@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.29 — 12 November 2026
+
+- Playing a game now picks the 4K copy when the provider lists the same feed more than once, while the channel list keeps its usual order and labels.
+- The live channel list wraps at both ends: down on the last channel returns to the first, and up on the first drops to the last.
+- The player shows the picture quality of the stream that is actually playing, read from the video track rather than the provider's name.
+- A manual channel search labels a result as a Search match when the query matches that channel's guide programme.
+
 ## 0.2.28 — 9 November 2026
 
 - Sports options adds Show betting lines: the book's spread and total from the scoreboard sit on each game card under the matchup and above the channel, and the preview and game details follow the same switch. It is on until you turn it off.
