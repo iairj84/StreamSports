@@ -13,6 +13,7 @@ import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import 'player_dialog.dart';
 import 'player_stream_info.dart';
+import 'player_quality_badge.dart';
 import 'player_connection_status.dart';
 import 'epg_guide.dart';
 import 'player_chrome.dart';
@@ -359,6 +360,9 @@ class PlayerControls extends StatelessWidget {
                                         ? Colors.white
                                         : playerMuted,
                                     fontWeight: FontWeight.w500))),
+                        // Real decoded quality, not the provider's claim.
+                        PlayerQualityBadge(
+                            controller: controller, compact: narrow),
                       ]),
                       if (programme != null) ...[
                         const SizedBox(height: 3),
