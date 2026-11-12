@@ -437,6 +437,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   final FocusNode _firstLiveChannelFocusNode =
       FocusNode(debugLabel: 'first-live-channel-row');
 
+  /// The plain live list's last row — the same idea as
+  /// [_firstLiveChannelFocusNode], used by the bottom-edge wrap below.
+  final FocusNode _lastLiveChannelFocusNode =
+      FocusNode(debugLabel: 'last-live-channel-row');
+
   /// Imperative access to the Timeline Guide's own State — lets
   /// [didPopNext] and the Up/Down key bindings below call
   /// [_TimelineGuideState.restoreFocusToChannel]/`.moveVertical` directly.
@@ -860,6 +865,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _leftEdgeHintOverlay?.remove();
 
     _liveListController.dispose();
+    _lastLiveChannelFocusNode.dispose();
     _currentChannelFocusNode.dispose();
     _firstLiveChannelFocusNode.dispose();
     _col0Scope.dispose();
@@ -3003,6 +3009,66 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     ));
   }
 
+  /// The node a plain live-list row uses, so an edge wrap knows where the
+  /// row it jumps to will be — the playing channel owns its own shared node.
+  FocusNode _liveRowFocusNode(
+      PlaybackService playback, List<Channel> channels, int index) {
+    if (playback.currentChannel?.id == channels[index].id) {
+      return _currentChannelFocusNode;
+    }
+    return index == channels.length - 1
+        ? _lastLiveChannelFocusNode
+        : _firstLiveChannelFocusNode;
+  }
+
+  /// Down on the last channel sends the cursor back to the first, and Up on
+  /// the first drops it to the last — a group with hundreds of channels
+  /// otherwise leaves the viewer stranded at whichever edge they reach.
+  Widget _liveEdgeWrap({
+    required Widget child,
+    required FocusNode target,
+    required bool downward,
+  }) =>
+      Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: (_, event) {
+          if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+            return KeyEventResult.ignored;
+          }
+          final edge = downward
+              ? LogicalKeyboardKey.arrowDown
+              : LogicalKeyboardKey.arrowUp;
+          if (event.logicalKey != edge) return KeyEventResult.ignored;
+          _wrapLiveList(toBottom: !downward, target: target);
+          return KeyEventResult.handled;
+        },
+        child: child,
+      );
+
+  void _wrapLiveList({required bool toBottom, required FocusNode target}) {
+    final controller = _liveListController;
+    if (!controller.hasClients) return;
+    var passes = 0;
+    void settle() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !controller.hasClients) return;
+        // A builder list only estimates its extent until its rows are laid
+        // out, so one jump to the end can land short of the true last row.
+        final end = controller.position.maxScrollExtent;
+        if (toBottom && controller.offset < end - 1 && passes++ < 4) {
+          controller.jumpTo(end);
+          settle();
+          return;
+        }
+        target.requestFocus();
+      });
+    }
+
+    controller.jumpTo(toBottom ? controller.position.maxScrollExtent : 0);
+    settle();
+  }
+
   Widget _buildLiveList(PlaylistManager playlist) {
     final channels = _currentLiveChannels(playlist);
     // Favorites from two or more playlists: a playlist label above each
@@ -3035,7 +3101,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         itemCount: channels.length,
         itemBuilder: (context, i) {
           final channel = channels[i];
-          final row = _buildLiveRow(playback, channel, i);
+          var row = _buildLiveRow(playback, channel, i, channels.length);
+          if (channels.length > 1) {
+            if (i == 0) {
+              row = _liveEdgeWrap(
+                  child: row,
+                  downward: false,
+                  target: _liveRowFocusNode(
+                      playback, channels, channels.length - 1));
+            } else if (i == channels.length - 1) {
+              row = _liveEdgeWrap(
+                  child: row,
+                  downward: true,
+                  target: _liveRowFocusNode(playback, channels, 0));
+            }
+          }
           if (!labelPlaylists ||
               (i > 0 && channels[i - 1].playlistId == channel.playlistId)) {
             return row;
@@ -3055,7 +3135,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
   }
 
-  Widget _buildLiveRow(PlaybackService playback, Channel channel, int i) {
+  Widget _buildLiveRow(
+      PlaybackService playback, Channel channel, int i, int total) {
     final isSelected = playback.currentChannel?.id == channel.id;
     // Exclude the favorite star from remote traversal so Up/Down selects rows.
     // HoldToActivate supplies remote long-press actions alongside touch handling.
@@ -3066,7 +3147,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         selected: isSelected,
         focusNode: isSelected
             ? _currentChannelFocusNode
-            : (i == 0 ? _firstLiveChannelFocusNode : null),
+            : (i == 0
+                ? _firstLiveChannelFocusNode
+                : (i == total - 1 ? _lastLiveChannelFocusNode : null)),
         onTap: () => _previewOrOpenChannel(channel),
         onLongPress: () => _showChannelOptions(channel),
         leading: SizedBox(
@@ -4854,7 +4937,16 @@ class _TimelineGuideState extends State<_TimelineGuide>
       widget.onReachedTop?.call();
       return;
     }
-    final targetRow = (rowIndex + delta).clamp(0, widget.channels.length - 1);
+    final lastRow = widget.channels.length - 1;
+    // A downward step taken on the last channel rolls back to the first: on
+    // a long guide the alternative is scrolling the whole list back up by
+    // hand. Steps from further up still clamp to the end (an accelerated
+    // hold counts as one long step), and the top edge keeps its existing
+    // behaviour — Up there leaves the grid for the toolbar, see
+    // onReachedTop above — so only the bottom wraps.
+    final targetRow = rowIndex >= lastRow && delta > 0
+        ? 0
+        : (rowIndex + delta).clamp(0, lastRow);
     if (targetRow == rowIndex) return;
     final request = ++_verticalRequest;
     _pendingVerticalRow = targetRow;

@@ -871,8 +871,12 @@ void main() {
     expect(grid.offset, grid.position.maxScrollExtent);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-    expect(grid.offset, grid.position.maxScrollExtent,
-        reason: 'End of list never wraps');
+    expect(grid.offset, 0,
+        reason: 'A step past the last channel rolls back to the top');
+    // Six rows down, so the large jump below is a real move back to row 0
+    // rather than the top-edge handoff.
+    guide.moveVertical(6);
+    await tester.pumpAndSettle();
     guide.moveVertical(-1000000);
     // Back before the destination mounts must cancel its pending focus restore.
     await tester.binding.handlePopRoute();
