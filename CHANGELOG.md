@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.30 — 12 November 2026
+
+- The guide wraps at the top too: Up on the first channel jumps to the last, and Menu still opens search.
+
 ## 0.2.29 — 12 November 2026
 
 - Playing a game now picks the 4K copy when the provider lists the same feed more than once, while the channel list keeps its usual order and labels.
