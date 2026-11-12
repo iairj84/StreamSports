@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.31 — 12 November 2026
+
+- Sports opens without waiting for every provider's guide: it reads only the channels it checks, so a large secondary guide no longer delays the hub.
+- The guide's now and next window is indexed, so startup and the periodic refresh seek a few hours of listings instead of walking the whole store.
+
 ## 0.2.30 — 12 November 2026
 
 - The guide wraps at the top too: Up on the first channel jumps to the last, and Menu still opens search.
