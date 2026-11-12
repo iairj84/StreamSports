@@ -291,7 +291,8 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
   void _onPlayKey() {
     if (_games.isEmpty) return;
     final g = _games[_focused.clamp(0, _games.length - 1)];
-    final best = widget.channelFilter.preferred(_matches[_key(g)] ?? const []);
+    final best = preferredPlaybackChannel(
+        _matches[_key(g)] ?? const [], widget.channelFilter);
     if (best == null) {
       unawaited(_openMenu(g));
     } else {

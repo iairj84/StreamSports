@@ -3531,20 +3531,49 @@ class SportsChannelMatcher {
         : (_byCanonical[aliasKey]?.toSet() ?? const <int>{});
     final known = {for (final match in matches) match.channel.id: match};
     final guide = <String, List<({EpgProgram programme, String title})>>{};
+    // Cached guide slots for one channel: a compact (programme, lowercase
+    // title) pair built once per search, so neither the typed words nor the
+    // programme titles are normalized per row.
+    List<({EpgProgram programme, String title})> slotsFor(String epgId) {
+      final cached = guide[epgId];
+      if (cached != null) return cached;
+      final current = _epg.getCurrentProgram(epgId);
+      final next = _epg.getNextProgram(epgId);
+      final slots = [
+        for (final p in [current, next])
+          if (p != null && p.stop.isAfter(now))
+            (programme: p, title: _fixtureText(p.title))
+      ];
+      // Do not retain tens of thousands of empty guide entries on TV boxes.
+      if (slots.isNotEmpty) guide[epgId] = slots;
+      return slots;
+    }
+
+    ({EpgProgram programme, String title})? matchedSlot(
+        List<({EpgProgram programme, String title})> slots, String name) =>
+        slots
+            .where((p) =>
+                words.any(p.title.contains) &&
+                words.every((w) => name.contains(w) || p.title.contains(w)))
+            .firstOrNull;
+
     final found = <({ChannelSearchResult result, int score, int index})>[];
     // The event's own channels are what the viewer is usually looking for, so
     // they belong at the top even when the typed words are team names that the
-    // channel name does not contain ("ACC Network" for a Duke game).
+    // channel name does not contain ("ACC Network" for a Duke game). They can
+    // still be a programme hit in their own right: a query matching their
+    // guide slot is labelled as one, not silently downgraded to a name match.
     final seeded = <String>{};
     for (final match in matches) {
       final index = _byId[match.channel.id];
       if (index == null || _excluded.contains(index)) continue;
       seeded.add(match.channel.id);
+      final slot = matchedSlot(slotsFor(match.channel.epgId), _names[index]);
       found.add((
         result: ChannelSearchResult(match.channel,
             match: match,
-            programme: match.programme,
-            programmeSearchHit: false),
+            programme: slot?.programme ?? match.programme,
+            programmeSearchHit: slot != null),
         score: 3200 + match.score,
         index: index
       ));
@@ -3580,24 +3609,8 @@ class SportsChannelMatcher {
       final channel = _channels[i];
       if (seeded.contains(channel.id)) continue;
       final name = _names[i];
-      var slots = guide[channel.epgId];
-      if (slots == null) {
-        final current = _epg.getCurrentProgram(channel.epgId);
-        final next = _epg.getNextProgram(channel.epgId);
-        slots = [
-          for (final p in [current, next])
-            if (p != null && p.stop.isAfter(now))
-              (programme: p, title: _fixtureText(p.title))
-        ];
-        // Do not retain tens of thousands of empty guide entries on TV boxes.
-        if (slots.isNotEmpty) guide[channel.epgId] = slots;
-      }
       final nameHit = words.every(name.contains) || aliasBucket.contains(i);
-      final slot = slots
-          .where((p) =>
-              words.any(p.title.contains) &&
-              words.every((w) => name.contains(w) || p.title.contains(w)))
-          .firstOrNull;
+      final slot = matchedSlot(slotsFor(channel.epgId), name);
       if (!nameHit && slot == null) continue;
       final match = known[channel.id];
       final score = (match == null ? 0 : 2000 + match.score) +

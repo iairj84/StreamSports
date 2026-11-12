@@ -1891,12 +1891,23 @@ void main() {
         await key(LogicalKeyboardKey.arrowDown);
       }
       await key(LogicalKeyboardKey.arrowRight);
+      expect(vertical.offset, greaterThan(0));
+      expect(
+          FocusManager.instance.primaryFocus?.ancestors
+              .any((n) => n.debugLabel == 'timeline-grid'),
+          isTrue);
+      // A guide scrolled away from the live slot returns to "now" on the first
+      // Back, and only the next Back leaves for the category column. Capture
+      // the state it settles on: that is what leaving and re-entering the
+      // column has to restore.
+      await back();
       final guideFocus = FocusManager.instance.primaryFocus;
       final x = horizontal.offset;
       final y = vertical.offset;
-      expect(y, greaterThan(0));
-      expect(guideFocus?.ancestors.any((n) => n.debugLabel == 'timeline-grid'),
-          isTrue);
+      expect(
+          guideFocus?.ancestors.any((n) => n.debugLabel == 'timeline-grid'),
+          isTrue,
+          reason: 'Back from a scrolled guide returns to now first');
       for (var i = 0; i < 4; i++) {
         await back();
         expect(FocusManager.instance.primaryFocus, same(categoryFocus));

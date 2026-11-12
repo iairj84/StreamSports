@@ -6,11 +6,21 @@ final _quality = RegExp(
     r'\b(?:sd|hd|fhd|uhd|4k|8k|hdr|hevc|h[ .]?26[45]|(?:480|576|720|1080|2160)[pi](?:(?:24|25|30|50|60)(?:fps)?)?|(?:25|30|50|60)\s*fps)\b',
     caseSensitive: false);
 final _separators = RegExp(r'[\s|:\[\](){}._\-]+');
+final _is4k = RegExp(r'(?:\b4k\b|\buhd\b|\b2160[pi])', caseSensitive: false);
 String _name(String value) => value
     .toLowerCase()
     .replaceAll(_quality, ' ')
     .replaceAll(_separators, ' ')
     .trim();
+
+/// Provider name with picture-quality tokens removed ("Sky Sports F1 4K" and
+/// "Sky Sports F1 HD" both become "sky sports f1"), for recognizing sibling
+/// copies of one feed.
+String sportsChannelNameWithoutQuality(String name) => _name(name);
+
+/// The name advertises 4K, or its UHD/2160p spelling. Only a hint used to pick
+/// a sibling copy for playback — never a decoded-stream quality claim.
+bool sportsChannelIs4K(String name) => _is4k.hasMatch(name);
 
 class SportsChannelVariants {
   SportsChannelVariants(ChannelSearchResult first) : rows = [first];
