@@ -640,7 +640,8 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
     }
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    // Up now wraps at the top edge; Menu is the tools route from the grid.
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
     await tester.pumpAndSettle();
     expect(FocusManager.instance.primaryFocus?.debugLabel,
         'timeline-filter-button');
@@ -873,6 +874,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(grid.offset, 0,
         reason: 'A step past the last channel rolls back to the top');
+    // The top edge mirrors it: Up on the first channel rolls to the last.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(grid.offset, grid.position.maxScrollExtent,
+        reason: 'A step up from the first channel rolls to the last');
+    // Wrapping must not strand search: Menu still focuses the filter button,
+    // and Down from that toolbar returns to the guide.
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.debugLabel,
+        'timeline-filter-button');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(grid.offset, grid.position.maxScrollExtent,
+        reason: 'Down from the toolbar resumes the guide where it was');
     // Six rows down, so the large jump below is a real move back to row 0
     // rather than the top-edge handoff.
     guide.moveVertical(6);

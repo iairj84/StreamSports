@@ -2856,6 +2856,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         translucent: _fullVideo,
         filterFocusNode: _timelineFilterButtonFocusNode,
         onFilterToggle: _openTimelineFilter,
+        // The filter bar needs Up for its own field, so only the plain grid
+        // wraps at the top edge.
+        wrapTop: !_timelineFilterActive,
         onBack: !_compact &&
                 !context.read<AppPreferences>().isTelevision &&
                 _focusDepth > 0
@@ -4048,6 +4051,7 @@ class _TimelineGuide extends StatefulWidget {
       this.emptyLabel = 'No channels found.',
       this.selectionStatus,
       this.onReachedTop,
+      this.wrapTop = false,
       this.onWindowStale,
       this.translucent = false});
 
@@ -4082,6 +4086,12 @@ class _TimelineGuide extends StatefulWidget {
 
   /// Move Up from the first guide row to the visible filter button or field.
   final VoidCallback? onReachedTop;
+
+  /// Up on the first channel rolls to the last, mirroring the bottom edge.
+  /// The host leaves this off while the filter bar is open, where Up has to
+  /// reach the field or its keyboard; from the grid, Menu still focuses the
+  /// filter button, and Down from that toolbar returns to the guide.
+  final bool wrapTop;
 
   /// This instance's fixed [_TimelineGuideState._windowStart]/`_windowEnd`
   /// has gone (or is about to go) stale — see that field's own doc
@@ -4934,19 +4944,23 @@ class _TimelineGuideState extends State<_TimelineGuide>
     if (rowIndex == null || widget.channels.isEmpty) return;
     if (rowIndex == 0 && delta < 0) {
       _finishHold(hide: true, cancelPending: true);
-      widget.onReachedTop?.call();
-      return;
+      // Filtering keeps Up as the way to its field/keyboard. Otherwise the
+      // top edge wraps like the bottom one, and the toolbar stays on Menu.
+      if (!widget.wrapTop || widget.channels.length < 2) {
+        widget.onReachedTop?.call();
+        return;
+      }
     }
     final lastRow = widget.channels.length - 1;
-    // A downward step taken on the last channel rolls back to the first: on
-    // a long guide the alternative is scrolling the whole list back up by
-    // hand. Steps from further up still clamp to the end (an accelerated
-    // hold counts as one long step), and the top edge keeps its existing
-    // behaviour — Up there leaves the grid for the toolbar, see
-    // onReachedTop above — so only the bottom wraps.
+    // A step beyond either edge rolls to the other end: on a long guide the
+    // alternative is scrolling the whole list back by hand. Steps that start
+    // further inside still clamp (an accelerated hold counts as one long
+    // step), so only a step actually taken on the edge wraps.
     final targetRow = rowIndex >= lastRow && delta > 0
         ? 0
-        : (rowIndex + delta).clamp(0, lastRow);
+        : (rowIndex == 0 && delta < 0 && widget.wrapTop)
+            ? lastRow
+            : (rowIndex + delta).clamp(0, lastRow);
     if (targetRow == rowIndex) return;
     final request = ++_verticalRequest;
     _pendingVerticalRow = targetRow;
