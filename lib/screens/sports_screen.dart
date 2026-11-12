@@ -2192,8 +2192,8 @@ class _SportsScreenState extends State<SportsScreen>
       [List<ChannelMatch>? matches]) async {
     // Playback stays usable even while fresh channel evidence is pending.
     if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
-    final best = _channelFilter
-        .preferred(matches ?? _matches[_gameKey(game)] ?? const []);
+    final best = preferredPlaybackChannel(
+        matches ?? _matches[_gameKey(game)] ?? const [], _channelFilter);
     if (best == null) return _openGame(game, matches);
     await _setPreview(game, best.channel);
   }
@@ -2240,7 +2240,8 @@ class _SportsScreenState extends State<SportsScreen>
       unawaited(_setPreview(null, null));
       return;
     }
-    final best = _channelFilter.preferred(_matches[_gameKey(game)] ?? const []);
+    final best = preferredPlaybackChannel(
+        _matches[_gameKey(game)] ?? const [], _channelFilter);
     if (best == null) {
       unawaited(_openGame(game));
       return;
@@ -3518,8 +3519,8 @@ class _SportsScreenState extends State<SportsScreen>
   Future<void> _activatePreview(SportsGame game) async {
     final channel = game.league.id == kNflRedZoneLeague.id
         ? _redZoneChannel()
-        : _channelFilter
-            .preferred(_matches[_gameKey(game)] ?? const [])
+        : preferredPlaybackChannel(
+                _matches[_gameKey(game)] ?? const [], _channelFilter)
             ?.channel;
     if (channel == null) return _openGame(game);
     await _setPreview(game, channel);
