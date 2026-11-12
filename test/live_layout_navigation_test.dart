@@ -565,6 +565,12 @@ class _Epg extends EpgService {
               p.start.isBefore(to) &&
               p.stop.isAfter(from))
           .toList();
+  /// This fake keeps its guide in the getters below: an empty slice keeps
+  /// matching on that path instead of opening a real store in a widget test.
+  @override
+  Future<Map<String, List<EpgProgram>>> sportsGuideSlice(
+          Iterable<String> channelIds) async =>
+      const {};
   final withoutGuide = <String>{};
   @override
   Iterable<EpgProgram> cachedCurrentProgrammes(DateTime now) =>

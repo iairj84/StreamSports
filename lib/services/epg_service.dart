@@ -203,6 +203,61 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   /// opens a database or starts a download on behalf of a metadata reader.
   Future<void> get initialCacheReady => _initFuture ?? Future<void>.value();
 
+  Future<void>? _openFuture;
+
+  /// Opens the store without joining the all-channel now/next preload.
+  /// Sports matching reads its own window from here so a large guide in
+  /// another playlist cannot hold up the sports hub.
+  Future<void> _openDatabase() => _openFuture ??= _openDatabaseOnce();
+
+  Future<void> _openDatabaseOnce() async {
+    try {
+      await _db.open();
+      _databaseReady = true;
+      _schedulePending();
+    } catch (e) {
+      _openFuture = null;
+      rethrow;
+    }
+  }
+
+  /// The now/next window for [channelIds], read straight from the store.
+  ///
+  /// Sports matching joins this instead of [initialCacheReady]: the latter also
+  /// waits for the all-channel preload, whose cost grows with every provider's
+  /// four-hour slice. Same horizon as the preload, but only for the channels
+  /// asked for, and each one through its primary key.
+  Future<Map<String, List<EpgProgram>>> sportsGuideSlice(
+      Iterable<String> channelIds) async {
+    try {
+      await _openDatabase();
+      final ids = <String>{
+        for (final id in channelIds)
+          if (id.trim().isNotEmpty) normalizeEpgId(id)
+      }.toList(growable: false);
+      if (ids.isEmpty) return const {};
+      final now = DateTime.now();
+      final result = <String, List<EpgProgram>>{};
+      const chunk = 400;
+      final slice = Stopwatch()..start();
+      for (var i = 0; i < ids.length; i += chunk) {
+        final rows = await _db.programmesForWindow(
+            ids.sublist(i, (i + chunk).clamp(0, ids.length)),
+            now.millisecondsSinceEpoch,
+            now.add(_soonAhead).millisecondsSinceEpoch);
+        result.addAll(_toPrograms(rows));
+        if (slice.elapsedMilliseconds >= 2) {
+          await Future<void>.delayed(Duration.zero);
+          slice.reset();
+        }
+      }
+      return result;
+    } catch (e) {
+      debugPrint('EpgService.sportsGuideSlice: ${e.runtimeType}');
+      return const {};
+    }
+  }
+
   Future<void> _init() async {
     _initialDirectoryPending = true;
     lastUpdated = _storage.getEpgLastUpdated();
@@ -211,9 +266,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
         .deleteCacheFile(AppConstants.cacheFileEpgPrograms)
         .catchError((_) {}));
     try {
-      await _db.open();
-      _databaseReady = true;
-      _schedulePending();
+      await _openDatabase();
       await _reloadCaches(initial: true);
     } catch (e) {
       debugPrint('EpgService.init: ${e.runtimeType}');

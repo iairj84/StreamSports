@@ -228,6 +228,86 @@ void main() {
     expect(guide.cachedUpcomingProgrammes(now.add(const Duration(minutes: 40))),
         isEmpty);
   });
+  test('programmesForWindow keeps only rows overlapping the requested window',
+      () async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final connection =
+        await databaseFactory.openDatabase(inMemoryDatabasePath);
+    addTearDown(connection.close);
+    await connection.execute('CREATE TABLE programme ('
+        'channel_id TEXT, start INTEGER, stop INTEGER, title TEXT, '
+        'descr TEXT, live INTEGER)');
+    final now = DateTime.fromMillisecondsSinceEpoch(
+        DateTime.now().millisecondsSinceEpoch);
+    final ms = now.millisecondsSinceEpoch;
+    const minute = 60000;
+    final batch = connection.batch();
+    batch
+      ..rawInsert('INSERT INTO programme VALUES (?,?,?,?,?,?)',
+          ['a', ms - 30 * minute, ms + 30 * minute, 'Live', null, 0])
+      ..rawInsert('INSERT INTO programme VALUES (?,?,?,?,?,?)',
+          ['a', ms + 30 * minute, ms + 90 * minute, 'Next', null, 0])
+      ..rawInsert('INSERT INTO programme VALUES (?,?,?,?,?,?)',
+          ['b', ms - 180 * minute, ms - 120 * minute, 'Ended', null, 0])
+      ..rawInsert('INSERT INTO programme VALUES (?,?,?,?,?,?)',
+          ['b', ms + 600 * minute, ms + 660 * minute, 'Later', null, 0]);
+    await batch.commit(noResult: true);
+    final db = EpgDatabase.withConnection(connection);
+    final rows = await db.programmesForWindow(
+        ['a', 'b'], ms, ms + 240 * minute);
+    expect(rows.keys, ['a']);
+    expect(rows['a']!.map((r) => r.title), ['Live', 'Next'],
+        reason: 'A running programme overlaps even though it started earlier');
+  });
+
+  test('sports guide slice opens the store without the all-channel preload',
+      () async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final dir = await Directory.systemTemp.createTemp('sports-slice-');
+    const method = MethodChannel('plugins.flutter.io/path_provider');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(method, (_) async => dir.path);
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    final db = EpgDatabase();
+    final now = DateTime.fromMillisecondsSinceEpoch(
+        DateTime.now().millisecondsSinceEpoch);
+    final ms = now.millisecondsSinceEpoch;
+    const minute = 60000;
+    await db.insertBatch([
+      for (final row in [
+        ('watched', -30, 30, 'Live game'),
+        ('watched', 30, 90, 'Next game'),
+        ('other', 600, 660, 'Far away')
+      ])
+        (
+          channelId: row.$1,
+          startMs: ms + row.$2 * minute,
+          stopMs: ms + row.$3 * minute,
+          title: row.$4,
+          description: null,
+          isLive: false
+        )
+    ], 'fixture', 1);
+    final guide = EpgService(storage, database: db);
+    addTearDown(() async {
+      guide.dispose();
+      messenger.setMockMethodCallHandler(method, null);
+      await databaseFactory.deleteDatabase('${dir.path}/vesper_epg.db');
+      await dir.delete(recursive: true);
+    });
+    // No init(): the slice opens the store itself and never waits for the
+    // every-channel preload.
+    final slice = await guide.sportsGuideSlice(['WATCHED']);
+    expect(slice['watched']!.map((p) => p.title), ['Live game', 'Next game']);
+    expect(slice.containsKey('other'), isFalse,
+        reason: 'Only the requested channels are read');
+  });
+
   test('v1 guide migration preserves rows and XMLTV live survives cache reload',
       () async {
     sqfliteFfiInit();

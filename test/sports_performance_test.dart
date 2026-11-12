@@ -40,6 +40,13 @@ class _Guide extends EpgService {
         .toList();
   }
 
+  /// This fake keeps its guide in [current]: an empty slice keeps matching on
+  /// that path instead of opening a real store during the test.
+  @override
+  Future<Map<String, List<EpgProgram>>> sportsGuideSlice(
+          Iterable<String> channelIds) async =>
+      const {};
+
   @override
   Future<List<EpgProgram>> findProgrammesByTitle(
       DateTime from, DateTime to, List<String> terms,
@@ -255,19 +262,21 @@ void main() {
         reason: 'Fresh saved matches avoid another SQL search');
   });
 
-  test('worker joins initial guide preload before querying or snapshotting',
+  test(
+      'worker reads its own guide window instead of joining the startup preload',
       () async {
+    // Left blocked on purpose: a large guide elsewhere must not hold up the
+    // sports hub, so matching reads only this catalogue's own window.
     guide.initialLoad = Completer<void>();
     final worker = SportsChannelMatcher.background(guide);
     addTearDown(worker.dispose);
     await worker.prepare([channel(1, 'NHL Network')]);
     final pending = worker.matchDay([game()], picks);
-    await Future<void>.delayed(const Duration(milliseconds: 30));
-    expect(guide.searches, 0);
-    expect(guide.channelSearches, 0);
+    final result = await pending.timeout(const Duration(seconds: 5));
+    expect(result, isNotNull);
+    expect(guide.searches, 1,
+        reason: 'SQL runs without the startup preload finishing');
     guide.initialLoad!.complete();
-    await pending.timeout(const Duration(seconds: 5));
-    expect(guide.searches, 1);
   });
 
   test(

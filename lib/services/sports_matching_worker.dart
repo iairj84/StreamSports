@@ -40,6 +40,10 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
   String? _diskCachePath;
   bool _cachePathChecked;
   Object? _snapshotKey;
+  /// Now/next rows for this matcher's own guide ids, read straight from the
+  /// store so a large guide elsewhere cannot delay the sports hub.
+  Map<String, List<EpgProgram>>? _guideSlice;
+  Object? _guideSliceKey;
   bool _snapshotDiskCacheAllowed = false;
   DateTime? _snapshotUntil;
   List<String> _guideIds = const [];
@@ -273,6 +277,8 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
           _preparedFor = signature;
           _workerPrepared = false;
           _snapshotKey = null;
+          _guideSlice = null;
+          _guideSliceKey = null;
           _guideStatuses.clear();
           _searchCache.clear();
         }
@@ -346,17 +352,6 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       bool waitForInitial = true]) async {
     final progress = SportsProgressReporter(onStatus);
     progress.report(SportsWorkStage.guideSnapshot, total: _guideIds.length);
-    // Indexing overlaps startup, but an empty snapshot during the initial
-    // preload would trigger a full SQL scan that is obsolete as soon as the
-    // preload completes. Join that existing read before copying its metadata.
-    final audit = const bool.fromEnvironment('IPTV_PROFILE_SPORTS')
-        ? (Stopwatch()..start())
-        : null;
-    if (waitForInitial) await _source.initialCacheReady;
-    if (audit != null && audit.elapsedMilliseconds > 100) {
-      debugPrint(
-          'IPTV_SPORTS initial_guide_wait_ms=${audit.elapsedMilliseconds}');
-    }
     final now = _clock();
     final key = (
       _source.changeRevision,
@@ -380,6 +375,16 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       }
       return;
     }
+    // Read this matcher's own window rather than joining the all-channel
+    // startup preload: that preload grows with every provider's guide, and
+    // waiting for it was what made a big secondary provider slow here.
+    final sliceRead = const bool.fromEnvironment('IPTV_PROFILE_SPORTS')
+        ? (Stopwatch()..start())
+        : null;
+    final guideSlice = await _readGuideSlice();
+    if (sliceRead != null && sliceRead.elapsedMilliseconds > 100) {
+      debugPrint('IPTV_SPORTS guide_slice_ms=${sliceRead.elapsedMilliseconds}');
+    }
     var until = now.add(const Duration(minutes: 5));
     void boundary(DateTime at) {
       if (at.isAfter(now) && at.isBefore(until)) until = at;
@@ -394,7 +399,8 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
         progress.report(SportsWorkStage.guideSnapshot,
             completed: read, total: _guideIds.length);
       }
-      final a = _source.getCurrentProgram(id), b = _source.getNextProgram(id);
+      final a = _sliceCurrent(guideSlice, id, now);
+      final b = _sliceNext(guideSlice, id, now);
       if (a != null) {
         current[id] = _snapshotProgramme(a);
         boundary(a.stop);
@@ -453,6 +459,41 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
               isLive: p.isLive,
               description: _guideDescription(p));
 
+  /// One channel's current programme from the slice read above, falling back
+  /// to the service's memory when the slice holds no rows for it — a channel
+  /// with nothing in the window has nothing to prefer either way.
+  EpgProgram? _sliceCurrent(
+      Map<String, List<EpgProgram>> slice, String id, DateTime at) {
+    final rows = slice[id];
+    return rows == null ? _source.getCurrentProgram(id) : programmeAt(rows, at);
+  }
+
+  EpgProgram? _sliceNext(
+      Map<String, List<EpgProgram>> slice, String id, DateTime at) {
+    final rows = slice[id];
+    return rows == null
+        ? _source.getNextProgram(id)
+        : nextProgrammeAfter(rows, at);
+  }
+
+  /// The now/next rows for this matcher's guide ids, cached until the guide's
+  /// own revisions change. Never waits for the all-channel preload.
+  Future<Map<String, List<EpgProgram>>> _readGuideSlice() async {
+    final key = (
+      _source.changeRevision,
+      _source.currentGuideRevision,
+      _source.lastUpdated,
+      _source.isLoading,
+      _source.error == null,
+    );
+    final cached = _guideSlice;
+    if (cached != null && key == _guideSliceKey) return cached;
+    final slice = await _source.sportsGuideSlice(_guideIds);
+    _guideSlice = slice;
+    _guideSliceKey = key;
+    return slice;
+  }
+
   ChannelMatch _restore(ChannelMatch match) => ChannelMatch(
       channelById(match.channel.id) ?? match.channel, match.reason, match.score,
       detail: match.detail,
@@ -472,8 +513,8 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
     final audit = const bool.fromEnvironment('IPTV_PROFILE_SPORTS')
         ? (Stopwatch()..start())
         : null;
-    await _source.initialCacheReady;
     if (_closed) throw StateError('Sports matcher disposed');
+    final guideSlice = await _readGuideSlice();
     Object sourceKey() => (
           _preparedFor,
           _source.changeRevision,
@@ -491,8 +532,8 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       final available = <String>{};
       final slice = Stopwatch()..start();
       for (final id in _guideIds) {
-        if (_source.getCurrentProgram(id) != null ||
-            _source.getNextProgram(id) != null) {
+        if (_sliceCurrent(guideSlice, id, at) != null ||
+            _sliceNext(guideSlice, id, at) != null) {
           available.add(id);
         }
         if (slice.elapsedMilliseconds >= 2) {

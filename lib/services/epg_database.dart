@@ -64,11 +64,15 @@ class EpgDatabase {
 
   Future<Database> _open(String path) => openDatabase(
         path,
-        version: 2,
+        version: 3,
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
             await db.execute(
                 'ALTER TABLE programme ADD COLUMN live INTEGER NOT NULL DEFAULT 0');
+          }
+          if (oldVersion < 3) {
+            await db.execute(
+                'CREATE INDEX IF NOT EXISTS idx_programme_start ON programme(start)');
           }
         },
         onCreate: (db, version) async {
@@ -91,6 +95,8 @@ class EpgDatabase {
           ''');
           await db
               .execute('CREATE INDEX idx_programme_stop ON programme(stop)');
+          await db
+              .execute('CREATE INDEX idx_programme_start ON programme(start)');
           await db.execute(
               'CREATE INDEX idx_programme_source ON programme(source_url, gen)');
         },
@@ -141,10 +147,15 @@ class EpgDatabase {
     // Retain one native cursor. Repeating a sorted range query for every page
     // can repeatedly scan/sort the guide; bounded cursor transfers keep the UI
     // responsive without repeating the database work.
+    // Seek the window through the start index instead of walking every
+    // programme that has not ended yet — on a 36-hour guide that walk is the
+    // whole store, while `start < toMs` touches only the retained past plus
+    // the next [toMs] hours. The predicate is unchanged, so the rows are too.
     final cursor = await db.rawQueryCursor(
         'SELECT channel_id, start, stop, title, descr, live FROM programme '
-        'WHERE stop > ? AND start < ? ORDER BY channel_id,start',
-        [fromMs, toMs],
+        'INDEXED BY idx_programme_start '
+        'WHERE start < ? AND stop > ? ORDER BY channel_id,start',
+        [toMs, fromMs],
         bufferSize: 512);
     final slice = Stopwatch()..start();
     try {
@@ -166,6 +177,41 @@ class EpgDatabase {
       }
     } finally {
       await cursor.close();
+    }
+    return result;
+  }
+
+  /// The now/next window for a chosen set of channels — rows that start
+  /// before [beforeMs] and end after [afterMs]. Each channel is a primary-key
+  /// range seek, so this stays small even when the store holds days of listings
+  /// for providers the caller does not care about. Sports matching uses it to
+  /// avoid waiting for the all-channel startup preload.
+  Future<Map<String, List<EpgRow>>> programmesForWindow(
+      List<String> channelIds, int afterMs, int beforeMs) async {
+    final db = await _database;
+    final result = <String, List<EpgRow>>{};
+    const chunk = 400;
+    for (var i = 0; i < channelIds.length; i += chunk) {
+      final ids = channelIds.sublist(
+          i, i + chunk > channelIds.length ? channelIds.length : i + chunk);
+      final placeholders = List.filled(ids.length, '?').join(',');
+      final rows = await db.rawQuery(
+        'SELECT channel_id, start, stop, title, descr, live FROM programme '
+        'WHERE channel_id IN ($placeholders) AND start < ? AND stop > ? '
+        'ORDER BY channel_id, start',
+        [...ids, beforeMs, afterMs],
+      );
+      for (final r in rows) {
+        final id = r['channel_id'] as String;
+        (result[id] ??= []).add((
+          channelId: id,
+          startMs: r['start'] as int,
+          stopMs: r['stop'] as int,
+          title: r['title'] as String,
+          description: r['descr'] as String?,
+          isLive: r['live'] == 1,
+        ));
+      }
     }
     return result;
   }
