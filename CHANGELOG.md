@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.32 — 13 November 2026
+
+- Settings > Theme gains a Surface section: Modern rounds rows, cards, guide blocks and dialogs and softens focus to a thin border with a glow, while Classic keeps the current flat look.
+- The player quality badge now labels 720p and 480p feeds too and is bigger and easier to read at TV distance.
+
 ## 0.2.31 — 12 November 2026
 
 - Sports opens without waiting for every provider's guide: it reads only the channels it checks, so a large secondary guide no longer delays the hub.
