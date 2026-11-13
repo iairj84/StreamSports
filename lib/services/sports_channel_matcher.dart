@@ -554,6 +554,13 @@ class SportsChannelMatcher {
 
   static SportsChannelMatcher? _shared;
 
+  /// Set once at startup from [DeviceMemoryService]. Memory-constrained
+  /// devices (typical TV boxes) skip the second discovery isolate: its
+  /// duplicate channel index is what tips a long first-open into memory
+  /// pressure, which kills the worker and restarts the whole minute from
+  /// zero. Single-worker matching returns the same results through the
+  /// worker's own progressive discovery instead.
+
   /// One matcher for the whole app (Sports hub, live list, player side
   /// panel): its channel index and guide-scan cache then survive leaving
   /// Sports — a new one per visit re-indexed every channel and re-ran the
@@ -565,9 +572,14 @@ class SportsChannelMatcher {
     return _shared = SportsChannelMatcher.background(epg);
   }
 
+  static bool lowMemoryDevice = false;
+
   factory SportsChannelMatcher.background(EpgService epg,
           {DateTime Function()? clock, String? cachePath}) =>
-      _BackgroundSportsMatcher(epg, clock: clock, cachePath: cachePath);
+      _BackgroundSportsMatcher(epg,
+          clock: clock,
+          cachePath: cachePath,
+          allowDiscoveryWorker: !lowMemoryDevice);
 
   static void disposeShared() {
     _shared?.dispose();

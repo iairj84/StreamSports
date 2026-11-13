@@ -7,9 +7,13 @@ part of 'sports_channel_matcher.dart';
 class _BackgroundSportsMatcher extends SportsChannelMatcher
     with WidgetsBindingObserver {
   _BackgroundSportsMatcher(this._source,
-      {super.clock, String? cachePath, bool guideOnly = false})
+      {super.clock,
+      String? cachePath,
+      bool guideOnly = false,
+      bool allowDiscoveryWorker = true})
       : _diskCachePath = cachePath,
         _guideOnly = guideOnly,
+        _allowDiscoveryWorker = allowDiscoveryWorker,
         _cachePathChecked = guideOnly || cachePath != null,
         super(_source) {
     WidgetsBinding.instance.addObserver(this);
@@ -17,7 +21,7 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
   final EpgService _source;
   final bool _guideOnly;
   _BackgroundSportsMatcher? _discoveryWorker;
-  bool _allowDiscoveryWorker = true;
+  bool _allowDiscoveryWorker;
   Object? _discoveryCatalogueKey;
   DateTime? _discoveryCatalogueAt;
   List<Channel>? _discoveryChannels;
