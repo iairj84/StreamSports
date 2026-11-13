@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.39 — 13 November 2026
+
+- Sports first opens on memory-constrained TV boxes no longer risk a memory-pressure kill (and full restart) of the match: these devices now match on a single worker instead of running a second discovery isolate alongside it, returning the same results with roughly half the peak memory.
+
 ## 0.2.38 — 13 November 2026
 
 - Sports first opens are faster on large providers: preparation returns once the channel index is built while guide discovery runs alongside it, concurrent discovery scans share one flight instead of each rescanning, less data crosses to the matching worker, and snapshot change checks no longer re-encode every programme row.
