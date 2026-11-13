@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.36 — 13 November 2026
+
+- The Sports Hub no longer restarts matching on guide ticks that change nothing, and it matches on in-memory listings instead of stalling when a heavy EPG refresh holds the database.
+
 ## 0.2.35 — 13 November 2026
 
 - Large EPG imports skip programme text outside the retained guide window and reuse sports guide slices during refreshes, so heavy providers load faster and slow the Sports Hub less.
