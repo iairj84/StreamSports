@@ -3,6 +3,7 @@ import '../utils/interface_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 
 import '../utils/constants.dart';
@@ -184,6 +185,9 @@ class _SportsChipState extends State<SportsChip> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final accent = widget.selectedColor ?? scheme.primary;
     final fg = _focused
         ? scheme.onPrimaryContainer
@@ -198,7 +202,7 @@ class _SportsChipState extends State<SportsChip> {
         child: InkWell(
           focusNode: widget.focusNode,
           canRequestFocus: widget.enabled,
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(tokens.blockRadius),
           onTap: widget.enabled ? widget.onTap : null,
           onFocusChange: (f) {
             setState(() => _focused = f);
@@ -223,16 +227,23 @@ class _SportsChipState extends State<SportsChip> {
                       : interfaceColor(context, Colors.white)
                           .withValues(alpha: 0.07)),
               gradient: _focused ? sportsFocusSheen(scheme) : null,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(tokens.blockRadius),
               border: Border.all(
                 color: _focused
                     ? scheme.primary
                     : (widget.selected
                         ? accent.withValues(alpha: 0.4)
                         : Colors.transparent),
-                width: _focused ? 2.5 : 1,
+                width: _focused ? tokens.focusBorderWidth : 1,
               ),
-              boxShadow: const [],
+              boxShadow: _focused && tokens.focusGlowBlur > 0
+                  ? [
+                      BoxShadow(
+                          color: scheme.primary.withValues(
+                              alpha: tokens.focusGlowAlpha),
+                          blurRadius: tokens.focusGlowBlur)
+                    ]
+                  : const [],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

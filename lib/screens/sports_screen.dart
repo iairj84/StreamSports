@@ -52,6 +52,7 @@ import '../models/channel.dart';
 import '../models/sports.dart';
 import '../models/sports_progress.dart';
 import '../widgets/sports_activity_status.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
@@ -3903,6 +3904,8 @@ class _SportsScreenState extends State<SportsScreen>
 
   Widget _buildSection(_Section s, SportsGame? preview,
       {bool headingOnly = false}) {
+    final tokens = SurfaceTokens.forStyle(
+        context.read<AppPreferences>().surfaceStyle);
     final rowKey = _rowKeys[s.id] ??= GlobalKey();
     final zoneIndex = _firstRowZone + _sections.indexWhere((x) => x.id == s.id);
     return Padding(
@@ -3941,10 +3944,20 @@ class _SportsScreenState extends State<SportsScreen>
                               color: focused
                                   ? accent.withValues(alpha: 0.18)
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(tokens
+                                  .blockRadius),
                               border: Border.all(
                                 color: focused ? accent : Colors.transparent,
                               ),
+                              boxShadow: focused && tokens.focusGlowBlur > 0
+                                  ? [
+                                      BoxShadow(
+                                          color: accent.withValues(
+                                              alpha:
+                                                  tokens.focusGlowAlpha),
+                                          blurRadius: tokens.focusGlowBlur)
+                                    ]
+                                  : const [],
                             ),
                             child: child,
                           );
@@ -4587,7 +4600,10 @@ class _GameCardState extends State<_GameCard> {
   Widget build(BuildContext context) {
     final dense = sportsLandscape(context);
     final scheme = Theme.of(context).colorScheme;
-    final frameWidth = _focused ? 2.5 : (widget.previewing ? 1.5 : 1.0);
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences>().surfaceStyle);
+    final frameWidth =
+        _focused ? tokens.focusBorderWidth : (widget.previewing ? 1.5 : 1.0);
     final frameInset = frameWidth - 1;
     final channelColor = widget.match == null
         ? interfaceColor(context, Colors.white54)
@@ -4691,7 +4707,7 @@ class _GameCardState extends State<_GameCard> {
             onHold: widget.onHold,
             child: InkWell(
               focusNode: widget.focusNode,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(tokens.rowRadius),
               onTap: () {
                 widget.focusNode.requestFocus();
                 widget.onTap();
@@ -4744,7 +4760,7 @@ class _GameCardState extends State<_GameCard> {
                             : interfaceColor(context, Colors.white)
                                 .withValues(alpha: 0.07),
                     gradient: _focused ? sportsFocusSheen(scheme) : null,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(tokens.rowRadius),
                     border: Border.all(
                         color: _focused
                             ? scheme.primary
@@ -4752,7 +4768,14 @@ class _GameCardState extends State<_GameCard> {
                                 ? scheme.primary.withValues(alpha: 0.6)
                                 : interfaceColor(context, Colors.white10),
                         width: frameWidth),
-                    boxShadow: const [],
+                    boxShadow: _focused && tokens.focusGlowBlur > 0
+                        ? [
+                            BoxShadow(
+                                color: scheme.primary.withValues(
+                                    alpha: tokens.focusGlowAlpha),
+                                blurRadius: tokens.focusGlowBlur)
+                          ]
+                        : const [],
                   ),
                   child: DefaultTextStyle.merge(
                     style: const TextStyle(height: 1.2),

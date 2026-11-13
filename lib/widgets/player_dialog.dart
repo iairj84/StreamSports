@@ -2,6 +2,7 @@ import '../utils/guarded_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../l10n/l10n.dart';
 import 'player_chrome.dart';
@@ -57,7 +58,11 @@ class _PlayerDialogState extends State<PlayerDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Focus(
+  Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return Focus(
       canRequestFocus: false,
       onKeyEvent: _key,
       child: Dialog(
@@ -68,7 +73,8 @@ class _PlayerDialogState extends State<PlayerDialog> {
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius:
+                  BorderRadius.circular(tokens.isModern ? 12 : 8),
               side: const BorderSide(color: Color(0xFF303C49))),
           child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -117,6 +123,7 @@ class _PlayerDialogState extends State<PlayerDialog> {
                             child: widget.child))),
               ]))));
 }
+}
 
 class PlayerSection extends StatelessWidget {
   const PlayerSection(this.title, {super.key});
@@ -147,7 +154,11 @@ class PlayerSettingRow extends StatelessWidget {
   final VoidCallback? onTap;
   final bool selected, autofocus;
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: TextButton(
           autofocus: autofocus,
@@ -174,7 +185,8 @@ class PlayerSettingRow extends StatelessWidget {
                       ? const Color(0xFF30485E)
                       : const Color(0x801E2935)),
               shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4))),
+                  borderRadius: BorderRadius.circular(
+                      tokens.isModern ? tokens.blockRadius : 4))),
               side: WidgetStateProperty.resolveWith((s) => BorderSide(
                   color: s.contains(WidgetState.focused)
                       ? Theme.of(context).colorScheme.primary
@@ -214,4 +226,5 @@ class PlayerSettingRow extends StatelessWidget {
                           ? Theme.of(context).colorScheme.primary
                           : playerMuted)),
           ])));
+  }
 }

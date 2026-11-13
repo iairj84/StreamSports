@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/sports_feed_issue.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/interface_colors.dart';
 
 /// Brief acknowledgement of a manual refresh failure. Diagnostics remain
@@ -22,7 +25,12 @@ void showSportsFeedNotice(BuildContext context,
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(SurfaceTokens.forStyle(
+                  context.read<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic)
+              .isModern
+          ? 10
+          : 4),
           side: BorderSide(color: scheme.outlineVariant)),
       content: Text('Some events couldn’t update.',
           style:
@@ -84,9 +92,13 @@ class _FeedIssueCard extends StatelessWidget {
   Widget build(BuildContext context) {
     String time(DateTime value) =>
         DateFormat('d MMM HH:mm:ss').format(value.toLocal());
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     return Material(
       color: interfaceColor(context, const Color(0xFF232C36)),
-      borderRadius: BorderRadius.circular(5),
+      borderRadius: BorderRadius.circular(
+          tokens.isModern ? tokens.rowRadius : 5),
       child: ExpansionTile(
         expansionAnimationStyle: AnimationStyle.noAnimation,
         key: PageStorageKey(issue.endpoint),

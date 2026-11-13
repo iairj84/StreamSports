@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show DateFormat;
+import 'package:provider/provider.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/sports_calendar.dart';
 import 'sports_toolbar_navigation.dart';
 
@@ -107,6 +110,9 @@ class _SportsScheduleDaysState extends State<SportsScheduleDays> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final scale = MediaQuery.textScalerOf(context);
     // Fixed extents let a remote jump to an unmounted day without laying out
     // the intervening dates. Size for the longest label, including larger text.
@@ -180,7 +186,10 @@ class _SportsScheduleDaysState extends State<SportsScheduleDays> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(
+                                      tokens.isModern
+                                          ? tokens.blockRadius
+                                          : 4),
                                   side: BorderSide(
                                       color: active
                                           ? colors.primary.withValues(alpha: .6)

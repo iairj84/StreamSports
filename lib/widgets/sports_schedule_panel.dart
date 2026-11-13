@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/sports.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/sports_service.dart';
 import '../services/sports_follows.dart';
@@ -1210,6 +1211,9 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final tv = context.read<AppPreferences>().isTelevision;
     final use24h = context.select<AppPreferences, bool>((p) => p.use24h);
     final dense = compactSportsControls(context);
@@ -1373,8 +1377,10 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
                                                     .withValues(alpha: .1)
                                                 : null,
                                         shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(4))),
+                                            borderRadius: BorderRadius.circular(
+                                                tokens.isModern
+                                                    ? tokens.blockRadius
+                                                    : 4))),
                                     onPressed: () {
                                       if (_browse.calendarDays != days) {
                                         _setView(days);

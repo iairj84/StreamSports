@@ -1,4 +1,5 @@
 import 'package:provider/provider.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../utils/guarded_dialog.dart';
 import '../utils/interface_colors.dart';
@@ -49,9 +50,15 @@ double sportsFilterHeight(BuildContext context) {
 
 Color sportsPopupBackground(BuildContext context) =>
     Theme.of(context).colorScheme.surface;
-ShapeBorder sportsPopupShape(BuildContext context) => RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(6),
-    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant));
+ShapeBorder sportsPopupShape(BuildContext context) {
+  final tokens = SurfaceTokens.forStyle(
+      context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+  return RoundedRectangleBorder(
+      borderRadius:
+          BorderRadius.circular(tokens.isModern ? tokens.rowRadius : 6),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant));
+}
 
 class SportsPopupHeader extends StatelessWidget {
   const SportsPopupHeader(
@@ -134,6 +141,9 @@ class SportsFilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = accent ?? Theme.of(context).colorScheme.primary;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     return Tooltip(
         message: tooltip ?? '$caption: $value',
         child: SizedBox(
@@ -162,7 +172,8 @@ class SportsFilterButton extends StatelessWidget {
                         : interfaceColor(context, const Color(0xFF1B232D))),
                 shape: WidgetStateProperty.resolveWith(
                     (s) => RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(
+                            tokens.isModern ? tokens.rowRadius : 6),
                         side: BorderSide(
                             width: 1,
                             color: s.contains(WidgetState.focused)
@@ -215,13 +226,19 @@ class SportsToolbarActions extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
+  Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return DecoratedBox(
       key: const ValueKey('sports-toolbar-actions'),
       decoration: BoxDecoration(
           color:
               Theme.of(context).colorScheme.onSurface.withValues(alpha: .035),
-          borderRadius: BorderRadius.circular(6)),
+          borderRadius: BorderRadius.circular(
+              tokens.isModern ? tokens.rowRadius : 6)),
       child: Row(mainAxisSize: MainAxisSize.min, children: children));
+  }
 }
 
 class SportsChoice<T> {

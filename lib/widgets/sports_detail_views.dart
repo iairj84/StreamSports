@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/sports.dart';
 import '../models/sports_details.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/storage_service.dart';
 import '../services/sports_standings_service.dart';
@@ -375,6 +376,9 @@ class _TeamOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final records = [
       for (final row in record?.rows.take(4) ?? const <SportsDetailRow>[])
         if (row.values.any((value) => value.trim().isNotEmpty))
@@ -406,7 +410,8 @@ class _TeamOverview extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
             color: colors.primary.withValues(alpha: .045),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(
+                tokens.isModern ? tokens.rowRadius : 6),
             border: Border.all(color: colors.primary.withValues(alpha: .16))),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -508,6 +513,9 @@ class SportsDetailTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
         final colors = Theme.of(context).colorScheme;
+        final tokens = SurfaceTokens.forStyle(
+            context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
         final tv = context.read<AppPreferences>().isTelevision;
         final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
         final comparison = section.kind == SportsDetailKind.comparison;
@@ -583,9 +591,10 @@ class SportsDetailTable extends StatelessWidget {
                   height: 30,
                   alignment: Alignment.center,
                   margin: const EdgeInsets.only(right: 9),
-                  decoration: BoxDecoration(
-                      color: colors.primary.withValues(alpha: .065),
-                      borderRadius: BorderRadius.circular(4)),
+                                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: .065),
+                          borderRadius: BorderRadius.circular(
+                              tokens.isModern ? tokens.blockRadius : 4)),
                   child: Text(
                       row.values.firstOrNull?.isNotEmpty == true
                           ? row.values.first

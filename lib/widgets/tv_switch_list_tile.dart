@@ -1,6 +1,9 @@
 import 'settings_section.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/tv_theme.dart';
 
 /// A `SwitchListTile` with an obvious solid-fill focus highlight — see
@@ -32,6 +35,9 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final settings = SettingsScope.contains(context);
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     // Flat focus fill; selection keeps a quieter accent outline.
     final focusForeground = scheme.onPrimaryContainer;
     return Container(
@@ -40,7 +46,7 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
       // has the full story on why changing a focus widget's ancestor
       // shape between builds corrupts its FocusNode on real hardware.
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(tokens.rowRadius),
         border: settings
             ? Border.all(
                 color: _focused ? scheme.primary : Colors.transparent,
@@ -53,12 +59,19 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
             ? LinearGradient(
                 colors: [scheme.primaryContainer, scheme.primaryContainer])
             : null,
-        boxShadow: const [],
+        boxShadow: _focused && tokens.focusGlowBlur > 0
+            ? [
+                BoxShadow(
+                    color: scheme.primary.withValues(
+                        alpha: tokens.focusGlowAlpha),
+                    blurRadius: tokens.focusGlowBlur)
+              ]
+            : const [],
       ),
       // Flat focus fill; selection keeps a quieter accent outline.
       child: MinimalGlassFocus(
         active: false,
-        borderRadius: 3,
+        borderRadius: tokens.rowRadius,
         child: Material(
             color: Colors.transparent,
             animationDuration: Duration.zero,

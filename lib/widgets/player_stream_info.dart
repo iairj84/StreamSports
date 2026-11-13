@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playback_health.dart';
@@ -186,7 +188,11 @@ class _PlayerStreamInfoState extends State<PlayerStreamInfo> {
       : value >= 1000000
           ? '${(value / 1000000).toStringAsFixed(2)} Mb/s'
           : '${(value / 1000).round()} kb/s';
-  Widget _group(String title, List<(String, String)> fields) => Column(
+  Widget _group(String title, List<(String, String)> fields) {
+    final tokens = SurfaceTokens.forStyle(
+        context.read<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PlayerSection(title),
@@ -195,7 +201,8 @@ class _PlayerStreamInfoState extends State<PlayerStreamInfo> {
             decoration: BoxDecoration(
                 color: const Color(0x661F2A36),
                 border: Border.all(color: const Color(0x303E4E60)),
-                borderRadius: BorderRadius.circular(5)),
+                borderRadius: BorderRadius.circular(
+                    tokens.isModern ? tokens.rowRadius : 5)),
             child: LayoutBuilder(builder: (context, box) {
               final columns = box.maxWidth >= 260 ? 2 : 1;
               return Wrap(spacing: 12, runSpacing: 13, children: [
@@ -223,6 +230,7 @@ class _PlayerStreamInfoState extends State<PlayerStreamInfo> {
           )
         ],
       );
+  }
 
   String _aspect(int width, int height) {
     if (width <= 0 || height <= 0) return tr('Not reported');
@@ -232,6 +240,9 @@ class _PlayerStreamInfoState extends State<PlayerStreamInfo> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final playback = _playback!;
     final channel = playback.currentChannel;
     final value = _controller?.value;
@@ -289,7 +300,8 @@ class _PlayerStreamInfoState extends State<PlayerStreamInfo> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                   color: const Color(0x88202C38),
-                  borderRadius: BorderRadius.circular(5)),
+                  borderRadius: BorderRadius.circular(
+                      tokens.isModern ? tokens.rowRadius : 5)),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

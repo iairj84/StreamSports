@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import 'sports_filter_picker.dart';
 import '../utils/sports_calendar.dart';
 
@@ -155,6 +158,9 @@ class SportsScheduleCalendarState extends State<SportsScheduleCalendar> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final scale = MediaQuery.textScalerOf(context).scale(11) / 11;
     _leading = _month ? widget.from.weekday - 1 : 0;
     _extent = (_month ? 64 : 72) * scale + 4;
@@ -291,8 +297,10 @@ class SportsScheduleCalendarState extends State<SportsScheduleCalendar> {
                                               : colors.onSurface
                                                   .withValues(alpha: .025),
                                       shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(5),
+                                          borderRadius: BorderRadius.circular(
+                                              tokens.isModern
+                                                  ? tokens.blockRadius
+                                                  : 5),
                                           side: BorderSide(
                                               width: node.hasFocus ? 1.5 : 1,
                                               color: node.hasFocus

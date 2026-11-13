@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/surface_style.dart';
 import '../../services/app_preferences.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
@@ -21,6 +22,40 @@ class ThemeScreen extends StatelessWidget {
                 padding: EdgeInsets.only(bottom: 16),
                 child: Text(
                     'Choose your appearance. The layout adapts automatically to your phone or TV.')),
+            SettingsSection(title: 'Surface', children: [
+              for (final style in SurfaceStyle.values)
+                Builder(builder: (context) {
+                  final scheme = Theme.of(context).colorScheme;
+                  final selected = prefs.surfaceStyle == style;
+                  final modern = style == SurfaceStyle.modern;
+                  return TvMenuTile(
+                    title: modern ? 'Modern' : 'Classic',
+                    subtitle: modern
+                        ? 'Rounder surfaces and a softer focus glow'
+                        : 'Our original look · square rows and bold outlines',
+                    leading: Container(
+                        width: 46,
+                        height: 34,
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: scheme.outline)),
+                        child: Container(
+                            decoration: BoxDecoration(
+                                color: scheme.primary,
+                                borderRadius: BorderRadius.circular(
+                                    modern ? 8 : 2)))),
+                    trailing: Icon(
+                        selected ? Icons.check_circle : Icons.circle_outlined,
+                        size: 21,
+                        color: selected
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.outline),
+                    onTap: () => prefs.setSurfaceStyle(style),
+                  );
+                }),
+            ]),
             SettingsSection(title: 'Appearance', children: [
               for (final palette in AppConstants.cyberpunkPalettes)
                 Builder(builder: (context) {

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/sports.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../services/playlist_manager.dart';
 import '../services/sports_channel_matcher.dart';
 import '../services/sports_service.dart';
@@ -298,12 +300,16 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
 
   Widget _card(SportsGame game, int index) {
     final muted = interfaceColor(context, Colors.white54);
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final focused = index < _cards.length && _cards[index].hasFocus;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: InkWell(
         focusNode: _cards[index],
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(
+            tokens.isModern ? tokens.blockRadius : 4),
         onTap: () => widget.onPlay(game),
         onFocusChange: (hasFocus) {
           if (hasFocus) setState(() => _index = index);
@@ -312,11 +318,22 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
           decoration: BoxDecoration(
             color: interfaceColor(context, Colors.white).withValues(alpha: .06),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(
+                tokens.isModern ? tokens.blockRadius : 4),
             border: Border.all(
                 color: focused
                     ? Theme.of(context).colorScheme.primary
                     : interfaceColor(context, Colors.white10)),
+            boxShadow: focused && tokens.focusGlowBlur > 0
+                ? [
+                    BoxShadow(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: tokens.focusGlowAlpha),
+                        blurRadius: tokens.focusGlowBlur)
+                  ]
+                : const [],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,6 +390,9 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
   @override
   Widget build(BuildContext context) {
     final muted = interfaceColor(context, Colors.white54);
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final games = _visible;
     final scopes = _scopes;
     final emptyMessage = _current.liveOnly
@@ -393,7 +413,8 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: .82),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(
+                tokens.isModern ? tokens.rowRadius : 6),
             border: Border.all(
                 color: interfaceColor(context, Colors.white24), width: 1),
           ),

@@ -7,6 +7,7 @@ import '../utils/time_format.dart';
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../services/epg_service.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
@@ -580,21 +581,35 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
                 _select(_tab, i);
                 unawaited(_activate());
               },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? Color.lerp(Colors.black, accent, 0.25)
-                      : const Color(0x991A222C),
-                  border: Border.all(
-                      color: selected
-                          ? accent.withValues(alpha: .7)
-                          : const Color(0xFF26313D),
-                      width: 1),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: row(i),
-              ),
+              child: Builder(builder: (context) {
+                final tokens = SurfaceTokens.forStyle(
+                    context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? Color.lerp(Colors.black, accent, 0.25)
+                        : const Color(0x991A222C),
+                    border: Border.all(
+                        color: selected
+                            ? accent.withValues(alpha: .7)
+                            : const Color(0xFF26313D),
+                        width: 1),
+                    borderRadius: BorderRadius.circular(
+                        tokens.isModern ? tokens.rowRadius : 5),
+                    boxShadow: selected && tokens.focusGlowBlur > 0
+                        ? [
+                            BoxShadow(
+                                color: accent.withValues(
+                                    alpha: tokens.focusGlowAlpha),
+                                blurRadius: tokens.focusGlowBlur)
+                          ]
+                        : const [],
+                  ),
+                  child: row(i),
+                );
+              }),
             ),
           );
         },

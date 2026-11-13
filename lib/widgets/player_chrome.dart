@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
+import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../services/playback_timeline.dart';
 import '../services/playback_health.dart';
 import 'hold_to_activate.dart';
@@ -28,7 +31,11 @@ class PlayerAction extends StatelessWidget {
   final FocusNode? focusNode;
   final bool selected, prominent, compact, autofocus, subtle;
   @override
-  Widget build(BuildContext context) => IconButton(
+  Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return IconButton(
       autofocus: autofocus,
       focusNode: focusNode,
       tooltip: tr(label),
@@ -43,8 +50,9 @@ class PlayerAction extends StatelessWidget {
         minimumSize:
             WidgetStatePropertyAll(Size(compact ? 44 : 48, compact ? 44 : 48)),
         padding: const WidgetStatePropertyAll(EdgeInsets.all(8)),
-        shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(5))),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+                tokens.isModern ? 8 : 5))),
         foregroundColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.disabled)
                 ? Colors.white24
@@ -65,7 +73,8 @@ class PlayerAction extends StatelessWidget {
       icon: Icon(icon,
           shadows: subtle
               ? const [Shadow(color: Colors.black87, blurRadius: 4)]
-              : null));
+                            : null));
+  }
 }
 
 String playerTime(int milliseconds) {

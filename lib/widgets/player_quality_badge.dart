@@ -97,21 +97,21 @@ class _PlayerQualityBadgeState extends State<PlayerQualityBadge> {
     final label = _label;
     if (label == null) return const SizedBox.shrink();
     return Container(
-      margin: const EdgeInsets.only(left: 6),
+      margin: const EdgeInsets.only(left: 8),
       padding: EdgeInsets.symmetric(
-          horizontal: widget.compact ? 4 : 5, vertical: 1),
+          horizontal: widget.compact ? 7 : 8, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: .45),
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: Colors.white.withValues(alpha: .28)),
+        color: Colors.black.withValues(alpha: .55),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: .35)),
       ),
       child: Text(label,
           style: TextStyle(
-              fontSize: widget.compact ? 9 : 10,
+              fontSize: widget.compact ? 11 : 12,
               height: 1.15,
-              letterSpacing: .4,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: .92))),
+              letterSpacing: .5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white)),
     );
   }
 }

@@ -1,7 +1,10 @@
 import 'settings_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/tv_theme.dart';
 
 /// Shared focusable settings destination row. Custom leading and trailing widgets retain the
@@ -99,6 +102,9 @@ class _TvMenuTileState extends State<TvMenuTile> {
 
   Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     if (SettingsScope.contains(context)) {
       // A remote focus change should repaint one row, not every tile in its
       // settings section. The explicit fill/border already show focus.
@@ -107,7 +113,8 @@ class _TvMenuTileState extends State<TvMenuTile> {
         animationDuration: Duration.zero,
         color: _focused ? scheme.primaryContainer : Colors.transparent,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(
+                tokens.isModern ? tokens.rowRadius : 4),
             side: BorderSide(
                 width: 1.5,
                 color: _focused ? scheme.primary : Colors.transparent)),
@@ -129,7 +136,8 @@ class _TvMenuTileState extends State<TvMenuTile> {
                   height: 30,
                   decoration: BoxDecoration(
                       color: scheme.primary.withValues(alpha: .09),
-                      borderRadius: BorderRadius.circular(5)),
+                      borderRadius: BorderRadius.circular(
+                          tokens.isModern ? tokens.blockRadius : 5)),
                   child: Icon(widget.icon,
                       size: 19,
                       color: _focused
@@ -164,19 +172,26 @@ class _TvMenuTileState extends State<TvMenuTile> {
       // ancestor shape between builds corrupts its FocusNode on real
       // hardware.
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(tokens.rowRadius),
         border: _focused ? Border.all(color: scheme.primary, width: 2) : null,
         // Flat focus fill; selection keeps a quieter accent outline.
         gradient: _focused
             ? LinearGradient(
                 colors: [scheme.primaryContainer, scheme.primaryContainer])
             : null,
-        boxShadow: const [],
+        boxShadow: _focused && tokens.focusGlowBlur > 0
+            ? [
+                BoxShadow(
+                    color: scheme.primary.withValues(
+                        alpha: tokens.focusGlowAlpha),
+                    blurRadius: tokens.focusGlowBlur)
+              ]
+            : const [],
       ),
       // Flat focus fill; selection keeps a quieter accent outline.
       child: MinimalGlassFocus(
         active: false,
-        borderRadius: 3,
+        borderRadius: tokens.rowRadius,
         child: ListTile(
           focusNode: widget.focusNode,
           autofocus: widget.autofocus,

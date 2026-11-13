@@ -29,6 +29,7 @@ import 'package:flutter/services.dart';
 
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
+import '../models/surface_style.dart';
 import '../models/epg_program.dart';
 import '../models/m3u_group.dart';
 import '../services/app_preferences.dart';
@@ -3294,6 +3295,12 @@ class _SelectableRowState extends State<_SelectableRow> {
     final foregroundColor = _focused
         ? focusedForeground
         : (isPlaying ? scheme.primary : interfaceColor(context, Colors.white));
+    // Geometry comes from the surface-style preference: Classic keeps the
+    // existing radii and thick focus outline, Modern rounds up and softens
+    // focus into a border plus glow. Sizes and padding stay untouched so
+    // both styles lay out identically.
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences>().surfaceStyle);
     // `scheme.tertiary` — a dedicated icon/symbol-glyph accent, separate
     // from the text/border/gradient accent (`scheme.primary`) — see
     // `buildPaletteColorScheme`'s own doc comment for why (Habs: white
@@ -3321,33 +3328,41 @@ class _SelectableRowState extends State<_SelectableRow> {
         // ancestor shape between builds corrupts its FocusNode on real
         // hardware; the same rule applies one level up, here.
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(tokens.rowRadius),
           // Flat focus fill; selection keeps a quieter accent outline.
           gradient: _focused
               ? LinearGradient(
                   colors: [scheme.primaryContainer, scheme.primaryContainer])
               : null,
-          boxShadow: const [],
+          boxShadow: _focused && tokens.focusGlowBlur > 0
+              ? [
+                  BoxShadow(
+                      color: scheme.primary
+                          .withValues(alpha: tokens.focusGlowAlpha),
+                      blurRadius: tokens.focusGlowBlur)
+                ]
+              : const [],
         ),
         // Flat focus fill; selection keeps a quieter accent outline.
         child: MinimalGlassFocus(
           active: false,
-          borderRadius: 3,
+          borderRadius: tokens.rowRadius,
           child: Material(
             color: _focused ? Colors.transparent : unfocusedColor,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(tokens.rowRadius),
               // Keep the active-item marker independent of keyboard focus so browsing another
               // row does not look like a selection change.
               side: _focused
-                  ? BorderSide(color: scheme.primary, width: 2.5)
+                  ? BorderSide(
+                      color: scheme.primary, width: tokens.focusBorderWidth)
                   : widget.selected
                       ? BorderSide(color: scheme.primary, width: 1.5)
                       : BorderSide.none,
             ),
             child: InkWell(
               focusNode: widget.focusNode,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(tokens.rowRadius),
               onTap: widget.onTap,
               onLongPress: widget.onLongPress,
               onFocusChange: (f) {
@@ -5550,6 +5565,8 @@ class _TimelineFilterButtonState extends State<_TimelineFilterButton> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences>().surfaceStyle);
     // Flat focus fill; selection keeps a quieter accent outline.
     return SizedBox(
       key: const ValueKey('guide-search'),
@@ -5574,7 +5591,7 @@ class _TimelineFilterButtonState extends State<_TimelineFilterButton> {
                 widget.focusNode.requestFocus();
                 widget.onPressed();
               },
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(tokens.blockRadius),
               child: Container(
                 decoration: BoxDecoration(
                   color:
@@ -5583,7 +5600,15 @@ class _TimelineFilterButtonState extends State<_TimelineFilterButton> {
                       color: _focused
                           ? scheme.primary
                           : scheme.onSurface.withValues(alpha: .09)),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(tokens.blockRadius),
+                  boxShadow: _focused && tokens.focusGlowBlur > 0
+                      ? [
+                          BoxShadow(
+                              color: scheme.primary.withValues(
+                                  alpha: tokens.focusGlowAlpha),
+                              blurRadius: tokens.focusGlowBlur)
+                        ]
+                      : const [],
                 ),
                 alignment: Alignment.center,
                 child: Tooltip(
@@ -5924,7 +5949,11 @@ class _ChannelLabel extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius:
+                    BorderRadius.circular(SurfaceTokens.forStyle(context
+                            .watch<AppPreferences>()
+                            .surfaceStyle)
+                        .blockRadius),
               ),
               child: Text(
                 tag,
@@ -6267,6 +6296,11 @@ class _ProgramBlockState extends State<_ProgramBlock> {
     final scheme = Theme.of(context).colorScheme;
     // Flat focus fill; selection keeps a quieter accent outline.
     final accent = scheme.primary;
+    // Small packed blocks take the block radius, not the row radius, and
+    // Modern softens the thick focus border into a border plus a glow —
+    // sizes and spacing stay identical so rows still pack the same way.
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences>().surfaceStyle);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1),
@@ -6319,10 +6353,17 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                       : widget.isNow
                           ? scheme.outlineVariant
                           : interfaceColor(context, Colors.white10),
-                  width: _focused ? 2 : 0.5,
+                  width: _focused ? tokens.focusBorderWidth : 0.5,
                 ),
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: const [],
+                borderRadius: BorderRadius.circular(tokens.blockRadius),
+                boxShadow: _focused && tokens.focusGlowBlur > 0
+                    ? [
+                        BoxShadow(
+                            color: accent.withValues(
+                                alpha: tokens.focusGlowAlpha),
+                            blurRadius: tokens.focusGlowBlur)
+                      ]
+                    : const [],
               ),
               alignment: Alignment.centerLeft,
               // Keep titles visible when long blocks extend left of the viewport. Adjust only

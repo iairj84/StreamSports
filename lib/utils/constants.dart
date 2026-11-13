@@ -277,6 +277,11 @@ class AppConstants {
 
   static const String keyPaletteId = 'nox_palette_id';
 
+  /// Surface style for the whole device: 'classic' keeps the existing
+  /// geometry, 'modern' rounds surfaces up and softens focus. Independent
+  /// of the colour palette above.
+  static const String keySurfaceStyle = 'nox_surface_style';
+
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force
   /// one regardless — needed because plenty of real Android boxes (this
   /// one included) aren't officially certified Android TV devices, so

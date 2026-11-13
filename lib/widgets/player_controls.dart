@@ -1,3 +1,5 @@
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/guarded_dialog.dart';
 import 'dart:async';
 
@@ -312,6 +314,8 @@ class PlayerControls extends StatelessWidget {
     final next =
         isLive ? context.watch<EpgService>().getNextProgram(channelId) : null;
 
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences>().surfaceStyle);
     return Container(
         decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -334,9 +338,15 @@ class PlayerControls extends StatelessWidget {
             children: [
               Row(children: [
                 if (channel?.logoUrl != null) ...[
-                  SizedBox(
+                  Container(
                       width: 26,
                       height: 26,
+                      decoration: BoxDecoration(
+                          color:
+                              Colors.white.withValues(alpha: 0.10),
+                          borderRadius:
+                              BorderRadius.circular(tokens.blockRadius)),
+                      clipBehavior: Clip.antiAlias,
                       child: CachedChannelLogo(url: channel!.logoUrl)),
                   const SizedBox(width: 10),
                 ],

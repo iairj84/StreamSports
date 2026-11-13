@@ -585,6 +585,13 @@ class StorageService {
   Future<void> setPaletteId(String id) =>
       _prefs.setString(AppConstants.keyPaletteId, id);
 
+  /// 'classic' when unset or unknown — the look every existing install and
+  /// geometry test was built against.
+  String getSurfaceStyleId() =>
+      _prefs.getString(AppConstants.keySurfaceStyle) ?? 'classic';
+  Future<void> setSurfaceStyleId(String id) =>
+      _prefs.setString(AppConstants.keySurfaceStyle, id);
+
   /// 'auto' or 'tv'. A saved 'phone' (the old phone-only home screen,
   /// removed) reads as 'auto'.
   String getLayoutMode() {

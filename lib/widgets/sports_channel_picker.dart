@@ -20,6 +20,7 @@ import '../models/sports.dart';
 import '../utils/formula_one.dart';
 import '../utils/sports_programme_excerpt.dart';
 import '../utils/sports_programme_identity.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/sports_channel_matcher.dart';
@@ -400,7 +401,12 @@ class _SportsChannelPickerDialogState extends State<SportsChannelPickerDialog> {
                 backgroundColor:
                     interfaceColor(context, const Color(0xFF151C25)),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(
+                        SurfaceTokens.forStyle(context.read<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic)
+                            .isModern
+                        ? 10
+                        : 8)),
                 title: Text(row.channel.name,
                     style: const TextStyle(fontSize: 16)),
                 content: const Text(
@@ -1645,7 +1651,11 @@ class _SportsChannelTileState extends State<_SportsChannelTile> {
           // Focus paints the surround; keep the much larger programme text layer
           // reusable while stepping between cards. ListView bounds mounted layers.
           child: RepaintBoundary(child: widget.child),
-          builder: (context, content) => Padding(
+          builder: (context, content) {
+            final tokens = SurfaceTokens.forStyle(
+                context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+            return Padding(
               padding: const EdgeInsets.only(bottom: 7),
               child: Material(
                   animationDuration: context.read<AppPreferences>().isTelevision
@@ -1658,7 +1668,8 @@ class _SportsChannelTileState extends State<_SportsChannelTile> {
                           .withValues(alpha: .1)
                       : interfaceColor(context, const Color(0xFF1B232D)),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(
+                          tokens.isModern ? tokens.rowRadius : 6),
                       side: BorderSide(
                           color: _node.hasFocus
                               ? Theme.of(context).colorScheme.primary
@@ -1679,7 +1690,7 @@ class _SportsChannelTileState extends State<_SportsChannelTile> {
                         if (focused) widget.onFocus(widget.id);
                       },
                       onTap: widget.onChoose,
-                      child: content)))));
+                      child: content)));}));
 }
 
 /// Full text and cached guide data only: no requests, per-row timers or scans.
@@ -1722,6 +1733,9 @@ class SportsChannelRow extends StatelessWidget {
         channel.group,
     ].join(' · ');
     final match = result.match;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final scheme = Theme.of(context).colorScheme;
     final now = DateTime.now();
     final cachedCurrent = epg.getCurrentProgram(channel.epgId);
@@ -1800,7 +1814,9 @@ class SportsChannelRow extends StatelessWidget {
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: .16),
-                borderRadius: BorderRadius.circular(3)),
+                borderRadius: BorderRadius.circular(tokens.isModern
+                    ? tokens.blockRadius
+                    : 3)),
             child: channel.logoUrl?.isNotEmpty == true
                 ? CachedNetworkImage(
                     imageUrl: channel.logoUrl!,
@@ -2085,12 +2101,17 @@ class _ChannelTag extends StatelessWidget {
   final IconData? icon;
   final Color? color;
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
       decoration: BoxDecoration(
           color: (color ?? interfaceColor(context, Colors.white))
               .withValues(alpha: emphasis ? .14 : .06),
-          borderRadius: BorderRadius.circular(3)),
+          borderRadius: BorderRadius.circular(
+              tokens.isModern ? tokens.blockRadius : 3)),
       child: Text.rich(
           TextSpan(children: [
             if (icon != null)
@@ -2111,6 +2132,7 @@ class _ChannelTag extends StatelessWidget {
               height: 1.15,
               color:
                   color ?? interfaceColor(context, const Color(0xFFB3BECA)))));
+  }
 }
 
 class _ChannelProgramme extends StatelessWidget {

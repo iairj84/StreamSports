@@ -1,7 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/sports.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/sports_detail_presentation.dart';
 import '../utils/sports_fixture_presentation.dart';
 import '../utils/time_format.dart';
@@ -20,6 +23,9 @@ class SportsDetailSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     return Container(
         padding: padding,
         decoration: BoxDecoration(
@@ -28,7 +34,8 @@ class SportsDetailSurface extends StatelessWidget {
           border: Border.all(
               color: (accent ? colors.primary : colors.outlineVariant)
                   .withValues(alpha: accent ? .2 : .3)),
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(
+              tokens.isModern ? tokens.rowRadius : 5),
         ),
         child: child);
   }
@@ -80,6 +87,9 @@ class SportsDetailMetrics extends StatelessWidget {
     if (entries.isEmpty) return const SizedBox.shrink();
     final colors = Theme.of(context).colorScheme;
     return LayoutBuilder(builder: (context, box) {
+      final tokens = SurfaceTokens.forStyle(
+          context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
       final scale = MediaQuery.textScalerOf(context).scale(1);
       final columns = (box.maxWidth / (112 * scale))
           .floor()
@@ -94,7 +104,8 @@ class SportsDetailMetrics extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                   decoration: BoxDecoration(
                       color: colors.onSurface.withValues(alpha: .035),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(
+                          tokens.isModern ? tokens.blockRadius : 4),
                       border: Border(
                           left: BorderSide(
                               width: 2,
@@ -306,14 +317,18 @@ class SportsDetailPeriodSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     return TextButton(
         style: TextButton.styleFrom(
             animationDuration: Duration.zero,
             foregroundColor: colors.onSurface,
             padding: const EdgeInsets.all(10),
             backgroundColor: colors.onSurface.withValues(alpha: .025),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(5))),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    tokens.isModern ? tokens.rowRadius : 5))),
         onPressed: onOpen,
         child: LayoutBuilder(builder: (context, box) {
           final scale = MediaQuery.textScalerOf(context).scale(1);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../models/cyberpunk_palette.dart';
+import '../models/surface_style.dart';
 import '../utils/constants.dart';
 import '../utils/time_format.dart';
 import 'storage_service.dart';
@@ -20,6 +21,7 @@ class AppPreferences extends ChangeNotifier {
 
   late bool showClock;
   late CyberpunkPalette palette;
+  late SurfaceStyle surfaceStyle;
   late String layoutMode; // 'auto', 'tv'
   late String guideViewMode; // 'live', 'timeline'
 
@@ -58,6 +60,7 @@ class AppPreferences extends ChangeNotifier {
     palette = AppConstants.cyberpunkPalettes.firstWhere(
         (p) => p.id == _storage.getPaletteId(),
         orElse: () => AppConstants.cyberpunkPalettes.first);
+    surfaceStyle = SurfaceTokens.fromId(_storage.getSurfaceStyleId());
     layoutMode = 'auto';
     guideViewMode = 'timeline';
     guideFullVideo = false;
@@ -73,6 +76,13 @@ class AppPreferences extends ChangeNotifier {
     palette = value;
     notifyListeners();
     await _storage.setPaletteId(value.id);
+  }
+
+  Future<void> setSurfaceStyle(SurfaceStyle value) async {
+    if (surfaceStyle == value) return;
+    surfaceStyle = value;
+    notifyListeners();
+    await _storage.setSurfaceStyleId(value.name);
   }
 
   /// 24-hour vs 12-hour times (see TimeFormat).

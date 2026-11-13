@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../services/epg_service.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/playlist_manager.dart';
 import '../services/sports_replay_service.dart';
@@ -671,6 +672,9 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
     final broadcasts = event.broadcasts
         .where((b) => b.programme.isNowPlaying(DateTime.now()))
         .toList();
+    final tokens = SurfaceTokens.forStyle(
+        context.read<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final choice = await showSportsDialog<ReplayBroadcast>(
         context: context,
         builder: (context) => SwallowHeldActivate(
@@ -739,7 +743,8 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
                               color: interfaceColor(
                                   context, const Color(0xFF262F3A)),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(5),
+                                  borderRadius: BorderRadius.circular(
+                                      tokens.isModern ? tokens.rowRadius : 5),
                                   side: BorderSide(
                                       color: b.channel.id == widget.playingId
                                           ? Theme.of(context)
@@ -1031,6 +1036,9 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
     _shelfExtent = 208 +
         (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0.0, 50.0) * 8;
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     Widget card(int index,
         {bool shelf = false, KeyEventResult Function(KeyEvent)? onKey}) {
       final event = events[index];
@@ -1088,7 +1096,8 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
                                   context, const Color(0xFF222A34)),
                               clipBehavior: Clip.antiAlias,
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(5),
+                                  borderRadius: BorderRadius.circular(
+                                      tokens.isModern ? tokens.rowRadius : 5),
                                   side: BorderSide(
                                       width: focused.hasFocus ? 1.5 : 1,
                                       color: focused.hasFocus
@@ -1184,7 +1193,8 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
             position: PopupMenuPosition.under,
             constraints: const BoxConstraints(minWidth: 272, maxWidth: 300),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(
+                    tokens.isModern ? tokens.rowRadius : 6),
                 side: BorderSide(
                     color: interfaceColor(context, const Color(0xFF343E4A)))),
             icon: Icon(Icons.more_horiz,
@@ -1717,6 +1727,9 @@ class _ReplayContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final likely = event.evidence == ReplayEvidence.likely;
     final condensed =
         isCondensedReplay(event.title, primary.programme.description);
@@ -1901,7 +1914,8 @@ class _ReplayContent extends StatelessWidget {
                   decoration: BoxDecoration(
                       color: interfaceColor(context, Colors.white)
                           .withValues(alpha: .06),
-                      borderRadius: BorderRadius.circular(4)),
+                      borderRadius: BorderRadius.circular(
+                          tokens.isModern ? tokens.blockRadius : 4)),
                   child: CachedChannelLogo(
                       url: primary.channel.logoUrl,
                       icon: playing
@@ -2010,6 +2024,9 @@ class _ReplayLeagueInitials extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final color = interfaceColor(
         context,
         switch (sport) {
@@ -2029,7 +2046,8 @@ class _ReplayLeagueInitials extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           color: color.withValues(alpha: .105),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(
+              tokens.isModern ? tokens.blockRadius : 4),
           border: Border.all(color: color.withValues(alpha: .22), width: .6),
         ),
         alignment: Alignment.center,
@@ -2055,14 +2073,21 @@ class _ReplayBadge extends StatelessWidget {
   final Color color;
   final bool filled;
   @override
-  Widget build(BuildContext context) => Container(
+  @override
+  Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return Container(
       padding: EdgeInsets.symmetric(horizontal: filled ? 6 : 0, vertical: 2),
       decoration: BoxDecoration(
           color: filled ? color.withValues(alpha: .10) : null,
-          borderRadius: BorderRadius.circular(3)),
+          borderRadius: BorderRadius.circular(
+              tokens.isModern ? tokens.blockRadius : 3)),
       child: Text(label,
           style: TextStyle(
               fontSize: 9.5, fontWeight: FontWeight.w500, color: color)));
+  }
 }
 
 class _ReplayDateLine extends StatelessWidget {

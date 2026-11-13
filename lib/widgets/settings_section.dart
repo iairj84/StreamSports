@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 
 class SettingsScope extends InheritedWidget {
   const SettingsScope({super.key, required super.child});
@@ -16,6 +20,9 @@ class SettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -29,7 +36,8 @@ class SettingsSection extends StatelessWidget {
         DecoratedBox(
           decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest.withValues(alpha: .35),
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(
+                  tokens.isModern ? tokens.rowRadius : 5),
               border: Border.all(
                   color: scheme.outlineVariant.withValues(alpha: .65))),
           child:

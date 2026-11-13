@@ -11,8 +11,10 @@ const _highFrameRateThreshold = 40.0;
 /// never actually decodes above 1080p, and conflate a 1080p30 broadcast
 /// feed with true 1080p60).
 ///
-/// Null below 1080p — not worth a badge for the common case, and this app
-/// has no reliable way to tell an honest 720p feed from a downscaled one.
+/// Null below 480p. Every badge names what the decoder actually reports —
+/// a provider's "4K" tag still shows as HD when the feed decodes at 720p.
+/// Label bands are coarse on purpose: a 540p transcode and an honest 480p
+/// feed both read as SD, which is exactly what the badge claims either way.
 String? qualityLabelForTrack({required int height, double? frameRate}) {
   if (height >= 2160) return '4K';
   if (height >= 1080) {
@@ -20,5 +22,7 @@ String? qualityLabelForTrack({required int height, double? frameRate}) {
         ? 'FHD'
         : 'HD';
   }
+  if (height >= 720) return 'HD';
+  if (height >= 480) return 'SD';
   return null;
 }
