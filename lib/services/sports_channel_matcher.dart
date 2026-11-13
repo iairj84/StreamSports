@@ -41,14 +41,6 @@ part 'sports_matching_worker.dart';
 part 'sports_guide_discovery.dart';
 part 'sports_programme_index.dart';
 
-class _DigestSink implements Sink<Digest> {
-  Digest? value;
-  @override
-  void add(Digest data) => value = data;
-  @override
-  void close() {}
-}
-
 class _GuideQuery {
   const _GuideQuery(this.generation, this.from, this.to, this.terms,
       this.result, this.fetchedAt);
@@ -770,7 +762,7 @@ class SportsChannelMatcher {
   final _manualCache = <String, List<ChannelSearchResult>>{};
   final _relatedCache = <String, (List<int>, DateTime)>{};
   String? _preparedFor;
-  String? _catalogueFingerprint;
+  int? _catalogueFingerprint;
   SportsMatchDiskCache? _diskCache;
   Object? _discoveryKey;
   DateTime? _discoveryUntil;
@@ -1023,10 +1015,10 @@ class SportsChannelMatcher {
     await textCache?.load();
     textCache?.retainNames({for (final channel in channels) channel.name});
     var reusedNames = 0;
-    final catalogueDigest = _DigestSink();
-    final catalogueSink = _diskCache == null
-        ? null
-        : sha256.startChunkedConversion(catalogueDigest);
+    // Rolling hash over the same catalogue fields a JSON encode plus SHA-256
+    // used to cover per channel. Tens of thousands of encodes cost seconds
+    // on a TV box on every cold index; only in-memory comparison needs it.
+    var catalogueFingerprint = channels.length;
     final tokenIndex = <String, List<int>>{};
     final byCanonical = <String, List<int>>{};
     final byEpgId = <String, List<int>>{};
@@ -1041,8 +1033,8 @@ class SportsChannelMatcher {
         slice.reset();
       }
       final c = channels[i];
-      catalogueSink?.add(
-          utf8.encode(jsonEncode([c.id, c.rawId, c.name, c.group, c.epgId])));
+      catalogueFingerprint = Object.hash(
+          catalogueFingerprint, c.id, c.rawId, c.name, c.group, c.epgId);
       final storedText = textCache?[c.name];
       if (storedText != null) reusedNames++;
       final norm = storedText?.$1 ?? _fixtureText(c.name);
@@ -1062,8 +1054,7 @@ class SportsChannelMatcher {
       if (canon.isNotEmpty) (byCanonical[canon] ??= <int>[]).add(i);
       (byEpgId[normalizeEpgId(c.epgId)] ??= <int>[]).add(i);
     }
-    catalogueSink?.close();
-    _catalogueFingerprint = catalogueDigest.value.toString();
+    _catalogueFingerprint = catalogueFingerprint;
     // Publish a complete index atomically; concurrent callers await it.
     _channels = channels;
     _names = names;
