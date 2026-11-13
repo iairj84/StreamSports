@@ -74,7 +74,11 @@ class PlaybackService extends ChangeNotifier {
       VideoPlayerHdrController.networkUrl(Uri.parse(url ?? channel.url),
           videoPlayerOptions: _videoOptions,
           httpHeaders: _playlistManager.playbackHeaders(channel),
-          closedCaptionFile: channel.subtitleUrl == null
+          // External sub-files are a VOD/archive concern: never hold up a
+          // live tune downloading one (the plugin awaits the file during
+          // initialize). In-stream subtitle tracks are unaffected.
+          closedCaptionFile: channel.subtitleUrl == null ||
+                  Channel.isLiveId(channel.rawId)
               ? null
               : _loadCaptions(channel.subtitleUrl!, headers: {
                   for (final entry
@@ -406,8 +410,17 @@ class PlaybackService extends ChangeNotifier {
 
     final request = ++_request;
     _reloadingCurrentChannel = false;
+    // Zap timing: one stopwatch per request, printed once the new stream
+    // is playing so a logcat capture shows exactly where tune time goes.
+    final tune = Stopwatch()..start();
+    var tuneTeardownMs = 0;
+    var tuneResolveMs = 0;
+    var tuneInitMs = 0;
+    var tuneReadyMs = 0;
     await _teardown();
     if (_disposed || request != _request) return;
+    tuneTeardownMs = tune.elapsedMilliseconds;
+    tuneResolveMs = tuneTeardownMs;
     if (_releaseFailed) {
       error = _releaseFailure;
       reconnectStatus = null;
@@ -442,6 +455,7 @@ class PlaybackService extends ChangeNotifier {
         return;
       }
       if (_disposed || request != _request) return;
+      tuneResolveMs = tune.elapsedMilliseconds;
     }
     final newController = createController(playable);
     controller = newController;
@@ -453,6 +467,7 @@ class PlaybackService extends ChangeNotifier {
                 'No playable data received within 30 seconds [STREAM_OPEN_TIMEOUT]'))
         .then((_) async {
       if (!_owns(newController, request)) return;
+      tuneInitMs = tune.elapsedMilliseconds;
       if (savedPositionMs > 0) {
         var seekMs = savedPositionMs;
         // A Trakt/Simkl resume point saved as a fraction (length unknown
@@ -477,8 +492,15 @@ class PlaybackService extends ChangeNotifier {
           channel: channel)) {
         return;
       }
+      tuneReadyMs = tune.elapsedMilliseconds;
       await newController.play();
       if (!_owns(newController, request)) return;
+      debugPrint('TuneReport ch=${channel.id} '
+          'teardown=${tuneTeardownMs}ms '
+          'resolve=${tuneResolveMs - tuneTeardownMs}ms '
+          'init=${tuneInitMs - tuneResolveMs}ms '
+          'ready=${tuneReadyMs - tuneInitMs}ms '
+          'play=${tune.elapsedMilliseconds - tuneReadyMs}ms');
       // Fire TV/Android TV boxes otherwise sleep the screen mid-stream on
       // idle-input timeout, exactly like they would for any non-video app —
       // there was nothing here telling the OS playback is active.
