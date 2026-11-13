@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.38 — 13 November 2026
+
+- Sports first opens are faster on large providers: preparation returns once the channel index is built while guide discovery runs alongside it, concurrent discovery scans share one flight instead of each rescanning, less data crosses to the matching worker, and snapshot change checks no longer re-encode every programme row.
+
 ## 0.2.37 — 13 November 2026
 
 - The Sports Hub index now warms up in the background after startup, so the first visit on large providers matches immediately instead of sitting on "Waiting for guide" for a minute.
