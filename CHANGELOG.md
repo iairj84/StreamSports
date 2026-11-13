@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.34 — 13 November 2026
+
+- Channel zapping no longer waits on external subtitle files for live streams, and each tune now records where its time goes to guide further speed work.
+
 ## 0.2.33 — 13 November 2026
 
 - Sports cards get a consistent type ramp: uppercase letterspaced league labels, bolder team names and event titles, tabular scores that never reflow as the game updates, and a stronger channel action.
