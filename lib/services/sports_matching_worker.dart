@@ -479,11 +479,14 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
   /// The now/next rows for this matcher's guide ids, cached until the guide's
   /// own revisions change. Never waits for the all-channel preload.
   Future<Map<String, List<EpgProgram>>> _readGuideSlice() async {
+    // A refresh in progress must not discard a usable slice. Programme
+    // inserts hold the database while sports is matching, so rereading here
+    // would serialize behind them. Committed guide changes still invalidate
+    // this cache through their revisions.
     final key = (
       _source.changeRevision,
       _source.currentGuideRevision,
       _source.lastUpdated,
-      _source.isLoading,
       _source.error == null,
     );
     final cached = _guideSlice;

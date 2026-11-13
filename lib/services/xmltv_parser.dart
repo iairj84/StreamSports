@@ -233,6 +233,14 @@ Future<
   String? channelId;
   String? startRaw;
   String? stopRaw;
+  DateTime? programmeStart;
+  DateTime? programmeStop;
+  // Programmes that cannot be stored or shown as now playing do not need
+  // their text parsed. Large feeds routinely contain many days of listings
+  // outside the retained window; skipping those strings avoids building and
+  // discarding megabytes of titles and descriptions while parsing.
+  bool inProgramme = false;
+  bool skipProgrammeBody = false;
   // 'title'/'desc' while inside a <programme>, or 'display-name' while
   // inside a <channel> — safe to share one flag either way since XMLTV
   // never nests one inside the other.
@@ -251,21 +259,24 @@ Future<
       subtitlePriority = -1;
 
   void finalizeProgramme() {
-    if (channelId == null || startRaw == null || stopRaw == null) return;
+    final start = programmeStart;
+    final stop = programmeStop;
+    if (channelId == null || start == null || stop == null) return;
     try {
-      final start = _parseXmltvTime(startRaw);
-      final stop = _parseXmltvTime(stopRaw);
       final cleanTitle =
           title?.trim().isNotEmpty == true ? title!.trim() : noTitle;
       // Preserve episode/match subtitles in the existing searchable synopsis.
       // This needs no database migration and keeps the guide's show title intact.
       final cleanSubtitle = subtitle?.trim() ?? '';
       final description = desc?.trim() ?? '';
-      final combined = cleanSubtitle.isEmpty ||
-              description.toLowerCase().contains(cleanSubtitle.toLowerCase()) ||
-              cleanTitle.toLowerCase().contains(cleanSubtitle.toLowerCase())
-          ? description
-          : '$cleanSubtitle\n$description'.trim();
+      var combined = description;
+      if (cleanSubtitle.isNotEmpty) {
+        final subtitleLower = cleanSubtitle.toLowerCase();
+        if (!description.toLowerCase().contains(subtitleLower) &&
+            !cleanTitle.toLowerCase().contains(subtitleLower)) {
+          combined = '$cleanSubtitle\n$description'.trim();
+        }
+      }
       final cleanDesc = combined.isEmpty ? null : combined;
       if (!now.isBefore(start) && now.isBefore(stop)) {
         nowPlaying[channelId] = EpgProgram(
@@ -317,9 +328,13 @@ Future<
   await for (final event in events) {
     if (event is XmlStartElementEvent) {
       if (event.name == 'programme') {
+        inProgramme = true;
         channelId = null;
         startRaw = null;
         stopRaw = null;
+        programmeStart = null;
+        programmeStop = null;
+        skipProgrammeBody = true;
         title = null;
         desc = null;
         subtitle = null;
@@ -339,12 +354,43 @@ Future<
               stopRaw = attr.value;
           }
         }
+        // Decide retention before handling text. Anything outside the stored
+        // window cannot become a row or the current programme, so leave its
+        // title and description unparsed. When no display-name linking is
+        // possible, programmes for unknown channels need text only if they
+        // are on now; their names are already known to be unlinked.
+        if (channelId != null && startRaw != null && stopRaw != null) {
+          try {
+            final start = _parseXmltvTime(startRaw);
+            final stop = _parseXmltvTime(stopRaw);
+            programmeStart = start;
+            programmeStop = stop;
+            skipProgrammeBody = stop.millisecondsSinceEpoch <= minStopMs ||
+                start.millisecondsSinceEpoch >= maxStartMs;
+            if (!skipProgrammeBody &&
+                knownChannelIds != null &&
+                !knownChannelIds.contains(channelId) &&
+                !namedIds.contains(channelId) &&
+                (knownChannelNames == null || knownChannelNames.isEmpty)) {
+              skipProgrammeBody =
+                  !(idNamesChannel[channelId] ??= _idNamesPlaylistChannel(
+                      channelId, knownChannelNames)) &&
+                  (now.isBefore(start) || !now.isBefore(stop));
+            }
+          } catch (_) {
+            programmeStart = null;
+            programmeStop = null;
+            skipProgrammeBody = true;
+          }
+        }
         // A self-closing <programme/> has no title/desc children and no
         // matching end event, so it must be recorded right here.
-        if (event.isSelfClosing) finalizeProgramme();
+        if (event.isSelfClosing && !skipProgrammeBody) finalizeProgramme();
+        if (event.isSelfClosing) inProgramme = false;
       } else if (event.name == 'live') {
-        isLive = true;
+        if (!inProgramme || !skipProgrammeBody) isLive = true;
       } else if (event.name == 'channel') {
+        inProgramme = false;
         catalogChannelId = null;
         catalogDisplayName = null;
         currentTextTag = null;
@@ -357,7 +403,8 @@ Future<
               event.name == 'desc' ||
               event.name == 'sub-title' ||
               event.name == 'display-name') &&
-          !event.isSelfClosing) {
+          !event.isSelfClosing &&
+          (!inProgramme || !skipProgrammeBody)) {
         // Self-closing versions of these carry no text — leave
         // currentTextTag unset so we don't wait on an end event that
         // will never arrive for them.
@@ -377,16 +424,20 @@ Future<
         }
       }
     } else if (event is XmlTextEvent) {
-      if (preferEnglish &&
+      if ((!inProgramme || !skipProgrammeBody) &&
+          preferEnglish &&
           (currentTextTag == 'title' ||
               currentTextTag == 'desc' ||
               currentTextTag == 'sub-title')) {
         localizedText = (localizedText ?? '') + event.value;
-      } else if (currentTextTag == 'title') {
+      } else if ((!inProgramme || !skipProgrammeBody) &&
+          currentTextTag == 'title') {
         title = (title ?? '') + event.value;
-      } else if (currentTextTag == 'sub-title') {
+      } else if ((!inProgramme || !skipProgrammeBody) &&
+          currentTextTag == 'sub-title') {
         subtitle = (subtitle ?? '') + event.value;
-      } else if (currentTextTag == 'desc') {
+      } else if ((!inProgramme || !skipProgrammeBody) &&
+          currentTextTag == 'desc') {
         desc = (desc ?? '') + event.value;
       } else if (currentTextTag == 'display-name' &&
           catalogDisplayName == null) {
@@ -399,7 +450,9 @@ Future<
       if (event.name == 'title' ||
           event.name == 'desc' ||
           event.name == 'sub-title') {
-        if (preferEnglish && (localizedText?.trim().isNotEmpty ?? false)) {
+        if ((!inProgramme || !skipProgrammeBody) &&
+            preferEnglish &&
+            (localizedText?.trim().isNotEmpty ?? false)) {
           if (event.name == 'title' && languagePriority > titlePriority) {
             title = localizedText;
             titlePriority = languagePriority;
@@ -417,7 +470,8 @@ Future<
       } else if (event.name == 'display-name') {
         currentTextTag = null;
       } else if (event.name == 'programme') {
-        finalizeProgramme();
+        if (!skipProgrammeBody) finalizeProgramme();
+        inProgramme = false;
       } else if (event.name == 'channel') {
         final id = catalogChannelId;
         if (id != null && catalogDisplayName != null) {
