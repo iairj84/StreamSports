@@ -66,12 +66,13 @@ Future<void> _configureImageCache() async {
   PaintingBinding.instance.imageCache.maximumSize = 512;
   PaintingBinding.instance.imageCache.maximumSizeBytes =
       imageCacheBudgetBytes(info);
-  // Same small-device line as Multiview: TV boxes skip the second sports
-  // discovery isolate, whose duplicate index risks a memory-pressure kill
-  // (and a full restart) of the first-open match.
-  SportsChannelMatcher.lowMemoryDevice = info == null ||
-      info.isLowRamDevice ||
-      info.totalMemGB < 3;
+  // Memory-constrained devices skip the second sports discovery isolate,
+  // whose duplicate index risks a memory-pressure kill (and a full
+  // restart) of the first-open match. The line sits well below Multiview's
+  // 3GB tile budget: a 3GB-class TV box handles the sports peak, it just
+  // must not serialize discovery for no reason.
+  SportsChannelMatcher.lowMemoryDevice =
+      info == null || info.totalMemGB < 2;
 }
 
 /// Restores settings before opening the app. Playlist caches and the guide

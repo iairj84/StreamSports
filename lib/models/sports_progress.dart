@@ -1,10 +1,19 @@
 /// Small, metadata-only progress messages. Counts describe work, not confidence.
 class SportsWorkProgress {
   const SportsWorkProgress(this.stage,
-      {this.completed = 0, this.total = 0, this.detail, this.failed = 0});
+      {this.completed = 0,
+      this.total = 0,
+      this.detail,
+      this.failed = 0,
+      this.elapsed});
   final SportsWorkStage stage;
   final int completed, total, failed;
   final String? detail;
+
+  /// Wall-clock time in the current stage when this update was emitted.
+  /// Display-only: lets a slow device show where its first-open minute
+  /// goes (index vs guide vs matching) without logcat access.
+  final Duration? elapsed;
 
   String get label => switch (stage) {
         SportsWorkStage.scores => 'Scores',
@@ -17,7 +26,11 @@ class SportsWorkProgress {
         SportsWorkStage.matching => 'Matching events',
         SportsWorkStage.verifying => 'Verifying matches',
       };
-  String get summary => total > 0 ? '$label · $completed/$total' : '$label…';
+  String get summary {
+    final timing = elapsed;
+    final timed = timing == null ? '' : ' · ${timing.inSeconds}s';
+    return total > 0 ? '$label · $completed/$total$timed' : '$label$timed…';
+  }
 
   /// Stages are local to this channel-check pass, never an estimated overall %.
   int get channelStep => switch (stage) {
@@ -59,16 +72,28 @@ class SportsProgressReporter {
   final void Function(SportsWorkProgress)? callback;
   final Stopwatch _clock = Stopwatch();
   SportsWorkStage? _stage;
+  DateTime? _stageStart;
 
   void report(SportsWorkStage stage,
       {int completed = 0, int total = 0, String? detail, bool force = false}) {
     if (callback == null) return;
-    if (!force && stage == _stage && _clock.elapsedMilliseconds < 350) return;
-    _stage = stage;
-    _clock
-      ..reset()
-      ..start();
+    final now = DateTime.now();
+    if (stage != _stage) {
+      _stage = stage;
+      _stageStart = now;
+      _clock
+        ..reset()
+        ..start();
+    } else {
+      if (!force && _clock.elapsedMilliseconds < 350) return;
+      _clock
+        ..reset()
+        ..start();
+    }
     callback!(SportsWorkProgress(stage,
-        completed: completed, total: total, detail: detail));
+        completed: completed,
+        total: total,
+        detail: detail,
+        elapsed: now.difference(_stageStart ?? now)));
   }
 }
