@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.35 — 13 November 2026
+
+- Large EPG imports skip programme text outside the retained guide window and reuse sports guide slices during refreshes, so heavy providers load faster and slow the Sports Hub less.
+
 ## 0.2.34 — 13 November 2026
 
 - Channel zapping no longer waits on external subtitle files for live streams, and each tune now records where its time goes to guide further speed work.
