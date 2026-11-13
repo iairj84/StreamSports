@@ -4168,7 +4168,7 @@ class _EventCardBody extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontSize: sportsLandscape(context) ? 13.5 : 15,
+                fontSize: sportsLandscape(context) ? 14 : 16,
                 fontWeight: FontWeight.w700,
                 color: interfaceColor(context, Colors.white))),
         const SizedBox(height: 3),
@@ -4226,11 +4226,13 @@ class _EventLeaderLine extends StatelessWidget {
             child: Text(entry.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: style.copyWith(fontWeight: FontWeight.w600)),
+                style: style.copyWith(fontWeight: FontWeight.w700)),
           ),
           if (entry.value != null)
             Text(entry.value!,
-                style: style.copyWith(fontWeight: FontWeight.w800)),
+                style: style.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: const [FontFeature.tabularFigures()])),
         ],
       ),
     );
@@ -4659,11 +4661,11 @@ class _GameCardState extends State<_GameCard> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     fontSize: dense
-                        ? 12.5
+                        ? 13
                         : widget.compact
-                            ? 13
-                            : 15,
-                    fontWeight: FontWeight.w600,
+                            ? 14
+                            : 16,
+                    fontWeight: FontWeight.w700,
                     color: g.state == GameState.post && !winning
                         ? interfaceColor(context, Colors.white70)
                         : interfaceColor(context, Colors.white))),
@@ -4678,6 +4680,7 @@ class _GameCardState extends State<_GameCard> {
                             : 20,
                     height: 1.2,
                     fontWeight: FontWeight.w800,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                     color: winning || live
                         ? interfaceColor(context, Colors.white)
                         : interfaceColor(context, Colors.white70)))
@@ -4803,15 +4806,18 @@ class _GameCardState extends State<_GameCard> {
                             Expanded(
                                 flex: 2,
                                 child: Text(
-                                    g.league.kind == SportsKind.tennis
-                                        ? '${g.league.shortName} · ${g.event?.session ?? 'Singles'}'
-                                        : isFormulaOne(g)
-                                            ? 'F1 · ${g.event?.session ?? 'Session'}'
-                                            : '${g.league.shortName} · ${leagueDescription(g.league)}',
+                                    (g.league.kind == SportsKind.tennis
+                                            ? '${g.league.shortName} · ${g.event?.session ?? 'Singles'}'
+                                            : isFormulaOne(g)
+                                                ? 'F1 · ${g.event?.session ?? 'Session'}'
+                                                : '${g.league.shortName} · ${leagueDescription(g.league)}')
+                                        .toUpperCase(),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                        fontSize: 10.5,
+                                        fontSize: 11,
+                                        letterSpacing: .8,
+                                        fontWeight: FontWeight.w700,
                                         color: interfaceColor(
                                             context, Colors.white60)))),
                             const SizedBox(width: 5),
@@ -4885,8 +4891,8 @@ class _GameCardState extends State<_GameCard> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
                                       color: interfaceColor(
                                           context, Colors.white))),
                             ),
@@ -4916,7 +4922,8 @@ class _GameCardState extends State<_GameCard> {
                               style: TextStyle(
                                   fontSize: dense ? 9.5 : 10,
                                   height: 1.1,
-                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: .3,
+                                  fontWeight: FontWeight.w600,
                                   color: interfaceColor(
                                       context, Colors.white60))),
                         const Spacer(),
@@ -4954,8 +4961,8 @@ class _GameCardState extends State<_GameCard> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
                                           color:
                                               widget.match?.isConfident == true
                                                   ? scheme.onSurface
