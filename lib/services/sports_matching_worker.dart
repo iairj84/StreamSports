@@ -21,6 +21,12 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
   Object? _discoveryCatalogueKey;
   DateTime? _discoveryCatalogueAt;
   List<Channel>? _discoveryChannels;
+  // First-open overlap: prepare starts discovery without awaiting it, and the
+  // first match batches share that flight instead of rescanning. Completed
+  // results are version-keyed so later batches skip the scan entirely.
+  Future<List<SportsGame>?>? _discoveryInFlight;
+  Object? _discoveryCompletedKey;
+  List<SportsGame>? _discoveryCompletedGames;
 
   Isolate? _worker;
   ReceivePort? _messages, _faults;
@@ -284,17 +290,19 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
           _guideStatuses.clear();
           _searchCache.clear();
         }
+        // Start discovery alongside the index so it overlaps instead of
+        // extending first paint, but do not await it: the first match batches
+        // share the flight (or its cached result) through _sharedLightGuide.
         final discovery = !_guideOnly && onGuideProgress != null
-            ? _discoverLightGuide(onProgress: onGuideProgress)
-                .then<void>((_) {}, onError: (Object error, StackTrace stack) {
-                // Optional early coverage cannot prevent ordinary matching.
-                debugPrint('Sports early guide: ${error.runtimeType}');
-              })
+            ? _sharedLightGuide(onProgress: onGuideProgress)
             : null;
-        try {
-          await _ensureIndex(onStatus);
-        } finally {
-          await discovery;
+        await _ensureIndex(onStatus);
+        if (discovery != null) {
+          unawaited(discovery.then<void>((_) {},
+              onError: (Object error, StackTrace stack) {
+            // Optional early coverage cannot prevent ordinary matching.
+            debugPrint('Sports early guide: ${error.runtimeType}');
+          }));
         }
       }, barrier: true);
 
@@ -314,20 +322,15 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       }
     }
     await _request('beginIndex', _diskCachePath);
-    // Bounded copies avoid a single 80k-object send pausing the UI isolate.
-    for (var i = 0; i < _channels.length; i += 512) {
+    // Bounded record batches avoid a single giant send pausing the UI
+    // isolate. Only the fields the worker-side index reads cross over; the
+    // UI keeps the original channel objects and swaps them back on restore.
+    for (var i = 0; i < _channels.length; i += 1024) {
       progress.report(SportsWorkStage.channels,
           completed: i, total: _channels.length);
       await _request('indexChunk', [
-        for (final c in _channels.skip(i).take(512))
-          Channel(
-              id: c.id,
-              rawId: c.rawId,
-              playlistId: '',
-              name: c.name,
-              group: c.group,
-              url: '',
-              epgIdOverride: c.epgId)
+        for (final c in _channels.skip(i).take(1024))
+          (c.id, c.rawId, c.name, c.group, c.epgId)
       ]);
       await Future<void>.delayed(Duration.zero);
     }
@@ -523,6 +526,32 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       (value as Map<String, List<ChannelMatch>>)
           .map((key, matches) => MapEntry(key, matches.map(_restore).toList()));
 
+  /// Collapse every concurrent discovery scan onto one flight: prepare,
+  /// match batches and the discovery fallback all share the in-flight scan
+  /// (or its version-keyed result) instead of each rescanning the guide.
+  /// Callers only waiting for the outcome still get the final games; the
+  /// first caller's progress callback streams the intermediate updates.
+  Future<List<SportsGame>?> _sharedLightGuide(
+      {void Function(SportsGuideDiscovery)? onProgress}) {
+    final inFlight = _discoveryInFlight;
+    if (inFlight != null) {
+      Object currentKey() => (
+            _preparedFor,
+            _source.changeRevision,
+            _source.currentGuideRevision,
+            _source.lastUpdated,
+          );
+      final version = currentKey();
+      return inFlight.then((games) => version == currentKey() ? games : null);
+    }
+    final future = _discoverLightGuide(onProgress: onProgress);
+    _discoveryInFlight = future;
+    void clear() {
+      if (identical(_discoveryInFlight, future)) _discoveryInFlight = null;
+    }
+    return future.whenComplete(clear);
+  }
+
   Future<List<SportsGame>?> _discoverLightGuide(
       {void Function(SportsGuideDiscovery)? onProgress}) async {
     // Small catalogues finish their normal index quickly; a second isolate
@@ -534,7 +563,6 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
         ? (Stopwatch()..start())
         : null;
     if (_closed) throw StateError('Sports matcher disposed');
-    final guideSlice = await _readGuideSlice();
     Object sourceKey() => (
           _preparedFor,
           _source.changeRevision,
@@ -542,6 +570,8 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
           _source.lastUpdated,
         );
     final version = sourceKey();
+    if (_discoveryCompletedKey == version) return _discoveryCompletedGames;
+    final guideSlice = await _readGuideSlice();
     // Current/next eligibility can only shrink as time advances over the same
     // rows. Keep this bounded superset until rows/catalogue change; snapshots
     // still expire at programme boundaries. A clock correction must rebuild it.
@@ -592,9 +622,13 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       debugPrint('IPTV_SPORTS guide_prepared ms=${audit.elapsedMilliseconds}');
     }
     if (version != sourceKey()) return null;
-    return worker.discoverGuideEvents(onProgress: (update) {
+    final games = await worker.discoverGuideEvents(onProgress: (update) {
       if (version == sourceKey()) onProgress?.call(update);
-    }).then((games) => version == sourceKey() ? games : null);
+    });
+    if (version != sourceKey()) return null;
+    _discoveryCompletedKey = version;
+    _discoveryCompletedGames = games;
+    return games;
   }
 
   @override
@@ -603,7 +637,7 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
           void Function(SportsGuideDiscovery)? onProgress}) =>
       _run(() async {
         try {
-          final early = await _discoverLightGuide(onProgress: onProgress);
+          final early = await _sharedLightGuide(onProgress: onProgress);
           if (early != null) return early;
         } catch (error) {
           if (_closed) rethrow;
@@ -650,7 +684,7 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
         if (discoverInMatcher) {
           try {
             final games =
-                await _discoverLightGuide(onProgress: onGuideProgress);
+                await _sharedLightGuide(onProgress: onGuideProgress);
             if (games != null) {
               onGuideEvents?.call(games);
               discoverInMatcher = false;
@@ -783,7 +817,7 @@ class _WorkerGuide implements SportsMatchGuide {
   // Snapshot turnover changes current-programme evidence, not the stored
   // schedule. SQL result caches can survive that turnover within their window.
   int queryRevision = 0;
-  String? fingerprint;
+  int? fingerprint;
   int? fingerprintRevision;
   bool diskCacheAllowed = false;
   @override
@@ -862,7 +896,21 @@ void _sportsWorkerMain(SendPort host) {
                   SportsChannelTextCache(File('$value.channel-text-v1'));
             }
           case 'indexChunk':
-            channels.addAll(value as List<Channel>);
+            // Compact records: only the fields the worker-side index reads.
+            // Reconstruction matches the previous full-object transfer field
+            // for field (playlist/url already arrived stripped).
+            for (final record in value as List) {
+              final (id, rawId, name, group, epgId) =
+                  record as (String, String, String, String, String);
+              channels.add(Channel(
+                  id: id,
+                  rawId: rawId,
+                  playlistId: '',
+                  name: name,
+                  group: group,
+                  url: '',
+                  epgIdOverride: epgId));
+            }
           case 'finishGuideIndex':
             await _prepareGuideCatalogue(matcher, channels);
             channels = [];
@@ -900,9 +948,13 @@ void _sportsWorkerMain(SendPort host) {
             previousNext = const {};
           case 'endGuideSnapshot':
             guide.diskCacheAllowed = value == true;
-            final digest = _DigestSink();
-            final sink = sha256.startChunkedConversion(digest);
-            sink.add(utf8.encode('${guide.lastUpdated}'));
+            // Rolling hash over the same evidence the old SHA-256 digest
+            // covered. Only compared against the previous in-memory
+            // snapshot, so cross-run digest stability is not required; this
+            // avoids a JSON encode plus hash update per programme row on
+            // every snapshot turnover.
+            var fingerprint =
+                Object.hash(guide.lastUpdated, guide.queryRevision);
             final changed = <String>{};
             var synopsisChanged = false;
             bool synopsis(EpgProgram? p) {
@@ -936,15 +988,15 @@ void _sportsWorkerMain(SendPort host) {
                     changedRow(entry.key, old, p);
                   }
                 }
-                sink.add(utf8.encode(jsonEncode([
-                  entry.key,
-                  p.channelId,
-                  p.title,
-                  p.description,
-                  p.start.millisecondsSinceEpoch,
-                  p.stop.millisecondsSinceEpoch,
-                  p.isLive
-                ])));
+                fingerprint = Object.hash(
+                    fingerprint,
+                    entry.key,
+                    p.channelId,
+                    p.title,
+                    p.description,
+                    p.start.millisecondsSinceEpoch,
+                    p.stop.millisecondsSinceEpoch,
+                    p.isLive);
               }
               if (!resetEvidence) {
                 for (final entry in previous.entries) {
@@ -953,10 +1005,8 @@ void _sportsWorkerMain(SendPort host) {
                   }
                 }
               }
-              sink.add([0]);
+              fingerprint = Object.hash(fingerprint, 0);
             }
-            sink.close();
-            final fingerprint = digest.value.toString();
             if (guide.fingerprint != fingerprint ||
                 guide.fingerprintRevision != guide.queryRevision) {
               guide.changeRevision++;
