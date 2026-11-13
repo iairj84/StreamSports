@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.40 — 13 November 2026
+
+- The Sports loading line now shows live seconds per stage, so a slow device reports whether its minute goes to indexing, guide reading or matching. The single-worker fallback now only applies below 2GB, so 3GB-class TV boxes get the faster overlapped path.
+
 ## 0.2.39 — 13 November 2026
 
 - Sports first opens on memory-constrained TV boxes no longer risk a memory-pressure kill (and full restart) of the match: these devices now match on a single worker instead of running a second discovery isolate alongside it, returning the same results with roughly half the peak memory.
