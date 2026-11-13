@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.33 — 13 November 2026
+
+- Sports cards get a consistent type ramp: uppercase letterspaced league labels, bolder team names and event titles, tabular scores that never reflow as the game updates, and a stronger channel action.
+
 ## 0.2.32 — 13 November 2026
 
 - Settings > Theme gains a Surface section: Modern rounds rows, cards, guide blocks and dialogs and softens focus to a thin border with a glow, while Classic keeps the current flat look.
