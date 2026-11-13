@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
@@ -42,14 +44,20 @@ class LiveBuffer {
     if (!_supported) return;
     final live = Channel.isLiveId(channel.rawId);
     try {
+      // Never park tuning on the native side: a dropped message must
+      // degrade to the default reserve, not a permanent spinner. This
+      // also keeps widget tests (no native port) moving instead of
+      // hanging on an unanswered channel.
       await _methods.invokeMethod<void>('setLiveBuffer', {
         'playerId': SubtitleTracks.playerIdOf(controller),
         'ms': live ? ms : 0,
-      });
+      }).timeout(const Duration(seconds: 2));
     } on MissingPluginException {
       // A native build without the port retains its buffering policy.
     } on PlatformException catch (e) {
       debugPrint('LiveBuffer: player configuration failed (${e.code})');
+    } on TimeoutException {
+      debugPrint('LiveBuffer: player configuration timed out');
     }
   }
 }

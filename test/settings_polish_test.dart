@@ -92,6 +92,22 @@ void main() {
     playlist.dispose();
     guide.dispose();
   });
+  /// The settings lists are lazily built: tiles below the fold do not
+  /// exist yet on short screens, so ensureVisible (which needs an element)
+  /// throws while the tile is still unbuilt. Drag from mid-screen until the
+  /// tile exists, then reveal it normally. dragFrom needs no scrollable
+  /// finder, which is ambiguous here (nested scrollables).
+  Future<void> revealTile(
+      WidgetTester tester, Finder tile, Size size) async {
+    final center = Offset(size.width / 2, size.height / 2);
+    for (var i = 0; i < 30 && tile.evaluate().isEmpty; i++) {
+      await tester.dragFrom(center, const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+  }
+
   Future<void> open(WidgetTester tester, Widget page, Size size,
       {double scale = 1}) async {
     tester.view.physicalSize = size;
@@ -125,16 +141,15 @@ void main() {
       await open(tester, const SettingsMenuScreen(), size);
       expect(find.text('Your TV'), findsOneWidget);
       expect(find.textContaining('noxqcx'), findsNothing);
-      await tester.ensureVisible(find.text('Playback & preferences'));
-      await tester.pumpAndSettle();
+      await revealTile(tester, find.text('Playback & preferences'), size);
       await tester.tap(find.text('Playback & preferences'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Playback at startup'));
-      await tester.pumpAndSettle();
+      await revealTile(tester, find.text('Playback at startup'), size);
       await tester.tap(find.text('Playback at startup'));
       await tester.pumpAndSettle();
       expect(find.text('Do not play automatically'), findsWidgets);
       expect(tester.takeException(), isNull);
+      // Dialog content is not lazily built: once open, the option exists.
       await tester.ensureVisible(find.text('Full screen'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Full screen'));
@@ -288,7 +303,8 @@ void main() {
       (tester) async {
     await open(tester, const GeneralSettingsScreen(), const Size(390, 844));
     expect(find.text('Media Hub'), findsNothing);
-    await tester.ensureVisible(find.text('Watch multiple channels'));
+    await revealTile(
+        tester, find.text('Watch multiple channels'), const Size(390, 844));
     final tile = tester.widget<TvSwitchListTile>(find.ancestor(
         of: find.text('Watch multiple channels'),
         matching: find.byType(TvSwitchListTile)));

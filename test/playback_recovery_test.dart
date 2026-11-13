@@ -111,6 +111,12 @@ void main() {
         .setMockMessageHandler(
             'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
             (_) async => const StandardMessageCodec().encodeMessage([null]));
+    // The tune path configures the native live buffer per player. Answer
+    // immediately so tunes complete on pumped fake time instead of parking
+    // on (or outliving the test past) the configure call.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler('vespertv/live_buffer', (_) async =>
+            const StandardMethodCodec().encodeSuccessEnvelope(null));
   });
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -140,6 +146,32 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump();
+    // The tune settles 250 ms after the ready frame; a trailing window
+    // guarantees it fires inside this helper instead of after the expects.
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+
+  /// Pump until [task] completes. The tune path parks on frames
+  /// ([SchedulerBinding.endOfFrame]) and short fake timers that fixed pumps
+  /// can strand between windows: the frame runs, the timer lands past the
+  /// pumped window, and a bare await never wakes up. Bounded so a genuine
+  /// hang still surfaces instead of stalling the suite.
+  Future<void> settleTask(WidgetTester tester, Future<void>? task) async {
+    if (task == null) return;
+    var done = false;
+    unawaited(Future(() async {
+      try {
+        await task;
+      } catch (_) {
+        // The final await below surfaces the error to the test.
+      } finally {
+        done = true;
+      }
+    }));
+    for (var i = 0; i < 1200 && !done; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await task;
   }
 
   playerTestWidgets(
@@ -161,7 +193,7 @@ void main() {
     expect(next.value.volume, .3);
     await ready(tester, next);
     await tester.pump(const Duration(seconds: 1));
-    await reconnect;
+    await settleTask(tester, reconnect);
     expect(next.plays, 1);
     expect(playback.error, isNull);
     expect(playback.reconnectStatus, isNull);
@@ -170,16 +202,16 @@ void main() {
       (tester) async {
     playback.currentChannel = channel('old');
     playback.controller = FakePlayer('old', log)..failRelease = true;
-    await playback.play(channel('new'));
+    await settleTask(tester, playback.play(channel('new')));
     expect(playback.created, isEmpty);
     expect(playback.error, contains('previous player could not close'));
     expect(playback.health.value.phase, StreamPhase.failed);
   });
   playerTestWidgets('late old-channel errors cannot overwrite the new channel',
       (tester) async {
-    await playback.play(channel('a'));
+    await settleTask(tester, playback.play(channel('a')));
     final a = playback.created.last;
-    await playback.play(channel('b'));
+    await settleTask(tester, playback.play(channel('b')));
     final b = playback.created.last;
     a.ready.completeError(StateError('old channel failure'));
     await tester.pump();
@@ -202,8 +234,8 @@ void main() {
     await tester.pump();
     expect(playback.created, isEmpty);
     old.release!.complete();
-    await first;
-    await second;
+    await settleTask(tester, first);
+    await settleTask(tester, second);
     expect(playback.created, hasLength(1));
     expect(playback.created.single.name, 'b');
     await ready(tester, playback.created.single);
@@ -215,12 +247,12 @@ void main() {
     playback.controller = FakePlayer('old', log);
     final reconnect = playback.reloadCurrentChannel();
     await tester.pump();
-    await playback.play(channel('new'));
+    await settleTask(tester, playback.play(channel('new')));
     final next = playback.created.single;
     await ready(tester, next);
     await tester.pump(const Duration(seconds: 3));
     await tester.pump(const Duration(seconds: 1));
-    await reconnect;
+    await settleTask(tester, reconnect);
     expect(playback.created, hasLength(1));
     expect(playback.currentChannel!.rawId, 'new');
     expect(playback.error, isNull);
@@ -228,7 +260,7 @@ void main() {
   playerTestWidgets(
       'opening timeout releases the stream and surfaces a real timeout',
       (tester) async {
-    await playback.play(channel('slow'));
+    await settleTask(tester, playback.play(channel('slow')));
     final slow = playback.created.single;
     await tester.pump(const Duration(seconds: 30));
     await tester.pump();
@@ -259,8 +291,8 @@ void main() {
       expect(playback.created, isEmpty,
           reason: 'A new decoder must still wait for release');
       released.complete();
-      await parking;
-      await newer;
+      await settleTask(tester, parking);
+      await settleTask(tester, newer);
       if (supersede == 'none') {
         expect(playback.pendingResumeChannel?.rawId, 'old');
       } else {
@@ -276,9 +308,9 @@ void main() {
 
   playerTestWidgets('stop cancels pending opens without a late error',
       (tester) async {
-    await playback.play(channel('old'));
+    await settleTask(tester, playback.play(channel('old')));
     final old = playback.created.single;
-    await playback.stop();
+    await settleTask(tester, playback.stop());
     old.ready.completeError(StateError('closed'));
     await tester.pump();
     expect(playback.currentChannel, isNull);
