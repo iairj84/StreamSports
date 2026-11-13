@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'models/channel.dart';
 import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
@@ -21,6 +22,7 @@ import 'services/epg_service.dart';
 import 'services/persistent_image_cache.dart';
 import 'services/playback_service.dart';
 import 'services/playlist_manager.dart';
+import 'services/sports_channel_matcher.dart';
 import 'services/storage_service.dart';
 import 'utils/playback_buffer.dart';
 
@@ -212,6 +214,10 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
           _playlistManager.whenRestored.then((_) => _autoResumeLastChannel()),
           _epgService.init(),
         ]);
+        // Index the sports catalogue while the user is elsewhere: the first
+        // Sports visit then matches instead of indexing tens of thousands of
+        // channels. Content-keyed preparation reuses this work.
+        unawaited(_warmSportsMatcher());
         _epgService.startAutoRefresh(
             _storage.getRefreshInterval(), _epgSources);
         // Settings > General: an opt-in launch refresh of every playlist (and
@@ -298,6 +304,35 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
 
   /// Sources for the normal programme-guide refresh.
   List<EpgSource> _epgSources() => _playlistManager.epgSources();
+
+  /// Background sports index warmup: same channel order the Sports hub
+  /// itself would pass (preferred playlist first), so its preparation is
+  /// reused instead of rebuilt. Never blocks startup; failures just leave
+  /// the hub to index on first open as before.
+  Future<void> _warmSportsMatcher() async {
+    try {
+      await _playlistManager.ensureLiveChannelsLoaded();
+      final preferred = _storage.getSportsPreferredPlaylistId();
+      final List<Channel> first = preferred == null
+          ? const []
+          : _playlistManager.visibleChannels(
+              playlistId: preferred, category: 'tv');
+      final seen = {for (final c in first) c.id};
+      final channels = first.isEmpty
+          ? _playlistManager.visibleLiveChannels
+          : [
+              ...first,
+              for (final c in _playlistManager.visibleLiveChannels)
+                if (!seen.contains(c.id)) c,
+            ];
+      if (channels.isEmpty) return;
+      final matcher = SportsChannelMatcher.shared(_epgService);
+      await matcher.prepare(channels);
+      await matcher.primeGuide();
+    } catch (e) {
+      debugPrint('Sports warmup: ${e.runtimeType}');
+    }
+  }
 
   /// Settings > General's "Update playlists at startup": re-fetch each enabled
   /// playlist from its provider, then refresh the guide. A playlist update is

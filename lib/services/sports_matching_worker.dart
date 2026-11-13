@@ -254,7 +254,9 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
         final slice = Stopwatch()..start();
         for (var i = 0; i < channels.length; i++) {
           final c = channels[i];
-          hash = Object.hash(hash, identityHashCode(c), c.epgId);
+          // Content, not object identity: a background warmup must be
+          // reusable once the UI passes freshly loaded equivalents.
+          hash = Object.hash(hash, c.id, c.epgId, c.name, c.group, c.url);
           if (i % 256 == 0 && slice.elapsedMilliseconds >= 2) {
             await Future<void>.delayed(Duration.zero);
             slice.reset();
