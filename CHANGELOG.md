@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.37 — 13 November 2026
+
+- The Sports Hub index now warms up in the background after startup, so the first visit on large providers matches immediately instead of sitting on "Waiting for guide" for a minute.
+
 ## 0.2.36 — 13 November 2026
 
 - The Sports Hub no longer restarts matching on guide ticks that change nothing, and it matches on in-memory listings instead of stalling when a heavy EPG refresh holds the database.
