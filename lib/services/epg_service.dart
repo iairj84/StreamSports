@@ -61,6 +61,28 @@ Map<String, List<EpgProgram>> _toPrograms(Map<String, List<EpgRow>> rows) =>
 /// time, the earlier programme keeps its slot; a later one that starts
 /// inside it is trimmed to begin when it ends, or dropped if it ends
 /// inside it too.
+/// What the UI and sports matching actually consume from a now/next slice:
+/// each channel's current and next programme identity. Periodic cache
+/// reloads compare this instead of blindly notifying, so a tick that
+/// changes nothing cannot restart sports matching or rebuild the guide.
+int _soonEvidence(Map<String, List<EpgProgram>> soon, DateTime now) {
+  final parts = <Object?>[soon.length];
+  for (final entry in soon.entries) {
+    final current = programmeAt(entry.value, now);
+    final next = nextProgrammeAfter(entry.value, now);
+    parts.add(entry.key);
+    parts.add(current == null
+        ? null
+        : (current.title, current.start.millisecondsSinceEpoch,
+            current.stop.millisecondsSinceEpoch));
+    parts.add(next == null
+        ? null
+        : (next.title, next.start.millisecondsSinceEpoch,
+            next.stop.millisecondsSinceEpoch));
+  }
+  return Object.hashAll(parts);
+}
+
 List<EpgProgram> _untangle(List<EpgRow> rows) {
   final sorted = [...rows]..sort((a, b) => a.startMs.compareTo(b.startMs));
   final out = <EpgProgram>[];
@@ -275,15 +297,18 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
     }
     if (_disposed) return;
     _soonTimer = Timer.periodic(_soonReloadEvery, (_) async {
-      await _reloadCaches();
-      notifyListeners();
+      // Most ticks change nothing the UI or matching consumes — a blind
+      // notify here used to restart sports matching every 15 minutes.
+      if (await _reloadCaches()) notifyListeners();
     });
     notifyListeners();
   }
 
   /// Reloads [_soon]/[_withData]. Later reloads invalidate [_full]; startup
-  /// retains visible rows already read from the same database.
-  Future<void> _reloadCaches({bool initial = false}) async {
+  /// retains visible rows already read from the same database. Returns
+  /// whether any now/next evidence actually changed — callers only notify
+  /// (and so restart matching) when it did.
+  Future<bool> _reloadCaches({bool initial = false}) async {
     final epoch = _cacheEpoch;
     final now = DateTime.now();
     Set<String>? available;
@@ -291,7 +316,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
       // Publish the small channel directory first. Visible guide rows can use
       // indexed, bounded reads while the all-channel now/next snapshot loads.
       available = await _db.channelIdsWithData(now.millisecondsSinceEpoch);
-      if (_disposed || epoch != _cacheEpoch) return;
+      if (_disposed || epoch != _cacheEpoch) return false;
       _initialDirectoryPending = false;
       _withData = available;
       // Availability changed, but no programme evidence has been replaced.
@@ -304,7 +329,14 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
     final converted = soon.length < 128
         ? _toPrograms(soon)
         : await compute(_toPrograms, soon);
-    if (_disposed || (initial && epoch != _cacheEpoch)) return;
+    if (_disposed || (initial && epoch != _cacheEpoch)) return false;
+    if (!initial &&
+        setEquals(_withData, withData) &&
+        _soonEvidence(_soon, now) == _soonEvidence(converted, now)) {
+      // Same channels, same current/next programmes: leave the caches —
+      // and every listener's matching work — alone.
+      return false;
+    }
     _soon = converted;
     _withData = withData;
     // Early visible rows came from this same database. Retain them and their
@@ -313,6 +345,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
       _full.clear();
       _cacheEpoch++;
     }
+    return true;
   }
 
   /// (Re)starts auto-refresh every [minutes], refreshing every source
@@ -422,6 +455,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   Future<void> _runRefresh(List<EpgSource> sources, {String? portalId}) async {
     isLoading = true;
     refreshStatus = 'Updating playlist guides…';
+    var evidenceChanged = false;
     _notifyStatus();
     try {
       await init();
@@ -460,7 +494,9 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
               'A portal guide could not be updated. Existing listings have been kept.');
         }
       }
-      await _reloadCaches();
+      // Only evidence changes restart matching — a refresh whose data is
+      // identical still reports status/errors, but must not churn the hub.
+      evidenceChanged = await _reloadCaches();
       final extras = portalId == null
           ? await supplementarySources?.call() ?? const <EpgSource>[]
           : const <EpgSource>[];
@@ -475,10 +511,10 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
         if (count != null) anySucceeded = true;
         if (error != null) failures.add(error!);
       }
-      if (extras.isNotEmpty) await _reloadCaches();
+      if (extras.isNotEmpty) evidenceChanged |= await _reloadCaches();
       if (portalId == null && onGuidesRefreshed != null) {
         final paired = await onGuidesRefreshed!();
-        if (paired > 0) await _reloadCaches();
+        if (paired > 0) evidenceChanged |= await _reloadCaches();
       }
       if (portalId == null) await onSupplementaryGuidesUpdated?.call();
       error = failures.isEmpty ? null : failures.first;
@@ -497,7 +533,12 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
     } finally {
       refreshStatus = null;
       isLoading = false;
-      notifyListeners();
+      if (evidenceChanged) {
+        notifyListeners();
+      } else {
+        // Status and errors still reach the UI; matching keeps its work.
+        _notifyStatus();
+      }
     }
   }
 

@@ -476,6 +476,11 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
         : nextProgrammeAfter(rows, at);
   }
 
+  /// How long the hub waits for its own guide slice before matching on
+  /// what is already in memory. A heavy EPG refresh holds the database
+  /// with programme inserts; without a bound the hub stalls behind it.
+  static const _guideSliceTimeout = Duration(seconds: 10);
+
   /// The now/next rows for this matcher's guide ids, cached until the guide's
   /// own revisions change. Never waits for the all-channel preload.
   Future<Map<String, List<EpgProgram>>> _readGuideSlice() async {
@@ -491,7 +496,17 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
     );
     final cached = _guideSlice;
     if (cached != null && key == _guideSliceKey) return cached;
-    final slice = await _source.sportsGuideSlice(_guideIds);
+    Map<String, List<EpgProgram>> slice;
+    try {
+      slice = await _source.sportsGuideSlice(_guideIds).timeout(
+            _guideSliceTimeout);
+    } on TimeoutException {
+      // The store is busy with a refresh. Match on the in-memory guide
+      // instead of stalling, and leave the key unset so the next pass
+      // retries the read once the database is free.
+      debugPrint('Sports guide slice timed out; matching on memory');
+      return const {};
+    }
     _guideSlice = slice;
     _guideSliceKey = key;
     return slice;

@@ -421,12 +421,11 @@ class _SportsScreenState extends State<SportsScreen>
 
   var _matchSession = SportsMatchSession();
   Object get _guideVersion {
+    // Evidence revisions only: a refresh that changes nothing (same
+    // programmes) must not invalidate coverage, even though lastUpdated
+    // advances. Freshness across restarts still keys the browse cache.
     final guide = context.read<EpgService>();
-    return (
-      guide.changeRevision,
-      guide.currentGuideRevision,
-      guide.lastUpdated
-    );
+    return (guide.changeRevision, guide.currentGuideRevision);
   }
 
   Object get _browseCacheKey => (
@@ -1031,7 +1030,6 @@ class _SportsScreenState extends State<SportsScreen>
       playlist.liveRevision,
       guide.changeRevision,
       guide.currentGuideRevision,
-      guide.lastUpdated,
       _matchSession.identities
     );
   }

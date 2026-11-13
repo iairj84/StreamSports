@@ -12,6 +12,59 @@ import 'package:nox_iptv/utils/guide_enrichment.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('repeat refreshes only restart matching when evidence changes',
+      () async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final dir = await Directory.systemTemp.createTemp('guide-idempotent-');
+    const pathChannel = MethodChannel('plugins.flutter.io/path_provider');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(pathChannel, (_) async => dir.path);
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    final epg = EpgService(storage);
+    addTearDown(() async {
+      epg.dispose();
+      messenger.setMockMethodCallHandler(pathChannel, null);
+      await databaseFactory.deleteDatabase('${dir.path}/vesper_epg.db');
+      await dir.delete(recursive: true);
+    });
+    final now = DateTime.now().toUtc();
+    String stamp(DateTime d) =>
+        '${d.toIso8601String().replaceAll(RegExp(r'[-:T]'), '').substring(0, 14)} +0000';
+    var title = 'Live programme';
+    String xml() =>
+        '<tv><programme channel="solo" start="${stamp(now.subtract(const Duration(hours: 1)))}" stop="${stamp(now.add(const Duration(hours: 1)))}"><title>$title</title></programme></tv>';
+    epg.startAutoRefresh(
+        360,
+        () => [
+              const EpgSource(
+                  url: 'https://example.invalid/solo',
+                  knownChannelIds: {'solo'})
+            ]);
+    await http.runWithClient(() async {
+      await epg.refreshAll();
+      expect(epg.getCurrentProgram('solo')?.title, 'Live programme');
+      final revision = epg.changeRevision;
+      var notifications = 0;
+      epg.addListener(() => notifications++);
+      // Identical data: status is reported, but the revision sports
+      // matches on must not move.
+      await epg.refreshAll();
+      expect(epg.getCurrentProgram('solo')?.title, 'Live programme');
+      expect(epg.changeRevision, revision);
+      expect(epg.isLoading, isFalse);
+      expect(epg.error, isNull);
+      // Changed data restarts matching exactly once per refresh.
+      title = 'Updated programme';
+      await epg.refreshAll();
+      expect(epg.getCurrentProgram('solo')?.title, 'Updated programme');
+      expect(epg.changeRevision, greaterThan(revision));
+      expect(notifications, greaterThan(0));
+    }, () => MockClient((_) async => http.Response(xml(), 200)));
+  });
   test(
       'primary commits before supplements; busy refresh coalesces and failures keep data',
       () async {
