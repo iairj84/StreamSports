@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.41 — 13 November 2026
+
+- Sports first opens are faster again: the channel index no longer JSON-encodes and hashes every catalogue row just to fingerprint it, which was seconds of single-threaded work on TV boxes on every cold build.
+
 ## 0.2.40 — 13 November 2026
 
 - The Sports loading line now shows live seconds per stage, so a slow device reports whether its minute goes to indexing, guide reading or matching. The single-worker fallback now only applies below 2GB, so 3GB-class TV boxes get the faster overlapped path.
