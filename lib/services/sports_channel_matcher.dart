@@ -747,6 +747,11 @@ class SportsChannelMatcher {
 
   List<Channel> _channels = const [];
   List<String> _names = const [];
+  // Provider names underneath renames, normalized like [_names] ('' when the
+  // display name is already the provider's own). A rename must never blind
+  // the matcher: retrieval consults these too in [_channelsNaming].
+  List<String> _originalNames = const [];
+  bool _hasOriginalNames = false;
   // Name-only facts, filled lazily and replaced with every channel index.
   // Dates, game state and current program evidence are checked separately.
   Uint8List _channelNameFlags = Uint8List(0);
@@ -1025,6 +1030,8 @@ class SportsChannelMatcher {
     final byId = <String, int>{};
     final excluded = <int>{};
     final names = List<String>.filled(channels.length, '');
+    final originalNames = List<String>.filled(channels.length, '');
+    var hasOriginalNames = false;
     for (var i = 0; i < channels.length; i++) {
       if (i % 32 == 0 && slice.elapsedMilliseconds >= _workSliceMs) {
         progress.report(SportsWorkStage.channelIndex,
@@ -1033,8 +1040,8 @@ class SportsChannelMatcher {
         slice.reset();
       }
       final c = channels[i];
-      catalogueFingerprint = Object.hash(
-          catalogueFingerprint, c.id, c.rawId, c.name, c.group, c.epgId);
+      catalogueFingerprint = Object.hash(catalogueFingerprint, c.id, c.rawId,
+          c.name, c.originalName, c.group, c.epgId);
       final storedText = textCache?[c.name];
       if (storedText != null) reusedNames++;
       final norm = storedText?.$1 ?? _fixtureText(c.name);
@@ -1053,11 +1060,32 @@ class SportsChannelMatcher {
       textCache?.remember(c.name, norm, canon);
       if (canon.isNotEmpty) (byCanonical[canon] ??= <int>[]).add(i);
       (byEpgId[normalizeEpgId(c.epgId)] ??= <int>[]).add(i);
+      // The provider's own name stays searchable under a rename, with the
+      // same channel. Display, scoring and search keep the renamed name.
+      final original = c.originalName;
+      if (original != null) {
+        final onorm = _fixtureText(original);
+        if (onorm.isNotEmpty && onorm != norm) {
+          originalNames[i] = onorm;
+          hasOriginalNames = true;
+          for (final t in onorm.trim().split(' ')) {
+            if (t.length < 2) continue;
+            final list = tokenIndex[t] ??= <int>[];
+            if (list.isEmpty || list.last != i) list.add(i);
+          }
+          final ocanon = _networkKey(original);
+          if (ocanon.isNotEmpty && ocanon != canon) {
+            (byCanonical[ocanon] ??= <int>[]).add(i);
+          }
+        }
+      }
     }
     _catalogueFingerprint = catalogueFingerprint;
     // Publish a complete index atomically; concurrent callers await it.
     _channels = channels;
     _names = names;
+    _originalNames = originalNames;
+    _hasOriginalNames = hasOriginalNames;
     _channelNameFlags = Uint8List(names.length);
     _tokenIndex = tokenIndex;
     _byCanonical = byCanonical;
@@ -1391,8 +1419,13 @@ class SportsChannelMatcher {
   }
 
   /// Channel indexes whose name contains one of [phrases] as whole words.
+  /// Renamed channels are also reachable by the provider name underneath.
   Set<int> _channelsNaming(List<String> phrases) {
-    return _naming(phrases, _names, _tokenIndex);
+    final hits = _naming(phrases, _names, _tokenIndex);
+    if (_hasOriginalNames) {
+      hits.addAll(_naming(phrases, _originalNames, _tokenIndex));
+    }
+    return hits;
   }
 
   /// A date written in an event channel's name ("Oct 13", "13 Oct",
@@ -2614,20 +2647,26 @@ class SportsChannelMatcher {
         if (named.isEmpty) break;
       }
       final exact = <int>{};
+      // A rename must not hide a channel the provider named well: verify
+      // the pre-rename name too when the display name does not fit.
+      bool fitsName(String text) =>
+          !context.conflicts(g, text) &&
+          _opponentsFit(g, labelGroups, text, allowUnqualifiedCodes: true);
       for (final i in named ?? const <int>{}) {
         channelEvidence(i);
-        if (!_eligible(i, g) ||
-            context.conflicts(g, _names[i]) ||
-            !_opponentsFit(g, labelGroups, _names[i],
-                allowUnqualifiedCodes: true)) {
-          continue;
+        if (!_eligible(i, g)) continue;
+        var text = _names[i];
+        if (!fitsName(text)) {
+          final original = _originalNames[i];
+          if (original.isEmpty || !fitsName(original)) continue;
+          text = original;
         }
         if (g.league.kind == SportsKind.tennis &&
             !tennisProgrammeIsExact(
                 g,
                 EpgProgram(
                     channelId: '',
-                    title: _channels[i].name,
+                    title: text,
                     start: g.start,
                     stop: g.start.add(const Duration(hours: 12))))) {
           continue;
@@ -2642,7 +2681,7 @@ class SportsChannelMatcher {
                         .where((word) => word.length > 1)
                         .length >
                     1 &&
-                _names[i].contains(phrase)))
+                text.contains(phrase)))
             .length;
         add(i, MatchReason.name,
             420 + (hints.date != null ? 20 : 0) + fullNames * 10 + hints.bias);

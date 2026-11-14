@@ -32,6 +32,8 @@ Future<void> _prepareGuideCatalogue(
     }
   }
   matcher._channels = channels;
+  matcher._originalNames = List.filled(channels.length, '');
+  matcher._hasOriginalNames = false;
   matcher._byId = byId;
   matcher._byEpgId = byGuide;
   matcher._excluded = excluded;

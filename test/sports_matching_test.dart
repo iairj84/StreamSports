@@ -576,7 +576,20 @@ void main() {
           _channel('fallback', 'Sky Sports F1'),
           _channel('exact', 'Singapore Grand Prix - Race @ Oct 10'),
         ]);
-    expect(racing.first.channel.rawId, 'exact');
+          expect(racing.first.channel.rawId, 'exact');
+    });
+  test('a rename never blinds matching to the provider name', () async {
+    final renamed = _channel('renamed', 'Dad TV')
+      ..originalName = 'Boston Bruins vs Toronto Maple Leafs';
+    final result = await match(
+        _game(
+            league: 'nhl',
+            home: 'Boston Bruins',
+            away: 'Toronto Maple Leafs',
+            tournament: ''),
+        [renamed, _channel('other', 'Other TV')]);
+    expect(result.map((m) => m.channel.rawId), ['renamed']);
+    expect(result.single.reason, MatchReason.name);
   });
   test(
       'short surnames work in event names and the guide without losing the opponent',

@@ -1,4 +1,6 @@
 # Changelog
+## 0.2.48 — 15 November 2026
+- Live down and distance gets its own line on sports hub cards instead of sharing the crowded status row, so it can no longer be squeezed off the card. Renamed channels also stay findable: matching now falls back to the provider name underneath a rename when the display name does not fit.
 ## 0.2.47 — 15 November 2026
 - Live football cards no longer lose the down-and-distance line early in games: when ESPN has not composed the text yet, the app builds it from the numeric down and distance, and the short line is used when only that is present. Channel names also gain a Reset all renames button, restoring provider names everywhere for verifying matches.
 ## 0.2.46 — 15 November 2026

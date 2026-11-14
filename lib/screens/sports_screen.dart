@@ -4614,24 +4614,23 @@ class _GameCardState extends State<_GameCard> {
     final live = g.isLive;
     final showScore = g.state != GameState.pre && !widget.hideScores;
     final oddsLine = widget.showOdds ? sportsOddsLine(g.odds) : null;
-    var status = switch (g.state) {
+    final status = switch (g.state) {
       GameState.pre => _preLabel(g),
       GameState.live =>
         g.statusText.isEmpty ? tr('LIVE') : trSports(g.statusText),
       GameState.post =>
         g.statusText.isEmpty ? tr('Final') : trSports(g.statusText),
     };
-    // Live cards show who has the ball and the spot ("2nd & 7 at NE 32").
-    // Gated by hideScores so spoiler mode stays clean.
+    // Live cards show who has the ball and the spot ("2nd & 7 at NE 32")
+    // on its own line: appended to the status row it was ellipsized away
+    // next to the league label. Gated by hideScores so spoiler mode stays
+    // clean.
     final possessionId = live ? g.situation?.possessionTeamId : null;
-    if (g.state == GameState.live && !widget.hideScores) {
-      final progress = g.situation?.text;
-      if (progress != null &&
-          progress.isNotEmpty &&
-          !status.contains(progress)) {
-        status = '$status · $progress';
-      }
-    }
+    final liveProgress = live && !widget.hideScores
+        ? g.situation?.text?.trim()
+        : null;
+    final showProgress =
+        liveProgress != null && liveProgress.isNotEmpty;
 
     Widget teamLine(SportsTeam t, {required bool leading}) {
       final firstScore = int.tryParse(g.first.score ?? '');
@@ -4887,6 +4886,19 @@ class _GameCardState extends State<_GameCard> {
                             ),
                           ],
                         ),
+                        if (showProgress)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(liveProgress,
+                                key: ValueKey(
+                                    'game-progress-${widget.game.id}'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: interfaceColor(
+                                        context, Colors.white)))),
                         if (g.league.kind == SportsKind.tennis &&
                             g.event != null)
                           Padding(
