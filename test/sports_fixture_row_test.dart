@@ -138,4 +138,53 @@ void main() {
       expect(find.byType(SportsLogo), findsNWidgets(2));
     });
   }
+  testWidgets('live football card shows who has the ball', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SportsGame game() => SportsGame(
+        id: 'nfl-game',
+        league: sportsLeagueById('nfl')!,
+        start: DateTime(2026, 11, 10, 19),
+        state: GameState.live,
+        statusText: '3rd 04:12',
+        home: const SportsTeam(
+            id: 'ne',
+            name: 'New England Patriots',
+            shortName: 'Patriots',
+            abbreviation: 'NE',
+            score: '14'),
+        away: const SportsTeam(
+            id: 'buf',
+            name: 'Buffalo Bills',
+            shortName: 'Bills',
+            abbreviation: 'BUF',
+            score: '10'),
+        situation: const SportsSituation(
+            text: '2nd & 7 at NE 32', possessionTeamId: 'ne'));
+    Future<void> show(bool hidden) async {
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: Center(
+                  child: SizedBox(
+                      height: 76,
+                      child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: SportsFixtureRow(
+                              game: game(),
+                              time: '8:15 PM',
+                              hideScores: hidden,
+                              use24h: false)))))));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    }
+
+    await show(false);
+    expect(find.textContaining('2nd & 7 at NE 32'), findsOneWidget);
+    expect(find.byIcon(Icons.circle), findsOneWidget);
+    // Spoiler mode hides the score and the ball with it.
+    await show(true);
+    expect(find.textContaining('2nd & 7'), findsNothing);
+    expect(find.byIcon(Icons.circle), findsNothing);
+  });
 }

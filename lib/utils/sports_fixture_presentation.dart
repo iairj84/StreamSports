@@ -17,6 +17,16 @@ String sportsFixtureStatus(SportsGame game) =>
             ? 'Time to be confirmed'
             : 'Scheduled';
 
+/// Live line combining the clock with who has the ball and the spot:
+/// football down & distance ("2nd & 7 at NE 32"), baseball count/outs.
+String sportsLiveProgress(SportsGame game) {
+  final base = sportsFixtureStatus(game);
+  final sit = game.situation?.text;
+  if (sit == null || sit.isEmpty || base.contains(sit)) return base;
+  if (base.isEmpty) return sit;
+  return '$base · $sit';
+}
+
 /// A delayed or cancelled fixture is not a completed result.
 bool sportsFixtureCompleted(SportsGame game) =>
     game.state == GameState.post && !_changedFixture.hasMatch(game.statusText);

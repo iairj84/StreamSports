@@ -37,6 +37,8 @@ class SportsFixtureRow extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final showScore = !hideScores && game.state != GameState.pre;
     final insight = sportsFixtureInsight(game, hideScores: hideScores);
+    final possessionId =
+        game.isLive ? game.situation?.possessionTeamId : null;
     Widget team(SportsTeam side) => Row(children: [
           ExcludeSemantics(
               child: SportsLogo(
@@ -60,6 +62,16 @@ class SportsFixtureRow extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       height: 1.25))),
+          if (showScore &&
+              possessionId != null &&
+              possessionId == side.id)
+            ExcludeSemantics(
+                child: Tooltip(
+                    message: 'Possession',
+                    child: Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(Icons.circle,
+                            size: 7, color: colors.primary)))),
           const SizedBox(width: 8),
           Text(
               showScore
@@ -76,8 +88,11 @@ class SportsFixtureRow extends StatelessWidget {
         ]);
     final oddsLine = showOdds ? sportsOddsLine(game.odds) : null;
     final status = game.isLive ? 'LIVE' : sportsFixtureStatus(game);
+    // Live cards show who has the ball and the spot: football down &
+    // distance ("2nd & 7 at NE 32"), baseball count/outs/runners.
+    // Gated by hideScores so spoiler mode stays clean.
     final progress =
-        game.isLive && !hideScores ? sportsFixtureStatus(game) : null;
+        game.isLive && !hideScores ? sportsLiveProgress(game) : null;
     final sport = showSport ? game.league.espnPath.split('/').first : null;
     return Row(children: [
       SizedBox(

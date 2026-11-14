@@ -10,6 +10,7 @@ import '../services/sports_channel_matcher.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
 import '../utils/interface_colors.dart';
+import '../utils/sports_fixture_presentation.dart';
 import '../utils/time_format.dart';
 import 'sports_filter_picker.dart';
 
@@ -260,7 +261,9 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
 
   String _status(SportsGame game) {
     if (game.isLive) {
-      return game.statusText.isEmpty ? 'LIVE' : game.statusText;
+      // Clock plus who has the ball: "3rd 04:12 · 2nd & 7 at NE 32".
+      final progress = sportsLiveProgress(game);
+      return progress.isEmpty ? 'LIVE' : progress;
     }
     if (game.state == GameState.post) {
       return game.statusText.isEmpty ? 'Final' : game.statusText;
@@ -272,6 +275,10 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     final label =
         side.abbreviation.isEmpty ? side.shortName : side.abbreviation;
     final rank = side.rankLabel;
+    final possessionId =
+        game.isLive ? game.situation?.possessionTeamId : null;
+    final hasBall =
+        possessionId != null && possessionId == side.id;
     // Before kick-off a 0-0 is noise: the records are the useful line.
     final trailing = game.state == GameState.pre
         ? (side.record ?? '')
@@ -285,6 +292,15 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                   color: interfaceColor(context, Colors.white)))),
+      if (hasBall)
+        ExcludeSemantics(
+            child: Tooltip(
+                message: 'Possession',
+                child: Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Icon(Icons.circle,
+                        size: 7,
+                        color: Theme.of(context).colorScheme.primary)))),
       const SizedBox(width: 4),
       Text(trailing,
           style: TextStyle(

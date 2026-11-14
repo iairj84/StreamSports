@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.43 — 14 November 2026
+
+- Live sports cards now show who has the ball: football cards carry a possession dot plus down and distance ("3rd 04:12 · 2nd & 7 at NE 32"), and baseball cards show the count, outs, and runners. The player score cards show the same.
+
 ## 0.2.42 — 14 November 2026
 
 - Sports channels fill in faster on slow hardware: when the guide database is busy with a refresh, each check used to wait out the full read timeout again, stacking stalls back to back. The hub now backs off and matches on the in-memory guide instead, retrying the store once it is free.
