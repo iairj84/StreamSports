@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.42 — 14 November 2026
+
+- Sports channels fill in faster on slow hardware: when the guide database is busy with a refresh, each check used to wait out the full read timeout again, stacking stalls back to back. The hub now backs off and matches on the in-memory guide instead, retrying the store once it is free.
+
 ## 0.2.41 — 13 November 2026
 
 - Sports first opens are faster again: the channel index no longer JSON-encodes and hashes every catalogue row just to fingerprint it, which was seconds of single-threaded work on TV boxes on every cold build.
