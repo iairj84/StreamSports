@@ -115,6 +115,25 @@ void main() {
     expect(plan.rows.single.before, 'US: 002 | ESPN HD');
   });
 
+  test('resetting all renames clears every playlist at once', () async {
+    final storage = await _storage({
+      AppConstants.keyPlaylists:
+          '[{"id":"fixture","name":"Fixture","mode":"m3u","m3uUrl":"https://example.invalid/list.m3u"}]',
+      '${AppConstants.keyChannelNames}_fixture':
+          '{"one":"My ESPN","two":"My TSN"}',
+    });
+    ChannelRenames.bind(storage);
+    expect(await ChannelRenames.clearAll(storage), 2);
+    expect(storage.getChannelNames('fixture'), isEmpty);
+    expect(await ChannelRenames.clearAll(storage), 0);
+    // Loaded channels get provider names back on the next apply.
+    final channel = _channel('one', 'US: 001 | ESPN HD');
+    ChannelRenames.applyTo(channel, 'My ESPN');
+    ChannelRenames.apply([channel]);
+    expect(channel.name, 'US: 001 | ESPN HD');
+    expect(channel.originalName, isNull);
+  });
+
   test('clearing the overrides puts the provider names back', () async {
     final storage = await _storage({
       AppConstants.keyPlaylists:

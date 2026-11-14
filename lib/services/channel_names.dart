@@ -94,6 +94,20 @@ class ChannelRenames {
     return changed.length;
   }
 
+  /// Removes every rename override across all playlists, so provider names
+  /// return on the next apply. Returns how many overrides were cleared.
+  static Future<int> clearAll(StorageService storage) async {
+    bind(storage);
+    var cleared = 0;
+    for (final playlist in storage.getPlaylists()) {
+      if (storage.getChannelNames(playlist.id).isEmpty) continue;
+      cleared += storage.getChannelNames(playlist.id).length;
+      await storage.setChannelNames(playlist.id, const {});
+    }
+    _cache = null;
+    return cleared;
+  }
+
   /// Saves one channel's display name, or clears it with an empty [name].
   /// Returns true when something changed.
   static Future<bool> rename(

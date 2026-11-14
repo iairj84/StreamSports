@@ -90,6 +90,48 @@ class _ChannelNamesScreenState extends State<ChannelNamesScreen> {
             : tr('{n} channels renamed from your phone.', {'n': '$changed'}))));
   }
 
+  /// Removes every rename override after a confirm, restoring provider
+  /// names everywhere. The count in the prompt comes from stored overrides,
+  /// including ones Clean up names applied earlier.
+  Future<void> _resetRenames() async {
+    final storage = context.read<StorageService>();
+    var count = 0;
+    for (final playlist in storage.getPlaylists()) {
+      count += storage.getChannelNames(playlist.id).length;
+    }
+    if (!mounted) return;
+    if (count == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('No channel renames to reset.'))));
+      return;
+    }
+    final confirm = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+              title: Text(tr('Reset all renames?')),
+              content: Text(tr(
+                  'Remove all {n} channel renames and restore provider names everywhere? Matching uses the new names again from the next check.',
+                  {'n': '$count'})),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: Text(tr('Cancel'))),
+                FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: Text(tr('Reset'))),
+              ],
+            ));
+    if (confirm != true || !mounted) return;
+    final cleared = await ChannelRenames.clearAll(storage);
+    if (!mounted) return;
+    context.read<PlaylistManager>().applyChannelNames();
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(cleared == 1
+            ? tr('1 channel rename reset.')
+            : tr('{n} channel renames reset.', {'n': '$cleared'}))));
+  }
+
   Future<void> _rename(Channel channel) async {
     final controller = TextEditingController(text: channel.name);
     final providerName = channel.originalName;
@@ -180,6 +222,11 @@ class _ChannelNamesScreenState extends State<ChannelNamesScreen> {
                       builder: (_) => const ChannelNameCleanupScreen())),
                   icon: const Icon(Icons.auto_fix_high),
                   label: Text(tr('Clean up names')),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _resetRenames,
+                  icon: const Icon(Icons.restart_alt),
+                  label: Text(tr('Reset all renames')),
                 ),
               ]),
             ),

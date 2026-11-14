@@ -1,4 +1,6 @@
 # Changelog
+## 0.2.47 — 15 November 2026
+- Live football cards no longer lose the down-and-distance line early in games: when ESPN has not composed the text yet, the app builds it from the numeric down and distance, and the short line is used when only that is present. Channel names also gain a Reset all renames button, restoring provider names everywhere for verifying matches.
 ## 0.2.46 — 15 November 2026
 - Sports matching does less guide searching on busy days: team games now retrieve on one side of the matchup instead of every name, so a shared term serves both same-city games at once (each game still claims only its own listings). Guide searches also carry every stored form of each channel id, so mixed-case provider ids can no longer fall silently out of scope.
 ## 0.2.45 — 14 November 2026

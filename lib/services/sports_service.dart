@@ -1798,10 +1798,31 @@ List<SportsLeader> _scoreboardLeaders(
   return [for (final s in order) byStat[s]!.$1];
 }
 
+String? _nonEmptyText(Object? value) {
+  final text = value?.toString().trim();
+  return (text == null || text.isEmpty) ? null : text;
+}
+
+/// The composed down-and-distance line from a numeric down and distance,
+/// for live states where ESPN has not composed the text yet (early in a
+/// game the block carries down/distance but no text; down 0 is a kickoff
+/// with no down to show). Returns null outside downs 1-4.
+String? _syntheticDownDistance(Map raw) {
+  int? number(Object? value) =>
+      value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+  final down = number(raw['down']);
+  final distance = number(raw['distance']);
+  if (down == null || distance == null || down < 1 || down > 4) return null;
+  const ordinals = ['1st', '2nd', '3rd', '4th'];
+  return '${ordinals[down - 1]} & $distance';
+}
+
 SportsSituation? _situationOf(Object? raw, SportsLeague league) {
   if (raw is! Map) return null;
   final lastPlay = (raw['lastPlay'] as Map?)?['text']?.toString();
-  String? text = raw['downDistanceText']?.toString();
+  String? text = _nonEmptyText(raw['downDistanceText']) ??
+      _nonEmptyText(raw['shortDownDistanceText']) ??
+      _syntheticDownDistance(raw);
   if (text == null && raw['outs'] != null) {
     // Baseball: "1-2, 2 out · 1st, 3rd".
     bool on(String k) => raw[k] == true || raw[k] is Map;
