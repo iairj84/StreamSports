@@ -1091,10 +1091,40 @@ class SportsChannelMatcher {
         if (!_excluded.contains(i) && _channels[i].epgId.isNotEmpty)
           normalizeEpgId(_channels[i].epgId)
     }.take(512).toList();
+    _scopeTitleFetch(channels);
     if (textCache != null) unawaited(textCache.flush());
     if (const bool.fromEnvironment('IPTV_PROFILE_SPORTS')) {
       debugPrint('IPTV_SPORTS channel_text reused=$reusedNames '
           'total=${channels.length}');
+    }
+  }
+
+  /// Every stored form of each catalogue guide id (raw, trimmed,
+  /// lowercased). Title searches run scoped to catalogue channels, but the
+  /// programme table keeps the provider's own casing while matching itself
+  /// is case-insensitive — handing the worker guide every form means a
+  /// mixed-case row is never silently out of scope. The scorer still
+  /// verifies each returned row, so extra forms can only widen recall.
+  static List<String> scopeGuideIds(Iterable<String> epgIds) {
+    final out = <String>{};
+    for (final id in epgIds) {
+      if (id.isEmpty) continue;
+      out.add(id);
+      final trimmed = id.trim();
+      if (trimmed.isNotEmpty && trimmed != id) out.add(trimmed);
+      final lower = trimmed.toLowerCase();
+      if (lower.isNotEmpty && !out.contains(lower)) out.add(lower);
+    }
+    return out.toList(growable: false);
+  }
+
+  /// Hands the worker guide its catalogue scope after an index rebuild.
+  /// A plain fake or direct guide (tests, non-worker use) ignores this.
+  void _scopeTitleFetch(List<Channel> channels) {
+    final guide = _epg;
+    if (guide is _WorkerGuide) {
+      guide.titleChannelScope =
+          scopeGuideIds([for (final c in channels) c.epgId]);
     }
   }
 
@@ -2135,6 +2165,14 @@ class SportsChannelMatcher {
     final contexts = {for (final g in games) g: _MatchTerms(g, tennisTerms)};
     // Query the local guide once, with deduplicated discriminating words.
     // Unlike whole SQL phrases, these also find punctuation/reversed names.
+    // Retrieval needs one discriminating group per team game, not every
+    // group: per-game scoring only examines rows the first group's postings
+    // (plus codes) can reach, and any row it can accept names that group. A
+    // shared "seattle" serves both a Kraken and a Seahawks game; each
+    // game's own check then claims only its rows. Event/league/sport
+    // vocabulary stays: generic coverage rows name no team at all. Tennis
+    // and fights keep every group: a row naming one side can still identify
+    // the fixture through its court or card.
     final raw = <String>{};
     // Matchup codes stay separate from the deduplicated words below: "uta" is
     // contained in "utah", so the containment pass would drop the very term a
@@ -2142,8 +2180,12 @@ class SportsChannelMatcher {
     final compactCodes = <String>{};
     for (final g in games) {
       final context = contexts[g]!;
+      final retrievalGroups = g.league.kind == SportsKind.team &&
+              context.nameGroups.isNotEmpty
+          ? [context.nameGroups.first]
+          : context.nameGroups;
       for (final phrase in [
-        ...context.nameGroups.expand((group) => group),
+        ...retrievalGroups.expand((group) => group),
         ...context.all,
       ]) {
         final words = phrase

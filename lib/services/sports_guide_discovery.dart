@@ -45,6 +45,7 @@ Future<void> _prepareGuideCatalogue(
   if (matcher._epg is _WorkerGuide) {
     matcher._epg.reads.configure(byGuide.keys);
   }
+  matcher._scopeTitleFetch(channels);
 }
 
 const _guideSportNames = {

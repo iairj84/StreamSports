@@ -1,5 +1,6 @@
 # Changelog
-
+## 0.2.46 — 15 November 2026
+- Sports matching does less guide searching on busy days: team games now retrieve on one side of the matchup instead of every name, so a shared term serves both same-city games at once (each game still claims only its own listings). Guide searches also carry every stored form of each channel id, so mixed-case provider ids can no longer fall silently out of scope.
 ## 0.2.45 — 14 November 2026
 
 - The sports hub's Live now cards were missing the possession dot and down-and-distance line — they now show who has the ball and the spot, same as the schedule and player score cards.

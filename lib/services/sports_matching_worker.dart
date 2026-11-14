@@ -176,11 +176,11 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       final audit = const bool.fromEnvironment('IPTV_PROFILE_SPORTS')
           ? (Stopwatch()..start())
           : null;
-      final (kind, from, to, terms) =
-          request as (String, DateTime, DateTime, List<String>);
+      final (kind, from, to, terms, scope) = request
+          as (String, DateTime, DateTime, List<String>, List<String>?);
       final rows = kind == 'titles'
           ? await _source.findProgrammesByTitle(from, to, terms,
-              channelIds: _guideIds)
+              channelIds: scope)
           : await _source.findSportsProgrammesForChannels(terms, from, to);
       if (audit != null) {
         debugPrint(
@@ -829,6 +829,14 @@ class _WorkerPicks implements SportsMatchPicks, SportsMatchRejections {
 
 class _WorkerGuide implements SportsMatchGuide {
   _WorkerGuide(this.host);
+
+  /// Catalogue channel ids a title search may return rows for, in every
+  /// stored form (raw, trimmed, lowercased — the programme table keeps the
+  /// provider's own casing while matching itself is case-insensitive).
+  /// Lets the host answer title searches from its title dictionary instead
+  /// of scanning and transferring the whole day window. Set once per
+  /// catalogue in the matcher's prepare step; null disables scoping.
+  List<String>? titleChannelScope;
   final SendPort host;
   final pending = <int, Completer<List<EpgProgram>>>{};
   final chunks = <int, List<EpgProgram>>{};
@@ -859,20 +867,20 @@ class _WorkerGuide implements SportsMatchGuide {
     return next[key];
   }
 
-  Future<List<EpgProgram>> query(
-      String kind, DateTime from, DateTime to, List<String> terms) {
+  Future<List<EpgProgram>> query(String kind, DateTime from, DateTime to,
+      List<String> terms, [List<String>? scope]) {
     final id = ++sequence;
     final done = Completer<List<EpgProgram>>();
     pending[id] = done;
     chunks[id] = [];
-    host.send((id, 'guide', (kind, from, to, terms)));
+    host.send((id, 'guide', (kind, from, to, terms, scope)));
     return done.future;
   }
 
   @override
   Future<List<EpgProgram>> findProgrammesByTitle(
           DateTime from, DateTime to, List<String> terms) =>
-      query('titles', from, to, terms);
+      query('titles', from, to, terms, titleChannelScope);
   @override
   Future<List<EpgProgram>> findSportsProgrammesForChannels(
           List<String> ids, DateTime from, DateTime to) =>
