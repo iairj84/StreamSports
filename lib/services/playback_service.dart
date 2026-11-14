@@ -129,6 +129,15 @@ class PlaybackService extends ChangeNotifier {
 
   Channel? currentChannel;
 
+  /// Non-null while the current stream is a catch-up (timeshift) URL for
+  /// [currentChannel] rather than its live URL — set by [play]'s
+  /// `urlOverride`, cleared by the next plain play/stop. Drives the
+  /// player's "Back to live" toggle.
+  String? _catchupUrl;
+
+  /// True while playing a catch-up stream instead of the live edge.
+  bool get isCatchUpPlayback => _catchupUrl != null;
+
   /// The live channel [play] replaced — the player's D-pad Right steps back to
   /// it. Swapped rather than consumed, so Right toggles between the last two
   /// live channels.
@@ -365,8 +374,10 @@ class PlaybackService extends ChangeNotifier {
 
   /// Starts playing [channel]. No-ops if it's already the current channel
   /// (so re-opening the fullscreen view for the channel the mini-player is
-  /// already showing doesn't restart it).
-  Future<void> play(Channel channel) async {
+  /// already showing doesn't restart it). [urlOverride] plays a different
+  /// stream for the same channel — the catch-up URL — and always retunes,
+  /// even when this channel is already current.
+  Future<void> play(Channel channel, {String? urlOverride}) async {
     // A queued episode whose stream isn't known yet (Archive Next / auto-
     // advance): resolve it first. Guarded, so the position timer's repeat
     // calls near the end don't start a second lookup.
@@ -397,7 +408,14 @@ class PlaybackService extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (currentChannel?.id == channel.id && controller != null) return;
+    // No-op only when already on the requested stream: a plain play()
+    // while a catch-up URL is active means "back to live" and retunes.
+    if (urlOverride == null &&
+        _catchupUrl == null &&
+        currentChannel?.id == channel.id &&
+        controller != null) {
+      return;
+    }
 
     // Remember what this replaces before teardown clears it, so D-pad Right can
     // step back (see [playPrevious]). Only live channels are worth keeping.
@@ -410,6 +428,7 @@ class PlaybackService extends ChangeNotifier {
 
     final request = ++_request;
     _reloadingCurrentChannel = false;
+    _catchupUrl = urlOverride;
     // Zap timing: one stopwatch per request, printed once the new stream
     // is playing so a logcat capture shows exactly where tune time goes.
     final tune = Stopwatch()..start();
@@ -457,7 +476,8 @@ class PlaybackService extends ChangeNotifier {
       if (_disposed || request != _request) return;
       tuneResolveMs = tune.elapsedMilliseconds;
     }
-    final newController = createController(playable);
+    final newController =
+        createController(playable, url: urlOverride);
     controller = newController;
 
     initFuture = newController
@@ -591,7 +611,8 @@ class PlaybackService extends ChangeNotifier {
           ? await _playlistManager.resolvePlaybackChannel(channel)
           : channel;
       if (_disposed || request != _request) return;
-      final next = replacement = createController(playable);
+      final next = replacement =
+          createController(playable, url: _catchupUrl);
       await next.setVolume(volume);
       if (_disposed || request != _request) {
         await _releaseController(next);
@@ -772,6 +793,7 @@ class PlaybackService extends ChangeNotifier {
     await _teardown();
     if (_disposed || request != _request) return;
     currentChannel = null;
+    _catchupUrl = null;
     error = null;
     reconnectStatus = null;
     // Clear the pending-resume hint when stopping, including handoff to Multiview, so a stale

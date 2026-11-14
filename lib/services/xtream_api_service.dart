@@ -490,6 +490,13 @@ List<Channel> _buildLiveChannels(_LiveStreamsArgs args) {
         ? epgChannelId
         : 'xt_live_$streamId';
     final categoryId = item['category_id']?.toString() ?? '';
+    // Timeshift: `tv_archive=1` with `tv_archive_duration` in days.
+    // Stored as mode 'xc' — `catchupUrlFor` derives the timeshift URL
+    // from the live URL below, so the stream id stays available even
+    // when [rawId] is an `epg_channel_id` or was deduplicated.
+    final archived = item['tv_archive']?.toString() == '1';
+    final archiveDays =
+        int.tryParse(item['tv_archive_duration']?.toString() ?? '');
     return Channel(
       id: '${args.playlistId}::$rawId',
       rawId: rawId,
@@ -500,6 +507,9 @@ List<Channel> _buildLiveChannels(_LiveStreamsArgs args) {
       // avoids reliance on repeated HLS manifest requests through relays.
       url: '${args.server}/live/${args.username}/${args.password}/$streamId.ts',
       logoUrl: item['stream_icon']?.toString(),
+      catchupMode: archived ? 'xc' : null,
+      catchupDays:
+          archived && archiveDays != null && archiveDays > 0 ? archiveDays : null,
     );
   }).toList());
 }

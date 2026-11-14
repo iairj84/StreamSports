@@ -11,8 +11,9 @@ import 'playlist_http_client.dart';
 /// Parses M3U / M3U8 playlists into [Channel] objects.
 ///
 /// Supports the common extended attributes (`tvg-id`, `tvg-logo`,
-/// `group-title`), the `#EXTGRP:` fallback tag, and an optional external
-/// subtitle track via `#EXTVLCOPT:sub-file=`.
+/// `group-title`), the `#EXTGRP:` fallback tag, an optional external
+/// subtitle track via `#EXTVLCOPT:sub-file=`, and catch-up timeshift
+/// (`catchup`, `catchup-days`, `catchup-source`).
 class M3uParser {
   static final RegExp _attrPattern = RegExp(r'([a-zA-Z0-9_-]+)="([^"]*)"');
 
@@ -122,6 +123,11 @@ class _ParseState {
       // A bare, non-comment line is the stream URL that finishes the
       // pending #EXTINF entry.
       if (_pendingName != null) {
+        // Catch-up: `catchup="default" catchup-days="3"`, plus an
+        // optional `catchup-source` template. Types this player cannot
+        // build (anything but default/append/shift without a template)
+        // are still recorded — `catchupUrlFor` decides playability.
+        final catchupMode = _attrs['catchup'];
         _autoId++;
         final tvgId = _attrs['tvg-id'];
         final rawId =
@@ -138,6 +144,12 @@ class _ParseState {
           url: line,
           logoUrl: _attrs['tvg-logo'],
           subtitleUrl: _pendingSubtitleUrl,
+          catchupMode: (catchupMode != null && catchupMode.isNotEmpty)
+              ? catchupMode
+              : null,
+          catchupDays:
+              int.tryParse(_attrs['catchup-days'] ?? ''),
+          catchupSource: _attrs['catchup-source'],
         );
         if (!liveOnly || !isOnDemandChannel(channel)) channels.add(channel);
       }

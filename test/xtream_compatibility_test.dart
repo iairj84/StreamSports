@@ -205,6 +205,24 @@ void main() {
     await expectLater(api().getLiveStreams(categoryNames: {}), throwsException);
   });
 
+  test('XC live archive flags land on the channel', () async {
+    bodyOverride = jsonEncode([
+      {
+        'stream_id': 9,
+        'category_id': '1',
+        'name': 'Archived',
+        'tv_archive': 1,
+        'tv_archive_duration': '4'
+      },
+      {'stream_id': 10, 'category_id': '1', 'name': 'Live only'}
+    ]);
+    final channels = await api().getLiveStreams(categoryNames: {});
+    expect(channels[0].hasCatchup, isTrue);
+    expect(channels[0].catchupMode, 'xc');
+    expect(channels[0].catchupDays, 4);
+    expect(channels[1].hasCatchup, isFalse);
+  });
+
   test('Smart Add preserves panel paths when extracting endpoint credentials',
       () {
     final parsed = parseSmartAddText(

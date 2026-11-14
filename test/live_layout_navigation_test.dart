@@ -500,7 +500,7 @@ class _Playback extends PlaybackService {
   List<Channel> recentLiveChannels({int limit = 10}) =>
       history.take(limit).toList();
   @override
-  Future<void> play(Channel channel) async {
+  Future<void> play(Channel channel, {String? urlOverride}) async {
     played.add(channel);
     currentChannel = channel;
     notifyListeners();

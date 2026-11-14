@@ -54,7 +54,7 @@ class _Playback extends PlaybackService {
   _Playback(super.storage, super.playlist);
   int reloads = 0;
   @override
-  Future<void> play(Channel channel) async {
+  Future<void> play(Channel channel, {String? urlOverride}) async {
     currentChannel = channel;
   }
 

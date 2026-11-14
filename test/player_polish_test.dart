@@ -180,7 +180,7 @@ class Playback extends PlaybackService {
   }
 
   @override
-  Future<void> play(Channel channel) async {
+  Future<void> play(Channel channel, {String? urlOverride}) async {
     currentChannel = channel;
   }
 

@@ -158,7 +158,7 @@ class SearchGuidePlaylist extends GuidePlaylist {
 class GuidePlayback extends PlaybackService {
   GuidePlayback(super.storage, super.playlistManager);
   @override
-  Future<void> play(Channel channel) async {
+  Future<void> play(Channel channel, {String? urlOverride}) async {
     currentChannel = channel;
     notifyListeners();
   }

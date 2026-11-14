@@ -25,6 +25,25 @@ https://example.invalid/live/4
     expect(channels.first.group, 'Sports, Events');
     expect(channels.first.logoUrl, 'https://example.invalid/logo,a.png');
   });
+  test('catch-up attributes land on the channel', () {
+    final channels = M3uParser.parse('''#EXTM3U
+#EXTINF:-1 tvg-id="espn" group-title="Sports" catchup="default" catchup-days="3",ESPN HD
+https://example.invalid/live/1
+#EXTINF:-1 tvg-id="hbo" group-title="Movies" catchup="shift" catchup-days="7" catchup-source="https://example.invalid/timeshift?start=\${start}&len=\${duration}",HBO
+https://example.invalid/live/2?token=abc
+#EXTINF:-1 tvg-id="plain" group-title="TV",Plain
+https://example.invalid/live/3
+''', playlistId: 'test');
+    expect(channels[0].hasCatchup, isTrue);
+    expect(channels[0].catchupMode, 'default');
+    expect(channels[0].catchupDays, 3);
+    expect(channels[1].hasCatchup, isTrue);
+    expect(channels[1].catchupMode, 'shift');
+    expect(channels[1].catchupDays, 7);
+    expect(channels[1].catchupSource,
+        'https://example.invalid/timeshift?start=\${start}&len=\${duration}');
+    expect(channels[2].hasCatchup, isFalse);
+  });
   test(
       'streamed background import makes one request and preserves all live rows',
       () async {

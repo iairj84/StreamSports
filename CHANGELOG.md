@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.44 — 14 November 2026
+
+- Catch-up TV for M3U and Xtream playlists: live channels that offer it get a "Watch from start" button in the player (with "Back to live" to return), and already-aired guide programmes play from the archive when opened. Providers without catch-up behave exactly as before.
+
 ## 0.2.43 — 14 November 2026
 
 - Live sports cards now show who has the ball: football cards carry a possession dot plus down and distance ("3rd 04:12 · 2nd & 7 at NE 32"), and baseball cards show the count, outs, and runners. The player score cards show the same.

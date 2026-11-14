@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 import '../models/channel.dart';
 import '../services/epg_service.dart';
+import '../utils/catchup.dart';
 import '../services/playback_service.dart';
 import '../utils/playback_error_message.dart';
 import '../services/playlist_manager.dart';
@@ -311,6 +312,16 @@ class PlayerControls extends StatelessWidget {
     final programme = isLive
         ? context.watch<EpgService>().getCurrentProgram(channelId)
         : null;
+    final playback = context.watch<PlaybackService>();
+    // Restart needs a resolvable start: the current guide slot, else the
+    // bounded fallback rewind. While a catch-up stream plays, the same
+    // slot offers the way back to the live edge instead.
+    final watchingCatchUp = playback.isCatchUpPlayback;
+    final restartable = isLive &&
+        channel != null &&
+        channel!.hasCatchup &&
+        (watchingCatchUp ||
+            canWatchFromStart(channel!, currentProgram: programme));
     final next =
         isLive ? context.watch<EpgService>().getNextProgram(channelId) : null;
 
@@ -392,6 +403,53 @@ class PlayerControls extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontSize: 10, color: playerMuted)),
+                      ],
+                      if (restartable) ...[
+                        const SizedBox(height: 2),
+                        Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                                style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 2),
+                                    minimumSize: const Size(0, 30),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap),
+                                onPressed: () {
+                                  onActivity?.call();
+                                  final ch = channel;
+                                  if (ch == null) return;
+                                  if (watchingCatchUp) {
+                                    // Plain play retunes the live URL.
+                                    playback.play(ch);
+                                    return;
+                                  }
+                                  final range = catchupRangeFor(ch,
+                                      program: programme);
+                                  final url = range == null
+                                      ? null
+                                      : catchupUrlFor(ch, range);
+                                  if (url == null) return;
+                                  playback.play(ch, urlOverride: url);
+                                },
+                                icon: Icon(
+                                    watchingCatchUp
+                                        ? Icons.live_tv_rounded
+                                        : Icons.restart_alt_rounded,
+                                    size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary),
+                                label: Text(
+                                    watchingCatchUp
+                                        ? tr('Back to live')
+                                        : tr('Watch from start'),
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary)))),
                       ],
                     ])),
               ]),

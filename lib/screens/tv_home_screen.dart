@@ -29,6 +29,7 @@ import 'package:flutter/services.dart';
 
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
+import '../utils/catchup.dart';
 import '../models/surface_style.dart';
 import '../models/epg_program.dart';
 import '../models/m3u_group.dart';
@@ -1380,7 +1381,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// needs none, and a double click/press still reads as two presses.
   /// Other entry points (History dialog, Continue Watching) keep
   /// [_selectChannel]'s straight-to-fullscreen behaviour.
-  Future<void> _previewOrOpenChannel(Channel channel) async {
+  void _closeTimelineFilterForOpen(Channel channel) {
+    if (_timelineSearchAll) {
+      setState(() {
+        _selectedGroup = channel.group;
+        _selectedLiveCollection = null;
+      });
+      _closeTimelineFilter(focusChannelId: channel.id);
+    } else if (_timelineFilterActive) {
+      _closeTimelineFilter(focusChannelId: channel.id);
+    }
+  }
+
+  Future<void> _previewOrOpenChannel(Channel channel,
+      {EpgProgram? program}) async {
     if (_route?.isCurrent == false) {
       return;
     }
@@ -1388,6 +1402,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final playback = context.read<PlaybackService>();
     // CH+/CH- in the player follow this exact list (e.g. Favorites order).
     playback.zapList = _currentLiveChannels(context.read<PlaylistManager>());
+    // An already-aired guide block on a catch-up channel plays the
+    // archive recording; anything else (live, future, or no catch-up)
+    // tunes live exactly as before.
+    String? urlOverride;
+    final now = DateTime.now();
+    if (program != null &&
+        program.stop.isBefore(now) &&
+        channel.hasCatchup) {
+      final range = catchupRangeFor(channel, program: program, now: now);
+      urlOverride = range == null ? null : catchupUrlFor(channel, range);
+    }
     final pending = _previewChannelId == channel.id ? _previewFuture : null;
     if (pending != null || playback.currentChannel?.id == channel.id) {
       // Wait for the preview's play() to finish first — same
@@ -1423,7 +1448,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
 
     playback.addListener(refocus);
-    final future = playback.play(channel);
+    final future = playback.play(channel, urlOverride: urlOverride);
     _previewChannelId = channel.id;
     _previewFuture = future;
     try {
@@ -2840,16 +2865,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // when fullscreen playback closes.
         onOpen: (channel) {
           if (isGuideSection(channel)) return;
-          if (_timelineSearchAll) {
-            setState(() {
-              _selectedGroup = channel.group;
-              _selectedLiveCollection = null;
-            });
-            _closeTimelineFilter(focusChannelId: channel.id);
-          } else if (_timelineFilterActive) {
-            _closeTimelineFilter(focusChannelId: channel.id);
-          }
+          _closeTimelineFilterForOpen(channel);
           _previewOrOpenChannel(channel);
+        },
+        onOpenProgram: (channel, program) {
+          if (isGuideSection(channel)) return;
+          _closeTimelineFilterForOpen(channel);
+          _previewOrOpenChannel(channel, program: program);
         },
         onFocusChanged: _onGuideFocusChanged,
         onShowOptions: _showChannelOptions,
@@ -4032,6 +4054,8 @@ class LiveGuideSelectionViewportState
       channels: widget.channels,
       epg: context.read<EpgService>(),
       onOpen: widget.onChoose,
+      // A channel picker, not a watch surface: program blocks tune live.
+      onOpenProgram: (channel, _) => widget.onChoose(channel),
       onFocusChanged: _ignoreFocus,
       onShowOptions: widget.onChoose,
       selectionStatus: widget.statusFor,
@@ -4055,6 +4079,7 @@ class _TimelineGuide extends StatefulWidget {
       required this.channels,
       required this.epg,
       required this.onOpen,
+      required this.onOpenProgram,
       required this.onFocusChanged,
       required this.onShowOptions,
       required this.filterFocusNode,
@@ -4077,6 +4102,11 @@ class _TimelineGuide extends StatefulWidget {
   final List<Channel> channels;
   final EpgService epg;
   final void Function(Channel channel) onOpen;
+
+  /// Program-block activation: [program] is the focused block (null for
+  /// gap rows). Past programmes on catch-up channels play from the
+  /// archive; everything else tunes live, like [onOpen].
+  final void Function(Channel channel, EpgProgram? program) onOpenProgram;
   final void Function(Channel channel, EpgProgram? program) onFocusChanged;
 
   /// Hold-Select on a block — see [_TvHomeScreenState._showChannelOptions].
@@ -5137,7 +5167,9 @@ class _TimelineGuideState extends State<_TimelineGuide>
                           windowStart: _windowStart,
                           windowEnd: _windowEnd,
                           pixelsPerMinute: _pixelsPerMinute,
-                          onOpen: () => widget.onOpen(widget.channels[i]),
+                          onOpen: () => widget.onOpenProgram(
+                              widget.channels[i],
+                              _focusedRowIndex == i ? _focusedProgram : null),
                           onShowOptions: () =>
                               widget.onShowOptions(widget.channels[i]),
                           ensureRowVisible: _ensureRowVisible,

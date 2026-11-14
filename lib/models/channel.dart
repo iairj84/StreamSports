@@ -33,6 +33,9 @@ class Channel {
     this.backdropUrl,
     this.providerPosterUrl,
     this.providerBackdropUrl,
+    this.catchupMode,
+    this.catchupDays,
+    this.catchupSource,
   });
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
@@ -129,6 +132,24 @@ class Channel {
   /// on-demand fetch and persistence as [providerPosterUrl].
   String? providerBackdropUrl;
 
+  /// Catch-up (timeshift) support. M3U `catchup="..."` type, or `'xc'` for
+  /// Xtream's `tv_archive=1`. Null/empty = no catch-up on this channel.
+  /// See `catchupUrlFor` for how each mode turns into a playable URL.
+  final String? catchupMode;
+
+  /// How far back catch-up reaches, in whole days — M3U `catchup-days`, or
+  /// Xtream's `tv_archive_duration`. Null = advertised but unbounded here;
+  /// callers clamp fallback rewinds themselves.
+  final int? catchupDays;
+
+  /// M3U `catchup-source`: a URL template for providers whose catch-up
+  /// endpoint differs from the live URL. Null for plain Xtream/`default`.
+  final String? catchupSource;
+
+  /// True when this channel can play already-aired programmes.
+  bool get hasCatchup =>
+      catchupMode != null && catchupMode!.isNotEmpty;
+
   /// Hero/detail background order: TMDB backdrop, then the provider's.
   String? get anyBackdropUrl {
     for (final u in [backdropUrl, providerBackdropUrl]) {
@@ -192,7 +213,10 @@ class Channel {
           String? rawId,
           String? epgKey,
           String? url,
-          Map<String, String>? httpHeaders}) =>
+          Map<String, String>? httpHeaders,
+          String? catchupMode,
+          int? catchupDays,
+          String? catchupSource}) =>
       Channel(
         id: id ?? this.id,
         rawId: rawId ?? this.rawId,
@@ -218,6 +242,9 @@ class Channel {
         backdropUrl: backdropUrl,
         providerPosterUrl: providerPosterUrl,
         providerBackdropUrl: providerBackdropUrl,
+        catchupMode: catchupMode ?? this.catchupMode,
+        catchupDays: catchupDays ?? this.catchupDays,
+        catchupSource: catchupSource ?? this.catchupSource,
       );
 
   Map<String, dynamic> toJson() => {
@@ -243,6 +270,9 @@ class Channel {
         'backdropUrl': backdropUrl,
         'providerPosterUrl': providerPosterUrl,
         'providerBackdropUrl': providerBackdropUrl,
+        if (catchupMode != null) 'catchupMode': catchupMode,
+        if (catchupDays != null) 'catchupDays': catchupDays,
+        if (catchupSource != null) 'catchupSource': catchupSource,
       };
 
   /// `playlistId` defaults to `'migrated_default'` and `rawId` to [id]
@@ -279,6 +309,9 @@ class Channel {
         backdropUrl: json['backdropUrl'] as String?,
         providerPosterUrl: json['providerPosterUrl'] as String?,
         providerBackdropUrl: json['providerBackdropUrl'] as String?,
+        catchupMode: json['catchupMode'] as String?,
+        catchupDays: json['catchupDays'] as int?,
+        catchupSource: json['catchupSource'] as String?,
       );
 
   /// Best-effort "is this a live channel, not VOD/an episode" signal from
