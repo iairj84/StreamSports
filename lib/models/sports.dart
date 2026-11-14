@@ -619,14 +619,16 @@ List<SportsGame> dedupeSportsEvents(Iterable<SportsGame> games) {
 }
 
 /// Two named sides at one kickoff, independent of which feed carried the row.
-/// Team ids are provider-wide, so the league path is deliberately not part of
-/// the key: a fixture reached through a conference and through the sport's own
-/// scoreboard is still one fixture.
+/// Team ids repeat across sports (every ESPN sport has its own team 5 at
+/// overlapping kickoff times), so the sport scopes the key: a fixture reached
+/// through a conference and through the sport's own scoreboard is still one
+/// fixture, but unrelated same-id pairs in other sports are not.
 String? _fixtureKeyOf(SportsGame game) {
   final home = game.home.id, away = game.away.id;
   if (home.isEmpty || away.isEmpty || home == away) return null;
   final pair = [home, away]..sort();
-  return '${game.start.toUtc().toIso8601String()}:${pair.first}>${pair.last}';
+  final sport = game.league.espnPath.split('/').first;
+  return '$sport:${game.start.toUtc().toIso8601String()}:${pair.first}>${pair.last}';
 }
 
 /// The base leagues — always available in the League manager, in the

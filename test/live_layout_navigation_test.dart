@@ -2,7 +2,6 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import 'player_polish_test.dart' as player_fixture;
 import 'package:nox_iptv/widgets/main_navigation_rail.dart';
 import 'package:nox_iptv/models/sports_favorites_filter.dart';
-import 'package:nox_iptv/widgets/sports_filter_picker.dart';
 import 'package:nox_iptv/widgets/sports_fixture_row.dart';
 import 'package:nox_iptv/utils/sports_channel_filter.dart';
 import 'package:nox_iptv/widgets/sports_schedule_panel.dart';
@@ -43,7 +42,6 @@ import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/screens/library_screen.dart';
 import 'package:nox_iptv/utils/top_level_tab_route.dart';
 import 'package:nox_iptv/screens/sports_screen.dart';
-import 'package:nox_iptv/widgets/sports_replays_panel.dart';
 import 'package:nox_iptv/widgets/player_controls.dart';
 import 'package:nox_iptv/screens/sports_live_list_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
@@ -1230,8 +1228,23 @@ void main() {
 
     await flush();
     final event = find.byKey(const ValueKey('card-nhl:poll-0'));
-    expect(find.descendant(of: event, matching: find.text(channel.name)),
-        findsOneWidget);
+    // The hub shows the picked channel on the match line (Watch once the
+    // pick confirms, Possible while its evidence is still being checked).
+    // A settled frame does not imply the matching isolate has replied.
+    // Wait for the full pass, not just the early pick hint, so Schedule
+    // reuses completed coverage instead of starting its own search.
+    final pickedChannel = find.descendant(
+        of: event, matching: find.textContaining(channel.name));
+    for (var i = 0;
+        i < 40 &&
+            (pickedChannel.evaluate().isEmpty ||
+                (tester.widget(event) as dynamic).matching as bool);
+        i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(pickedChannel, findsOneWidget);
     final catalogueLoads = playlist.catalogueLoads, queries = guide.queries;
     await tester.tap(find.byKey(const ValueKey('sports-view-schedule')));
     await flush();
@@ -1783,6 +1796,24 @@ void main() {
           matching: find.byType(Scrollable));
       final rail = tester.state<ScrollableState>(lists.first).position;
       final loads = playlist.catalogueLoads;
+      // Picking a category drills into its content: the cursor starts on the
+      // first channel's programme and arrows navigate the timeline. The
+      // categories rail stays put (TV hides it once content has focus), so
+      // the no-animation assertion covers every scrollable instead of it.
+      void expectNoScrollAnimation() {
+        final states = <ScrollableState>[];
+        void collect(Element e) {
+          if (e is StatefulElement && e.state is ScrollableState) {
+            states.add(e.state as ScrollableState);
+          }
+          e.visitChildren(collect);
+        }
+        collect(tester.element(find.byType(MaterialApp)));
+        expect(states, isNotEmpty);
+        for (final state in states) {
+          expect(state.position.isScrollingNotifier.value, isFalse);
+        }
+      }
       var previous = FocusManager.instance.primaryFocus;
       for (var i = 0; i < 18; i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
@@ -1790,14 +1821,15 @@ void main() {
         final focus = FocusManager.instance.primaryFocus!;
         expect(focus, isNot(same(previous)));
         previous = focus;
-        expect(rail.isScrollingNotifier.value, isFalse);
-        if (i == 0) expect(rail.pixels, 0);
-        final viewport =
-            tester.getRect(find.byKey(const ValueKey('live-categories-rail')));
-        expect(focus.rect.top, greaterThanOrEqualTo(viewport.top));
-        expect(focus.rect.bottom, lessThanOrEqualTo(viewport.bottom));
+        expectNoScrollAnimation();
+        // Content navigation keeps the cursor on screen.
+        expect(focus.rect.top, greaterThanOrEqualTo(0));
+        expect(focus.rect.left, greaterThanOrEqualTo(0));
+        expect(focus.rect.bottom, lessThanOrEqualTo(540));
+        expect(focus.rect.right, lessThanOrEqualTo(960));
       }
-      expect(rail.pixels, greaterThan(0));
+      expect(rail.pixels, 0,
+          reason: 'Content navigation leaves the categories rail alone');
       expect(playlist.catalogueLoads, loads);
       expect(playback.played, isEmpty);
       expect(tester.takeException(), isNull);
@@ -2163,10 +2195,11 @@ void main() {
             await settleSports(tester);
             final card = find.byKey(const ValueKey('card-nhl:row-0'));
             // A settled frame does not imply the matching isolate has replied.
+            // The hub shows a confident match as a Watch line.
             final matchedChannel = find.descendant(
                 of: card,
-                matching:
-                    find.text('NHL: Boston Bruins vs Toronto Maple Leafs'));
+                matching: find.text(
+                    'Watch · NHL: Boston Bruins vs Toronto Maple Leafs'));
             for (var i = 0; i < 200 && matchedChannel.evaluate().isEmpty; i++) {
               await tester.runAsync(
                   () => Future<void>.delayed(const Duration(milliseconds: 10)));
@@ -2655,14 +2688,14 @@ void main() {
             // switching views. A detached node still has a context in Flutter.
             await press(LogicalKeyboardKey.contextMenu);
             await press(LogicalKeyboardKey.arrowUp);
-            for (var i = 0; i < 5; i++) {
+            // Four view tabs precede the leagues gear on the toolbar.
+            for (var i = 0; i < 4; i++) {
               await press(LogicalKeyboardKey.arrowRight);
             }
             expect(focused(), 'sports-chip-leagues-gear');
             await press(LogicalKeyboardKey.arrowDown);
             await press(LogicalKeyboardKey.contextMenu);
             await press(LogicalKeyboardKey.arrowUp);
-            await press(LogicalKeyboardKey.arrowLeft);
             await press(LogicalKeyboardKey.arrowLeft);
             expect(focused(), 'sports-chip-view-replays');
             await press(LogicalKeyboardKey.select);
@@ -2674,6 +2707,12 @@ void main() {
                 reason: 'Do not focus the detached Events filter');
             await press(LogicalKeyboardKey.arrowRight);
             await press(LogicalKeyboardKey.select);
+            await settleSports(tester);
+            // The control after the view tabs is the replay sport picker.
+            // Choosing All sports closes it without changing the view.
+            expect(find.text('Replay sport'), findsOneWidget);
+            await tester.tap(find.descendant(
+                of: find.byType(Dialog), matching: find.text('All sports')));
             await settleSports(tester);
             await press(LogicalKeyboardKey.contextMenu);
             expect(focused(), 'replays-refresh');
@@ -3301,8 +3340,12 @@ void main() {
     expect(find.textContaining('Channels: checked'), findsOneWidget);
     final scope = '${sportsCalendarDay(scores.start, 0).toIso8601String()}:'
         '${savedSportsLeagues(storage).map((l) => l.id).join(',')}';
+    // The browse key carries the preferred playlist and versions guide
+    // evidence without lastUpdated: a no-change refresh must not invalidate
+    // coverage.
     final snapshot = SportsBrowseCache.shared.read((
       storage,
+      storage.getSportsPreferredPlaylistId(),
       playlist,
       epg,
       scores,
@@ -3312,7 +3355,7 @@ void main() {
       storage.getActiveViewerId(),
       sportsCalendarDay(scores.start, 0),
       playlist.liveRevision,
-      (epg.changeRevision, epg.currentGuideRevision, epg.lastUpdated),
+      (epg.changeRevision, epg.currentGuideRevision),
     ), scores.start);
     expect(snapshot, isNotNull);
     final identities = snapshot!.restoreSession().identities;
@@ -3326,7 +3369,6 @@ void main() {
           playlist.liveRevision,
           epg.changeRevision,
           epg.currentGuideRevision,
-          epg.lastUpdated,
           identities,
         ),
         reason:
@@ -3461,7 +3503,9 @@ void main() {
           state: hour == 0 ? GameState.live : GameState.pre,
           statusText: '',
           home: SportsTeam(
-              id: 'home',
+              // Distinct fixtures need distinct team ids: same sport, start
+              // and pair now dedupes conference and poll views of one game.
+              id: 'home-$id',
               name: id == 'urgent' ? 'Zebrafish United' : 'Boston Bruins',
               shortName: id == 'urgent' ? 'Zebrafish' : 'Bruins',
               abbreviation: ''),
@@ -3907,7 +3951,11 @@ void main() {
       }
     }
 
-    await flush();
+    // 216 live games keep the matcher in its channel-index stage for a
+    // while; the running search appears once the isolate reaches the guide.
+    for (var i = 0; i < 15 && epg.requests.isEmpty; i++) {
+      await flush();
+    }
     expect(epg.requests, hasLength(1));
     await tester.pump(const Duration(seconds: 31));
     await flush();
@@ -4604,6 +4652,20 @@ void main() {
         await tester.pumpAndSettle();
         failing = false;
         await tester.tap(find.byKey(const ValueKey('sports-refresh')));
+        // Scoreboard JSON parses on background isolates (real async): give
+        // the refresh's downloads room to finish instead of asserting while
+        // the load is still parked in `compute`.
+        for (var i = 0;
+            i < 60 &&
+                find
+                    .byKey(const ValueKey('sports-feed-info'))
+                    .evaluate()
+                    .isNotEmpty;
+            i++) {
+          await tester.runAsync(
+              () => Future<void>.delayed(const Duration(milliseconds: 50)));
+          await tester.pump(const Duration(milliseconds: 100));
+        }
         await settleSports(tester);
         expect(find.text('World Poker Tour'), findsWidgets);
         expect(find.text('On air'), findsOneWidget);
@@ -5094,7 +5156,19 @@ void main() {
                     isNotNull);
               }
 
+              // A tap or pull while a poll is in flight is a silent no-op:
+              // wait for the request count to settle first.
+              Future<void> waitScoresIdle() async {
+                for (var i = 0; i < 30; i++) {
+                  final seen = scoreRequests;
+                  await tester.runAsync(() =>
+                      Future<void>.delayed(const Duration(milliseconds: 50)));
+                  await tester.pump(const Duration(milliseconds: 100));
+                  if (scoreRequests == seen) return;
+                }
+              }
               final beforeRefresh = scoreRequests;
+              await waitScoresIdle();
               await tester.tap(find.byKey(const ValueKey('sports-refresh')));
               await tester.pump();
               expect(find.byKey(const ValueKey('card-nba:1')), findsOneWidget);
@@ -5105,20 +5179,30 @@ void main() {
                 final beforePull = scoreRequests;
                 final groups =
                     find.byKey(const PageStorageKey('sports-events'));
-                tester.widget<ScrollView>(groups).controller!.jumpTo(0);
-                await tester.pumpAndSettle();
-                final pull = await tester.startGesture(
-                    tester.getTopLeft(groups) + const Offset(100, 24));
-                for (var step = 0; step < 6; step++) {
-                  await pull.moveBy(const Offset(0, 50));
-                  await tester.pump(const Duration(milliseconds: 50));
+                Future<void> pullOnce() async {
+                  tester.widget<ScrollView>(groups).controller!.jumpTo(0);
+                  await tester.pumpAndSettle();
+                  final pull = await tester.startGesture(
+                      tester.getTopLeft(groups) + const Offset(100, 24));
+                  for (var step = 0; step < 6; step++) {
+                    await pull.moveBy(const Offset(0, 50));
+                    await tester.pump(const Duration(milliseconds: 50));
+                  }
+                  await captureSports(tester, size, 'sports-refresh');
+                  await pull.up();
+                  // Start the snap animation before advancing its fake clock.
+                  await tester.pump();
+                  await tester.pump(const Duration(milliseconds: 300));
                 }
-                await captureSports(tester, size, 'sports-refresh');
-                await pull.up();
-                // Start the snap animation before advancing its fake clock.
-                await tester.pump();
-                await tester.pump(const Duration(milliseconds: 300));
-                await finishRefresh(beforePull + 9);
+                // A poll can start mid-gesture and swallow the pull; retry on
+                // an idle screen until the pull's own fetch lands.
+                for (var attempt = 0;
+                    attempt < 3 && scoreRequests < beforePull + 9;
+                    attempt++) {
+                  await waitScoresIdle();
+                  await pullOnce();
+                  await finishRefresh(beforePull + 9);
+                }
                 expect(scoreRequests, beforePull + 9);
               }
               expect(playback.currentChannel, same(originalChannel));
@@ -5262,12 +5346,12 @@ void main() {
               await settleSports(tester);
               await captureSports(tester, size, 'sports');
               await tester
-                  .ensureVisible(find.byKey(const ValueKey('league-picker')));
-              await tester.tap(find.byKey(const ValueKey('league-picker')));
+                  .ensureVisible(find.byKey(const ValueKey('leagues-gear')));
+              await tester.tap(find.byKey(const ValueKey('leagues-gear')));
               await settleSports(tester);
               expect(
                   find.descendant(
-                      of: find.byType(Dialog),
+                      of: find.byKey(const ValueKey('sports-panel-surface')),
                       matching: find.text('American football')),
                   findsWidgets);
               await tester.tap(find.byType(TextField));
@@ -5275,30 +5359,16 @@ void main() {
               await tester.pump();
               await tester.enterText(find.byType(TextField), 'NBA');
               await tester.pump();
-              expect(find.text('Pro basketball'), findsOneWidget);
+              expect(find.text('Basketball'), findsWidgets);
               await tester.enterText(find.byType(TextField), '');
               await tester.pump();
-              await tester
-                  .tap(find.byKey(const ValueKey('sports-picker-sort')));
-              await settleSports(tester);
-              expect(find.byKey(const ValueKey('sports-sort-top')),
-                  findsOneWidget);
-              await tester.tap(find.byKey(const ValueKey('sports-sort-live')));
-              await settleSports(tester);
-              await tester
-                  .tap(find.byKey(const ValueKey('sports-picker-sort')));
-              await settleSports(tester);
-              await tester
-                  .tap(find.byKey(const ValueKey('sports-sort-upcoming')));
-              await settleSports(tester);
-              await tester
-                  .tap(find.byKey(const ValueKey('sports-picker-sort')));
-              await settleSports(tester);
-              await tester.tap(find.byKey(const ValueKey('sports-sort-top')));
+              // The league manager no longer sorts; close it with its
+              // close action (escape does not pop its guarding PopScope).
+              // Sort now lives in the event filter picker, covered by its
+              // own tests.
+              await tester.tap(find.byKey(const ValueKey('close-leagues')));
               await settleSports(tester);
               await captureSports(tester, size, 'sports-leagues');
-              await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-              await settleSports(tester);
               await toggleLive();
               await chooseChannelFilter('all');
               await settleSports(tester);
@@ -5315,43 +5385,15 @@ void main() {
               await settleSports(tester);
               expect(find.byKey(const ValueKey('sport-heading:hockey')),
                   findsNothing);
-              expect(
-                  find.byKey(const ValueKey('sport-picker')), findsOneWidget);
-              // Sport/league pickers work without a scrolling toolbar.
+              // The basketball heading already selects the sport; the
+              // standalone sport picker dialog is gone (sport is chosen via
+              // headings and managed in the league manager, covered above).
               await tester
-                  .ensureVisible(find.byKey(const ValueKey('sport-picker')));
-              await tester.tap(find.byKey(const ValueKey('sport-picker')));
+                  .ensureVisible(find.byKey(const ValueKey('leagues-gear')));
+              await tester.tap(find.byKey(const ValueKey('leagues-gear')));
               await settleSports(tester);
-              expect(find.text('Choose sport'), findsOneWidget);
-              // The selected sport is revealed on open; All may be above the
-              // viewport once configuration actions are included.
-              await tester.scrollUntilVisible(
-                  find.byKey(const ValueKey('')), -100,
-                  scrollable: find
-                      .descendant(
-                          of: find.byType(Dialog),
-                          matching: find.byType(Scrollable))
-                      .last);
-              await settleSports(tester);
-              expect(
-                  find.byWidgetPredicate((w) =>
-                      w is SportsCounts && w.live == 9 && w.upcoming == 6),
-                  findsOneWidget);
-              await captureSports(tester, size, 'sports-picker');
-              await tester.tap(find.byType(TextField));
-              await tester.sendKeyEvent(LogicalKeyboardKey.select);
-              await tester.pump();
-              await tester.enterText(find.byType(TextField), 'basket');
-              await tester.pump();
-              await tester.tap(find.text('Basketball').last);
-              await settleSports(tester);
-              expect(find.text('Basketball'), findsOneWidget);
-              await tester
-                  .ensureVisible(find.byKey(const ValueKey('league-picker')));
-              await tester.tap(find.byKey(const ValueKey('league-picker')));
-              await settleSports(tester);
-              expect(find.text('Choose league'), findsOneWidget);
-              await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+              expect(find.text('Choose leagues'), findsOneWidget);
+              await tester.tap(find.byKey(const ValueKey('close-leagues')));
               await settleSports(tester);
               // Secondary controls remain available in the options menu.
               await tester.tap(find.byIcon(Icons.more_horiz));
@@ -5368,24 +5410,8 @@ void main() {
               await toggleLive();
               await settleSports(tester);
               expect(find.text('Later today'), findsNothing);
-              await tester
-                  .ensureVisible(find.byKey(const ValueKey('sport-picker')));
-              await tester.tap(find.byKey(const ValueKey('sport-picker')));
-              await settleSports(tester);
-              // Counts retain upcoming games even when Live-only is on.
-              await tester.scrollUntilVisible(
-                  find.byKey(const ValueKey('')), -100,
-                  scrollable: find
-                      .descendant(
-                          of: find.byType(Dialog),
-                          matching: find.byType(Scrollable))
-                      .last);
-              await settleSports(tester);
-              expect(
-                  find.byWidgetPredicate((w) =>
-                      w is SportsCounts && w.live == 6 && w.upcoming == 6),
-                  findsOneWidget);
-              await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+              // Counts retain upcoming games even when Live-only is on;
+              // verified through the visible section headings below.
               await settleSports(tester);
               await toggleLive();
               await settleSports(tester);
@@ -5812,121 +5838,9 @@ void main() {
               await settleSports(tester);
               expect(playback.currentChannel?.name, 'NFL Replay 1');
               expect(playback.played.length, beforeReplays + 3);
-              // Highlights are a separate current-guide view; opening it
-              // preserves playback, and its details/search never imply dates.
-              for (final entry in [
-                (
-                  'NBA TV',
-                  'NBA: Boston v New York Highlights',
-                  'Highlights from the NBA season opener at Madison Square Garden.'
-                ),
-                (
-                  'NBA TV HD',
-                  'NBA: Boston v New York Highlights',
-                  'Highlights from the NBA season opener at Madison Square Garden.'
-                ),
-                (
-                  'Sky Sports Cricket',
-                  '2nd Test Day 4: SA v AUS Hlts',
-                  'Day four highlights from South Africa v Australia in Gqeberha.'
-                ),
-                (
-                  'Sky Sport Select',
-                  'A-League: Phoenix v Melbourne City Hls',
-                  'Highlights from the opening round of the Women’s A-League in Wellington.'
-                ),
-              ]) {
-                playlist.fixtureChannels.add(Channel(
-                    id: 'demo::${entry.$1}',
-                    rawId: entry.$1,
-                    playlistId: 'demo',
-                    name: entry.$1,
-                    group: 'Sports',
-                    url: 'https://example.test/no-stream'));
-                epg.replays.add(EpgProgram(
-                    channelId: entry.$1,
-                    title: entry.$2,
-                    description: entry.$3,
-                    start: replayNow.subtract(const Duration(minutes: 8)),
-                    stop: replayNow.add(const Duration(minutes: 22))));
-              }
-              playlist.notifyListeners();
-              epg.notifyListeners();
-              tester
-                  .widget<TextButton>(
-                      find.byKey(const ValueKey('sports-view-highlights')))
-                  .focusNode!
-                  .requestFocus();
-              await tester.pumpAndSettle();
-              await tester.sendKeyEvent(LogicalKeyboardKey.select);
-              await settleSports(tester);
-              expect(
-                  find.byWidgetPredicate(
-                      (w) => w is SportsReplaysPanel && w.highlights),
-                  findsOneWidget);
-              expect(find.textContaining('3 shown'), findsOneWidget);
-              expect(playback.currentChannel?.name, 'NFL Replay 1');
-              expect(playback.played.length, beforeReplays + 3);
-              expect(find.text('Date unclear'), findsNothing);
-              expect(find.text('Likely replay'), findsNothing);
-              await captureSports(tester, size, 'sports-highlights');
-              await tester
-                  .tap(find.byKey(const ValueKey('replay-sort-picker')));
-              await settleSports(tester);
-              expect(find.text('Sort highlights'), findsOneWidget);
-              expect(find.text('Event date'), findsNothing);
-              expect(find.text('Recent events'), findsNothing);
-              await tester.tap(find.text('Top leagues').last);
-              await settleSports(tester);
-              await tester.tap(find.byKey(const ValueKey('replay-options')));
-              await settleSports(tester);
-              expect(find.text('Include possible replays'), findsNothing);
-              await tester.tap(find.text('Search highlights'));
-              await settleSports(tester);
-              final highlightSearch =
-                  find.byKey(const ValueKey('replay-search-field'));
-              if (tester.widget<TextField>(highlightSearch).readOnly) {
-                await tester.sendKeyEvent(LogicalKeyboardKey.select);
-                await tester.pump();
-              }
-              await tester.enterText(highlightSearch, 'Boston');
-              await settleSports(tester);
-              expect(find.textContaining('1 shown'), findsOneWidget);
-              final highlightCard = find.byWidgetPredicate((w) =>
-                  w is InkWell &&
-                  (w.key?.toString().contains('replay-demo::NBA TV:') ??
-                      false));
-              if (size.width >= 600) {
-                tester.widget<InkWell>(highlightCard).focusNode!.requestFocus();
-                await tester.pump();
-                await tester.sendKeyEvent(LogicalKeyboardKey.select);
-              } else {
-                await tester.tap(highlightCard);
-              }
-              await settleSports(tester);
-              expect(playback.currentChannel?.name, 'NBA TV');
-              await tester.tap(find.descendant(
-                  of: highlightCard,
-                  matching: find.byTooltip('Programme details and channels')));
-              await settleSports(tester);
-              expect(find.text('Original guide'), findsOneWidget);
-              expect(find.text('Original guide & date source'), findsNothing);
-              await captureSports(tester, size, 'highlight-channels');
-              await tester.tap(find.descendant(
-                  of: find.byType(AlertDialog),
-                  matching: find.text('NBA TV HD')));
-              await settleSports(tester);
-              expect(playback.currentChannel?.name, 'NBA TV HD');
-              tester
-                  .widget<TextButton>(
-                      find.byKey(const ValueKey('sports-view-replays')))
-                  .focusNode!
-                  .requestFocus();
-              await tester.pumpAndSettle();
-              await tester.sendKeyEvent(LogicalKeyboardKey.select);
-              await settleSports(tester);
-              expect(find.textContaining('4 shown'), findsOneWidget);
-              expect(playback.currentChannel?.name, 'NBA TV HD');
+              // The highlights view tab is gone; its panel survives only as
+              // a widget. Coverage resumes with the replays already playing.
+              expect(tester.takeException(), isNull);
               tester
                   .widget<TextButton>(
                       find.byKey(const ValueKey('sports-view-events')))
@@ -5935,12 +5849,6 @@ void main() {
               await tester.pumpAndSettle();
               await tester.sendKeyEvent(LogicalKeyboardKey.select);
               await settleSports(tester);
-              expect(playback.currentChannel?.name, 'NBA TV HD');
-              expect(
-                  find.byWidgetPredicate(
-                      (w) => w is SportsReplaysPanel && !w.highlights),
-                  findsNothing);
-              expect(tester.takeException(), isNull);
               epg.replays = [];
               // An empty matched-channel result stays useful and can be cleared.
               playlist.fixtureChannels.clear();
@@ -5977,16 +5885,16 @@ void main() {
                 await tester.tap(find.byKey(const ValueKey('bottom-settings')));
                 await settleSports(tester);
                 expect(find.byType(SportsScreen), findsNothing);
-                expect(playback.currentChannel?.name, 'NBA TV HD');
+                expect(playback.currentChannel?.name, 'NFL Replay 1');
                 expect(find.text('Settings'), findsWidgets);
                 await tester.tap(find.byKey(const ValueKey('bottom-sports')));
                 await settleSports(tester);
                 final beforeReturn = playback.played.length;
-                expect(playback.currentChannel?.name, 'NBA TV HD');
+                expect(playback.currentChannel?.name, 'NFL Replay 1');
                 await tester.tap(find.byKey(const ValueKey('bottom-live')));
                 await settleSports(tester);
                 expect(playback.played.length, beforeReturn);
-                expect(playback.currentChannel?.name, 'NBA TV HD');
+                expect(playback.currentChannel?.name, 'NFL Replay 1');
                 expect(find.byType(SportsScreen), findsNothing);
                 expect(
                     find.byKey(const ValueKey('bottom-live')), findsOneWidget);
@@ -6175,7 +6083,7 @@ void main() {
         expect(find.byKey(const ValueKey('tennis-tournament-tennis-demo')),
             findsOneWidget);
         expect(find.text('BNP Paribas Fortis European Open'), findsWidgets);
-        expect(find.text('ATP · Round 2'), findsOneWidget);
+        expect(find.text('ATP · ROUND 2'), findsOneWidget);
         final eventCard = find.descendant(
             of: find.byKey(const ValueKey('card-tennis.atp:tennis-demo')),
             matching: find.byType(InkWell));

@@ -4926,7 +4926,7 @@ class _GameCardState extends State<_GameCard> {
                                       context, Colors.white60))),
                         const Spacer(),
                         Divider(
-                            height: 5,
+                            height: 4,
                             thickness: .5,
                             color: scheme.onSurface.withValues(alpha: .09)),
                         Row(
