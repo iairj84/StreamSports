@@ -4614,13 +4614,24 @@ class _GameCardState extends State<_GameCard> {
     final live = g.isLive;
     final showScore = g.state != GameState.pre && !widget.hideScores;
     final oddsLine = widget.showOdds ? sportsOddsLine(g.odds) : null;
-    final status = switch (g.state) {
+    var status = switch (g.state) {
       GameState.pre => _preLabel(g),
       GameState.live =>
         g.statusText.isEmpty ? tr('LIVE') : trSports(g.statusText),
       GameState.post =>
         g.statusText.isEmpty ? tr('Final') : trSports(g.statusText),
     };
+    // Live cards show who has the ball and the spot ("2nd & 7 at NE 32").
+    // Gated by hideScores so spoiler mode stays clean.
+    final possessionId = live ? g.situation?.possessionTeamId : null;
+    if (g.state == GameState.live && !widget.hideScores) {
+      final progress = g.situation?.text;
+      if (progress != null &&
+          progress.isNotEmpty &&
+          !status.contains(progress)) {
+        status = '$status · $progress';
+      }
+    }
 
     Widget teamLine(SportsTeam t, {required bool leading}) {
       final firstScore = int.tryParse(g.first.score ?? '');
@@ -4668,6 +4679,11 @@ class _GameCardState extends State<_GameCard> {
                         ? interfaceColor(context, Colors.white70)
                         : interfaceColor(context, Colors.white))),
           ),
+          if (showScore && possessionId != null && possessionId == t.id)
+            Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Icon(Icons.circle,
+                    size: 7, color: scheme.primary)),
           if (showScore)
             Text(t.score ?? '',
                 style: TextStyle(

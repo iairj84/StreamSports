@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.45 — 14 November 2026
+
+- The sports hub's Live now cards were missing the possession dot and down-and-distance line — they now show who has the ball and the spot, same as the schedule and player score cards.
+
 ## 0.2.44 — 14 November 2026
 
 - Catch-up TV for M3U and Xtream playlists: live channels that offer it get a "Watch from start" button in the player (with "Back to live" to return), and already-aired guide programmes play from the archive when opened. Providers without catch-up behave exactly as before.

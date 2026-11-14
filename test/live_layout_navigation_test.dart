@@ -314,6 +314,41 @@ class _RowScores extends _PollingScores {
       ];
 }
 
+/// One live football game with a parsed ESPN situation — the hub card
+/// must show who has the ball and the spot.
+class _PossessionScores extends _PollingScores {
+  @override
+  Future<List<SportsGame>> gamesForDay(List<SportsLeague> leagues, DateTime day,
+      {void Function(List<SportsGame>)? onProgress,
+      bool forceRefresh = false,
+      void Function(SportsWorkProgress)? onStatus}) async {
+    calls++;
+    return [
+      SportsGame(
+        id: 'possession-game',
+        league: sportsLeagueById('nfl')!,
+        start: start.subtract(const Duration(hours: 1)),
+        state: GameState.live,
+        statusText: '3rd 04:12',
+        home: const SportsTeam(
+            id: 'ne',
+            name: 'New England Patriots',
+            shortName: 'Patriots',
+            abbreviation: 'NE',
+            score: '14'),
+        away: const SportsTeam(
+            id: 'buf',
+            name: 'Buffalo Bills',
+            shortName: 'Bills',
+            abbreviation: 'BUF',
+            score: '10'),
+        situation: const SportsSituation(
+            text: '2nd & 7 at NE 32', possessionTeamId: 'ne'),
+      )
+    ];
+  }
+}
+
 class _HeldScores extends _PollingScores {
   final activityChecks = <bool Function()>[];
   @override
@@ -3445,6 +3480,52 @@ void main() {
     expect(epg.requests.last.isCompleted, isFalse);
     epg.requests.last.complete([]);
     await flush();
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    SportsChannelMatcher.disposeShared();
+    playback.dispose();
+    playlist.dispose();
+    epg.dispose();
+    prefs.dispose();
+  });
+
+  testWidgets('live hub card shows possession and down and distance',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    setLayoutPreferences({'sports_online_extras': false});
+    final storage = StorageService();
+    await storage.init();
+    await storage.setSportsAddedLeagues(['nfl']);
+    await storage.setSportsLeagues(['nfl']);
+    await storage.setSportsChannelFilter('all');
+    final prefs = AppPreferences(storage);
+    await prefs.init();
+    prefs.isTelevision = true;
+    final playlist = _Playlist(storage, CatalogDatabase());
+    final playback = _Playback(storage, playlist);
+    final epg = _Epg(storage);
+    final scores = _PossessionScores();
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider.value(value: storage),
+          ChangeNotifierProvider.value(value: prefs),
+          ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
+          ChangeNotifierProvider<PlaybackService>.value(value: playback),
+          ChangeNotifierProvider<EpgService>.value(value: epg),
+        ],
+        child: MaterialApp(
+            theme: buildAppTheme(prefs.palette),
+            navigatorObservers: [appRouteObserver],
+            home: SportsScreen(scores: scores))));
+    for (var i = 0; i < 30; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(find.textContaining('2nd & 7 at NE 32'), findsWidgets);
+    expect(find.byIcon(Icons.circle), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     SportsChannelMatcher.disposeShared();
