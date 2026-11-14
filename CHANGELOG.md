@@ -1,4 +1,6 @@
 # Changelog
+## 0.2.49 — 15 November 2026
+- The sports picker search now reaches later listings, not just what is on now or next: a typed team that plays tonight shows those streams the same way the main guide search does. Short prefixes keep the instant now-and-next behavior.
 ## 0.2.48 — 15 November 2026
 - Live down and distance gets its own line on sports hub cards instead of sharing the crowded status row, so it can no longer be squeezed off the card. Renamed channels also stay findable: matching now falls back to the provider name underneath a rename when the display name does not fit.
 ## 0.2.47 — 15 November 2026

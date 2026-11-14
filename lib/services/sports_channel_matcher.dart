@@ -1175,7 +1175,10 @@ class SportsChannelMatcher {
   static final Map<String, List<String>> _shortCodeAliases = {
     for (final group in _shortCodeGroups)
       for (final code in group)
-        code: [for (final other in group) if (other != code) other],
+        code: [
+          for (final other in group)
+            if (other != code) other
+        ],
   };
 
   /// Name phrases a channel or program title may use for [t] — nickname
@@ -2213,10 +2216,10 @@ class SportsChannelMatcher {
     final compactCodes = <String>{};
     for (final g in games) {
       final context = contexts[g]!;
-      final retrievalGroups = g.league.kind == SportsKind.team &&
-              context.nameGroups.isNotEmpty
-          ? [context.nameGroups.first]
-          : context.nameGroups;
+      final retrievalGroups =
+          g.league.kind == SportsKind.team && context.nameGroups.isNotEmpty
+              ? [context.nameGroups.first]
+              : context.nameGroups;
       for (final phrase in [
         ...retrievalGroups.expand((group) => group),
         ...context.all,
@@ -3077,8 +3080,7 @@ class SportsChannelMatcher {
                   !_opponentsFit(g, groups, title,
                       qualification: feedContext) &&
                   !_opponentsFit(g, _nameGroups(g, shortCodes: true), title,
-                      qualification: feedContext,
-                      allowUnqualifiedCodes: true));
+                      qualification: feedContext, allowUnqualifiedCodes: true));
         }
 
         final programme = _epg.getCurrentProgram(match.channel.epgId);
@@ -3466,11 +3468,8 @@ class SportsChannelMatcher {
     final slotGroups = _nameGroups(game, shortCodes: true);
     final selected = <int>{
       ...broad,
-      ..._channelsNaming([
-        ...terms.event,
-        ...terms.league,
-        ...slotGroups.expand((g) => g)
-      ])
+      ..._channelsNaming(
+          [...terms.event, ...terms.league, ...slotGroups.expand((g) => g)])
     };
     final found = {
       for (final m in matches)
@@ -3498,8 +3497,7 @@ class SportsChannelMatcher {
       final eventNow = terms.event.any(p.text.contains);
       final eventName = terms.event.any(name.contains);
       final namedEvent = slotGroups.isNotEmpty &&
-          _opponentsFit(game, slotGroups, name,
-              allowUnqualifiedCodes: true);
+          _opponentsFit(game, slotGroups, name, allowUnqualifiedCodes: true);
       if (!broad.contains(i) &&
           !eventName &&
           !namedEvent &&
@@ -3610,7 +3608,7 @@ class SportsChannelMatcher {
     ]);
     final cached = _manualCache[cacheKey];
     if (cached != null) return cached;
-    final words = normalized.split(' ');
+    final words = normalized.split(' ').where((w) => w.isNotEmpty).toList();
     // One service-table lookup per search instead of one per channel: typing
     // "BTN" has to reach "Big Ten Network" and "ESPN 2" has to reach "ESPN2".
     final aliasKey = _networkKey(normalized);
@@ -3638,101 +3636,183 @@ class SportsChannelMatcher {
     }
 
     ({EpgProgram programme, String title})? matchedSlot(
-        List<({EpgProgram programme, String title})> slots, String name) =>
+            List<({EpgProgram programme, String title})> slots, String name) =>
         slots
             .where((p) =>
                 words.any(p.title.contains) &&
                 words.every((w) => name.contains(w) || p.title.contains(w)))
             .firstOrNull;
 
-    final found = <({ChannelSearchResult result, int score, int index})>[];
-    // The event's own channels are what the viewer is usually looking for, so
-    // they belong at the top even when the typed words are team names that the
-    // channel name does not contain ("ACC Network" for a Duke game). They can
-    // still be a programme hit in their own right: a query matching their
-    // guide slot is labelled as one, not silently downgraded to a name match.
-    final seeded = <String>{};
-    for (final match in matches) {
-      final index = _byId[match.channel.id];
-      if (index == null || _excluded.contains(index)) continue;
-      seeded.add(match.channel.id);
-      final slot = matchedSlot(slotsFor(match.channel.epgId), _names[index]);
-      found.add((
-        result: ChannelSearchResult(match.channel,
-            match: match,
-            programme: slot?.programme ?? match.programme,
-            programmeSearchHit: slot != null),
-        score: 3200 + match.score,
-        index: index
-      ));
-    }
-    int compare(({ChannelSearchResult result, int score, int index}) a,
-        ({ChannelSearchResult result, int score, int index}) b) {
-      int evidenceTier(ChannelMatch? match) => match == null
-          ? 0
-          : match.reason == MatchReason.pick
-              ? 3
-              : match.isConfident
-                  ? 2
-                  : 1;
-      final evidence =
-          evidenceTier(b.result.match).compareTo(evidenceTier(a.result.match));
-      if (evidence != 0) return evidence;
-      final score = b.score.compareTo(a.score);
-      return score != 0 ? score : a.index.compareTo(b.index);
+    // The main guide search reaches later listings; the picker must too. A
+    // typed team usually plays tonight, when it is on neither the current
+    // nor the next slot yet. One cached day-window title fetch covers the
+    // whole search; short prefixes keep the now/next-only behavior rather
+    // than scanning the title dictionary per keystroke.
+    bool dayHit(String title, String name) =>
+        words.any(title.contains) &&
+        words.every((w) => name.contains(w) || title.contains(w));
+    // The day-window read runs only as a fallback when names and now/next
+    // slots find nothing at all (populated below), so ordinary searches
+    // never touch the guide store; short prefixes keep the now/next-only
+    // behavior rather than scanning the title dictionary per keystroke.
+    var dayBest = const <int, EpgProgram>{};
+    var scannedAny = false;
+    // Null = proceed to (re)scan; non-null is terminal (cancelled or the
+    // index moved and the whole search restarts).
+    Future<List<ChannelSearchResult>?> fetchDayBest() async {
+      final dayStart = DateTime(now.year, now.month, now.day);
+      final dayRows = await _guideHits(
+          dayStart, dayStart.add(const Duration(days: 2)), words.toSet());
+      if (isCancelled?.call() == true) return const [];
+      if (version != _preparedFor) {
+        return searchWithGuide(query,
+            matches: matches, limit: limit, isCancelled: isCancelled);
+      }
+      final best = <int, EpgProgram>{};
+      for (var r = 0; r < dayRows.length; r++) {
+        if (r % 200 == 0) await Future<void>.delayed(Duration.zero);
+        final p = dayRows[r];
+        for (final i
+            in _byEpgId[normalizeEpgId(p.channelId)] ?? const <int>[]) {
+          if (_excluded.contains(i)) continue;
+          final title = _fixtureText(p.title);
+          if (!dayHit(title, _names[i])) continue;
+          final had = best[i];
+          if (had == null) {
+            best[i] = p;
+            continue;
+          }
+          final liveNow = !p.start.isAfter(now) && p.stop.isAfter(now);
+          final hadLiveNow = !had.start.isAfter(now) && had.stop.isAfter(now);
+          if ((liveNow && !hadLiveNow) ||
+              (liveNow == hadLiveNow && p.start.isBefore(had.start))) {
+            best[i] = p;
+          }
+        }
+      }
+      dayBest = best;
+      return null;
     }
 
-    final slice = Stopwatch()..start();
-    for (var i = 0; i < _channels.length; i++) {
-      if (i % 32 == 0 && slice.elapsedMilliseconds >= _workSliceMs) {
-        await Future<void>.delayed(Duration.zero);
-        if (isCancelled?.call() == true) return const [];
-        if (version != _preparedFor) {
-          return searchWithGuide(query,
-              matches: matches, limit: limit, isCancelled: isCancelled);
+    // restart=true asks the caller to rerun the whole search on the new
+    // index. scannedAny records a non-seeded hit, which skips the fallback.
+    Future<({List<ChannelSearchResult> results, bool restart})> scan() async {
+      final found = <({ChannelSearchResult result, int score, int index})>[];
+      // The event's own channels are what the viewer is usually looking for, so
+      // they belong at the top even when the typed words are team names that the
+      // channel name does not contain ("ACC Network" for a Duke game). They can
+      // still be a programme hit in their own right: a query matching their
+      // guide slot is labelled as one, not silently downgraded to a name match.
+      final seeded = <String>{};
+      for (final match in matches) {
+        final index = _byId[match.channel.id];
+        if (index == null || _excluded.contains(index)) continue;
+        seeded.add(match.channel.id);
+        final slot = matchedSlot(slotsFor(match.channel.epgId), _names[index]);
+        found.add((
+          result: ChannelSearchResult(match.channel,
+              match: match,
+              programme: slot?.programme ?? match.programme,
+              programmeSearchHit: slot != null),
+          score: 3200 + match.score,
+          index: index
+        ));
+      }
+      int compare(({ChannelSearchResult result, int score, int index}) a,
+          ({ChannelSearchResult result, int score, int index}) b) {
+        int evidenceTier(ChannelMatch? match) => match == null
+            ? 0
+            : match.reason == MatchReason.pick
+                ? 3
+                : match.isConfident
+                    ? 2
+                    : 1;
+        final evidence = evidenceTier(b.result.match)
+            .compareTo(evidenceTier(a.result.match));
+        if (evidence != 0) return evidence;
+        final score = b.score.compareTo(a.score);
+        return score != 0 ? score : a.index.compareTo(b.index);
+      }
+
+      final slice = Stopwatch()..start();
+      for (var i = 0; i < _channels.length; i++) {
+        if (i % 32 == 0 && slice.elapsedMilliseconds >= _workSliceMs) {
+          await Future<void>.delayed(Duration.zero);
+          if (isCancelled?.call() == true) {
+            return (results: const <ChannelSearchResult>[], restart: false);
+          }
+          if (version != _preparedFor) {
+            return (results: const <ChannelSearchResult>[], restart: true);
+          }
+          slice.reset();
         }
-        slice.reset();
+        if (_excluded.contains(i)) continue;
+        final channel = _channels[i];
+        if (seeded.contains(channel.id)) continue;
+        final name = _names[i];
+        final nameHit = words.every(name.contains) || aliasBucket.contains(i);
+        final slot = matchedSlot(slotsFor(channel.epgId), name);
+        final day = dayBest[i];
+        if (!nameHit && slot == null && day == null) continue;
+        final match = known[channel.id];
+        final score = (match == null ? 0 : 2000 + match.score) +
+            (slot == null
+                ? (day == null ? 0 : 40)
+                : slot.programme.isNowPlaying(now)
+                    ? 160
+                    : 80) +
+            (name.trim() == normalized
+                ? 120
+                : name.contains(' $normalized ')
+                    ? 60
+                    : 0);
+        found.add((
+          result: ChannelSearchResult(channel,
+              match: match,
+              programme: slot?.programme ?? day ?? match?.programme,
+              programmeSearchHit: slot != null || day != null),
+          score: score,
+          index: i
+        ));
+        scannedAny = true;
+        if (found.length >= limit * 2) {
+          found.sort(compare);
+          found.removeRange(limit, found.length);
+        }
       }
-      if (_excluded.contains(i)) continue;
-      final channel = _channels[i];
-      if (seeded.contains(channel.id)) continue;
-      final name = _names[i];
-      final nameHit = words.every(name.contains) || aliasBucket.contains(i);
-      final slot = matchedSlot(slotsFor(channel.epgId), name);
-      if (!nameHit && slot == null) continue;
-      final match = known[channel.id];
-      final score = (match == null ? 0 : 2000 + match.score) +
-          (slot == null
-              ? 0
-              : slot.programme.isNowPlaying(now)
-                  ? 160
-                  : 80) +
-          (name.trim() == normalized
-              ? 120
-              : name.contains(' $normalized ')
-                  ? 60
-                  : 0);
-      found.add((
-        result: ChannelSearchResult(channel,
-            match: match,
-            programme: slot?.programme ?? match?.programme,
-            programmeSearchHit: slot != null),
-        score: score,
-        index: i
-      ));
-      if (found.length >= limit * 2) {
-        found.sort(compare);
-        found.removeRange(limit, found.length);
+      if (isCancelled?.call() == true) {
+        return (results: const <ChannelSearchResult>[], restart: false);
+      }
+      found.sort(compare);
+      return (
+        results: found.take(limit).map((r) => r.result).toList(),
+        restart: false
+      );
+    }
+
+    List<ChannelSearchResult> finish(List<ChannelSearchResult> results) {
+      _manualCache[cacheKey] = results;
+      while (_manualCache.length > 12) {
+        _manualCache.remove(_manualCache.keys.first);
+      }
+      return results;
+    }
+
+    var scanned = await scan();
+    if (scanned.restart) {
+      return searchWithGuide(query,
+          matches: matches, limit: limit, isCancelled: isCancelled);
+    }
+    if (!scannedAny && words.every((w) => w.length >= 3)) {
+      final fetched = await fetchDayBest();
+      if (fetched != null) return fetched;
+      scanned = await scan();
+      if (scanned.restart) {
+        return searchWithGuide(query,
+            matches: matches, limit: limit, isCancelled: isCancelled);
       }
     }
-    if (isCancelled?.call() == true) return const [];
-    found.sort(compare);
-    final results = found.take(limit).map((r) => r.result).toList();
-    _manualCache[cacheKey] = results;
-    while (_manualCache.length > 12) {
-      _manualCache.remove(_manualCache.keys.first);
-    }
-    return results;
+    return finish(scanned.results);
   }
 
   /// Channels whose name contains every word of [query] — the manual
@@ -3779,24 +3859,24 @@ final _networkNumber = RegExp(
 // Bally Sports became FanDuel Sports Network in 2024. Providers moved at
 // different speeds, so a channel and a listing can name the same RSN by either
 // brand. Collapse the brand and the "network" suffix on both sides.
-final _rsnRename = RegExp(r'\b(?:bally|fanduel) sports(?: network)?\b',
-    caseSensitive: false);
+final _rsnRename =
+    RegExp(r'\b(?:bally|fanduel) sports(?: network)?\b', caseSensitive: false);
 
 /// The channel name with quality labels, the RSN brand and a numbered
 /// family's spelling folded onto one token, but before the service table.
 String _networkBase(String name) => canonicalChannelKey(name
-    .replaceAll(_formatMarkers, '')
-    .replaceAll(_rsnRename, 'fanduel sports')
-    .replaceAllMapped(_networkNumber, (m) {
-  // "F-Sports 1", "F Sports 1" and "Fox Sports 1" are one service spelled
-  // three ways. Collapse the spelling and number onto one token so every
-  // variant produces the same canonical key.
-  final family = m[1]!.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
-  return switch (family) {
-    'fs' || 'fsports' || 'foxsports' => 'foxsports${m[2]}',
-    _ => '$family${m[2]}',
-  };
-}));
+        .replaceAll(_formatMarkers, '')
+        .replaceAll(_rsnRename, 'fanduel sports')
+        .replaceAllMapped(_networkNumber, (m) {
+      // "F-Sports 1", "F Sports 1" and "Fox Sports 1" are one service spelled
+      // three ways. Collapse the spelling and number onto one token so every
+      // variant produces the same canonical key.
+      final family = m[1]!.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+      return switch (family) {
+        'fs' || 'fsports' || 'foxsports' => 'foxsports${m[2]}',
+        _ => '$family${m[2]}',
+      };
+    }));
 
 /// One key per service, whichever way a provider spells it.
 String _networkKey(String name) {
@@ -4002,12 +4082,11 @@ bool _opponentsFit(SportsGame game, List<List<String>> groups, String text,
         game.league.shortName,
         ...game.league.seriesPhrases
       ].map(sportsNormalize).toList();
-      bool namesLeague(String source) => competition
-          .any((p) => p.trim().length >= 3 && source.contains(p));
+      bool namesLeague(String source) =>
+          competition.any((p) => p.trim().length >= 3 && source.contains(p));
       // A feed grouped under the sport itself ("Hockey") is league evidence
       // for that sport's codes: college and pro codes are distinct enough.
-      final sportKey =
-          sportsNormalize(game.league.espnPath.split('/').first);
+      final sportKey = sportsNormalize(game.league.espnPath.split('/').first);
       final qualified = namesLeague(text) ||
           (qualification.isNotEmpty &&
               (namesLeague(qualification) ||
@@ -4741,9 +4820,25 @@ bool _regionTagged(String name, String group) {
 /// ("FS1") is a US listing; a generic name such as "TNT" says nothing at all.
 final _usServiceKeys = {
   for (final name in const [
-    'ACCN', 'SECN', 'CBSSN', 'BTN', 'BTN Alt', 'FS1', 'FS2', 'ESPNU',
-    'ESPNEWS', 'NFLN', 'NFL RedZone', 'NBATV', 'MLBN', 'NHLN', 'Golf Channel',
-    'USA Network', 'LHN', 'P12N', 'Tennis Channel',
+    'ACCN',
+    'SECN',
+    'CBSSN',
+    'BTN',
+    'BTN Alt',
+    'FS1',
+    'FS2',
+    'ESPNU',
+    'ESPNEWS',
+    'NFLN',
+    'NFL RedZone',
+    'NBATV',
+    'MLBN',
+    'NHLN',
+    'Golf Channel',
+    'USA Network',
+    'LHN',
+    'P12N',
+    'Tennis Channel',
   ])
     _networkKey(name),
 };
