@@ -54,6 +54,7 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
   /// store so a large guide elsewhere cannot delay the sports hub.
   Map<String, List<EpgProgram>>? _guideSlice;
   Object? _guideSliceKey;
+  DateTime? _sliceTimeoutAt;
   bool _snapshotDiskCacheAllowed = false;
   DateTime? _snapshotUntil;
   List<String> _guideIds = const [];
@@ -490,6 +491,11 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
   /// with programme inserts; without a bound the hub stalls behind it.
   static const _guideSliceTimeout = Duration(seconds: 10);
 
+  /// How long to trust the in-memory guide after a slice timeout before
+  /// retrying the store. Retrying every pass turns one busy refresh into a
+  /// 10s stall per pass; the cooldown bounds it to one stall per window.
+  static const _guideSliceCooldown = Duration(seconds: 30);
+
   /// The now/next rows for this matcher's guide ids, cached until the guide's
   /// own revisions change. Never waits for the all-channel preload.
   Future<Map<String, List<EpgProgram>>> _readGuideSlice() async {
@@ -505,6 +511,16 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
     );
     final cached = _guideSlice;
     if (cached != null && key == _guideSliceKey) return cached;
+    // A stalled store stays stalled for the whole refresh: weak hardware can
+    // spend minutes inserting a guide while every match pass burns the full
+    // 10s slice timeout behind it. Back off after a timeout and match on the
+    // in-memory guide until the cooldown lapses; the unset key still lets a
+    // later pass retry the read once the database is free.
+    final lastTimeout = _sliceTimeoutAt;
+    if (lastTimeout != null &&
+        _clock().difference(lastTimeout) < _guideSliceCooldown) {
+      return const {};
+    }
     Map<String, List<EpgProgram>> slice;
     try {
       slice = await _source.sportsGuideSlice(_guideIds).timeout(
@@ -514,6 +530,7 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       // instead of stalling, and leave the key unset so the next pass
       // retries the read once the database is free.
       debugPrint('Sports guide slice timed out; matching on memory');
+      _sliceTimeoutAt = _clock();
       return const {};
     }
     _guideSlice = slice;
