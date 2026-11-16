@@ -265,7 +265,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         duration: const Duration(seconds: 2),
         content: Text(tr('Finding {game}…', {'game': game.title}))));
     try {
-      await matcher.prepare(playlist.visibleLiveChannels);
+      await matcher.prepare(SportsChannelMatcher.matchChannels(playlist,
+          preferredId: storage.getSportsPreferredPlaylistId()));
       final matches =
           await matcher.matchDay([game], SportsChannelPicks.load(storage));
       final channel = matches.values

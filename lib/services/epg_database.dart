@@ -41,6 +41,8 @@ class EpgDatabase {
   final _sportsSearch = SportsGuideSearchIndex();
   Future<void> _scopedTitleRead = Future<void>.value();
 
+  /// Encodes sports title tokens in the background; searches stay exact
+  /// while it runs.
   Future<void> warmSportsSearch({bool Function()? cancelled}) async =>
       _sportsSearch.maintain(await _database, cancelled: cancelled);
 

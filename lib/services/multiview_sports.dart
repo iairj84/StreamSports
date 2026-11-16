@@ -62,7 +62,8 @@ class MultiviewSports {
     if (games.isEmpty) return const [];
     final matcher = SportsChannelMatcher.shared(epg);
     await playlist.ensureLiveChannelsLoaded();
-    await matcher.prepare(playlist.visibleChannels(category: 'tv'));
+    await matcher.prepare(SportsChannelMatcher.matchChannels(playlist,
+        preferredId: storage.getSportsPreferredPlaylistId()));
     final matches =
         await matcher.matchDay(games, SportsChannelPicks.load(storage));
     return [

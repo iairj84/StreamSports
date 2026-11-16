@@ -3304,19 +3304,9 @@ class _SportsScreenState extends State<SportsScreen>
   /// Channels the matcher indexes: the preferred playlist first, then the
   /// browsed one, so a game missing from the preferred playlist still finds
   /// a channel.
-  List<Channel> _matchChannels(PlaylistManager playlist) {
-    final preferred = _preferredPlaylistId;
-    if (preferred == null) return playlist.visibleLiveChannels;
-    final first =
-        playlist.visibleChannels(playlistId: preferred, category: 'tv');
-    if (first.isEmpty) return playlist.visibleLiveChannels;
-    final seen = {for (final c in first) c.id};
-    return [
-      ...first,
-      for (final c in playlist.visibleLiveChannels)
-        if (!seen.contains(c.id)) c,
-    ];
-  }
+  List<Channel> _matchChannels(PlaylistManager playlist) =>
+      SportsChannelMatcher.matchChannels(playlist,
+          preferredId: _preferredPlaylistId);
 
   Future<void> _pickCardSize() async {
     final choice = await showSportsChoices(context,

@@ -8,7 +8,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'models/channel.dart';
 import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
@@ -203,6 +202,12 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
         _pendingAutoOpenAddPlaylist = await _confirmNewUserWantsPlaylist();
       }
       if (mounted) setState(() => _ready = true);
+      // The dictionary's first build scans the whole programme table in one
+      // transaction on the guide's only connection, so it waits for the
+      // first painted frame instead of joining the matcher warm-up below.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _epgService.warmSportsSearchSoon(delay: Duration.zero);
+      });
       if (_pendingAutoOpenAddPlaylist) {
         // Same reasoning as the toast above — the real Navigator this
         // pushes onto doesn't exist until this build lands.
@@ -319,19 +324,10 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
   Future<void> _warmSportsMatcher() async {
     try {
       await _playlistManager.ensureLiveChannelsLoaded();
-      final preferred = _storage.getSportsPreferredPlaylistId();
-      final List<Channel> first = preferred == null
-          ? const []
-          : _playlistManager.visibleChannels(
-              playlistId: preferred, category: 'tv');
-      final seen = {for (final c in first) c.id};
-      final channels = first.isEmpty
-          ? _playlistManager.visibleLiveChannels
-          : [
-              ...first,
-              for (final c in _playlistManager.visibleLiveChannels)
-                if (!seen.contains(c.id)) c,
-            ];
+      final channels = SportsChannelMatcher.matchChannels(
+        _playlistManager,
+        preferredId: _storage.getSportsPreferredPlaylistId(),
+      );
       if (channels.isEmpty) return;
       final matcher = SportsChannelMatcher.shared(_epgService);
       await matcher.prepare(channels);

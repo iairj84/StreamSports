@@ -148,8 +148,13 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   final StorageService _storage;
   final EpgDatabase _db;
 
-  Future<void> warmSportsSearch({bool Function()? cancelled}) =>
-      _db.warmSportsSearch(cancelled: cancelled);
+  /// Background sports title-dictionary build; see
+  /// [EpgDatabase.warmSportsSearch]. Joins the service init so any caller
+  /// can use it without racing the database open.
+  Future<void> warmSportsSearch({bool Function()? cancelled}) async {
+    await init();
+    await _db.warmSportsSearch(cancelled: cancelled);
+  }
   bool _disposed = false;
 
   /// How far ahead [_soon] reaches — comfortably past "next" for any
@@ -399,6 +404,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
   List<PortalGuideSource> Function()? portalSources;
   Future<void> Function()? onSupplementaryGuidesUpdated;
   Future<void>? _activeRefresh;
+  Timer? _searchWarmupTimer;
   String? refreshStatus;
 
   Future<void> _serialRefresh(List<EpgSource> sources,
@@ -457,9 +463,9 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
     refreshStatus = 'Updating playlist guides…';
     var evidenceChanged = false;
     _notifyStatus();
+    var anySucceeded = false;
     try {
       await init();
-      var anySucceeded = false;
       final failures = <String>[];
       for (final source in sources) {
         final count = await _refreshOne(source.url,
@@ -533,6 +539,10 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
     } finally {
       refreshStatus = null;
       isLoading = false;
+      // New titles arrive un-encoded and stay on the exact path until the
+      // dictionary absorbs them; schedule that pass once the post-refresh
+      // reload and UI rebuild have settled.
+      if (anySucceeded) warmSportsSearchSoon();
       if (evidenceChanged) {
         notifyListeners();
       } else {
@@ -540,6 +550,22 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
         _notifyStatus();
       }
     }
+  }
+
+  /// Sports title-dictionary build after [delay]. Overlapping calls
+  /// reschedule rather than pile up, and overlapping builds coalesce
+  /// inside the index. Used after the first painted frame (delay zero) and
+  /// after guide refreshes (once the reload and UI rebuild have settled).
+  void warmSportsSearchSoon({Duration delay = const Duration(seconds: 30)}) {
+    _searchWarmupTimer?.cancel();
+    _searchWarmupTimer = Timer(delay, () async {
+      if (_disposed) return;
+      try {
+        await warmSportsSearch();
+      } catch (_) {
+        // Optional acceleration; searches stay exact without it.
+      }
+    });
   }
 
   /// Wipes every stored programme ("Clear Cache" in EPG settings).
@@ -850,6 +876,7 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
     _pendingLoads.clear();
     _refreshTimer?.cancel();
     _soonTimer?.cancel();
+    _searchWarmupTimer?.cancel();
     guideRowsLoaded.dispose();
     super.dispose();
   }

@@ -77,7 +77,15 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
           if (_trimAfterJob) {
             _stop();
           } else {
-            _idle = Timer(const Duration(minutes: 2), _stop);
+            // Keep the channel index, guide snapshot and cached matches
+            // alive between hub visits: returning from a game must not
+            // rebuild them. Low-memory devices keep the short leash;
+            // memory pressure still trims the worker immediately through
+            // didHaveMemoryPressure.
+            _idle = Timer(
+                Duration(
+                    minutes: SportsChannelMatcher.lowMemoryDevice ? 2 : 20),
+                _stop);
           }
         }
       }

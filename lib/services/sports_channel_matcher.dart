@@ -30,6 +30,7 @@ import '../utils/sports_team_vocabulary.dart';
 import '../utils/sports_programme_time_index.dart';
 import '../utils/sports_title_matcher.dart';
 import 'epg_service.dart';
+import 'playlist_manager.dart';
 import 'sports_channel_text_cache.dart';
 import 'sports_match_disk_cache.dart';
 import 'sports_match_inputs.dart';
@@ -1144,6 +1145,26 @@ class SportsChannelMatcher {
       if (lower.isNotEmpty && !out.contains(lower)) out.add(lower);
     }
     return out.toList(growable: false);
+  }
+
+  /// Channels the matcher indexes: the preferred playlist first, then
+  /// everything else, so a game missing from the preferred playlist still
+  /// finds a channel. Every caller must use this order — the index
+  /// signature folds channels in order, so a different order rebuilds the
+  /// whole index even when the channels are identical.
+  static List<Channel> matchChannels(PlaylistManager playlist,
+      {String? preferredId}) {
+    final all = playlist.visibleLiveChannels;
+    if (preferredId == null) return all;
+    final preferred = playlist.visibleChannels(
+        playlistId: preferredId, category: 'tv');
+    if (preferred.isEmpty) return all;
+    final seen = {for (final c in preferred) c.id};
+    return [
+      ...preferred,
+      for (final c in all)
+        if (!seen.contains(c.id)) c,
+    ];
   }
 
   /// Hands the worker guide its catalogue scope after an index rebuild.

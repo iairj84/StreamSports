@@ -35,18 +35,21 @@ class SportsGuideSearchIndex {
   }
 
   /// Called after visible work, not awaited by the first sports screen.
+  /// Overlapping runs share one pass. Logs what the pass encoded for
+  /// payoff measurement; searches stay exact while it is in flight.
   Future<void> maintain(Database db, {bool Function()? cancelled}) =>
       _maintenance ??=
           _maintain(db, cancelled).whenComplete(() => _maintenance = null);
 
   Future<void> _maintain(Database db, bool Function()? cancelled) async {
-    final audit = const bool.fromEnvironment('IPTV_PROFILE_SPORTS')
-        ? (Stopwatch()..start())
-        : null;
+    final clock = Stopwatch()..start();
     var indexed = 0;
+    var total = 0;
+    var fresh = false;
     try {
       if (cancelled?.call() == true) return;
       if (!await available(db)) {
+        fresh = true;
         await db.transaction((txn) async {
           // Rebuild only derived state; the ordinary guide remains authoritative.
           for (final name in ['insert', 'update']) {
@@ -87,6 +90,7 @@ class SportsGuideSearchIndex {
       final count = Sqflite.firstIntValue(
               await db.rawQuery('SELECT COUNT(*) FROM sports_title_doc')) ??
           0;
+      total = count;
       if (count > 100000) {
         await db.transaction((txn) async {
           await txn.execute('CREATE TEMP TABLE sports_title_stale AS '
@@ -124,10 +128,8 @@ class SportsGuideSearchIndex {
     } catch (_) {
       // Optional acceleration: all ordinary guide data and queries survive.
     } finally {
-      if (audit != null && indexed > 0) {
-        debugPrint(
-            'IPTV_SEARCH_INDEX built=$indexed elapsed_ms=${audit.elapsedMilliseconds}');
-      }
+      debugPrint('IPTV_SEARCH_INDEX indexed=$indexed total=$total '
+          'fresh=$fresh elapsed_ms=${clock.elapsedMilliseconds}');
     }
   }
 

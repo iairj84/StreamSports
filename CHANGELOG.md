@@ -1,4 +1,6 @@
 # Changelog
+## 0.2.50 — 16 November 2026
+- Sports matching stays warm between hub visits: the title dictionary builds after the first screen and after every guide refresh, the matching worker idles for 20 minutes instead of two on capable devices, and every entry point indexes channels in the same preferred-first order so returning to the hub reuses the index instead of rebuilding it.
 ## 0.2.49 — 15 November 2026
 - The sports picker search now reaches later listings, not just what is on now or next: a typed team that plays tonight shows those streams the same way the main guide search does. Short prefixes keep the instant now-and-next behavior.
 ## 0.2.48 — 15 November 2026
