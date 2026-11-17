@@ -11,6 +11,7 @@ import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
+import '../services/remote_controls.dart';
 
 import 'player_chrome.dart';
 import 'cached_channel_logo.dart';
@@ -250,12 +251,6 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
         : context.read<PlaybackService>().play(channel);
   }
 
-  static bool _isSelect(LogicalKeyboardKey key) =>
-      key == LogicalKeyboardKey.select ||
-      key == LogicalKeyboardKey.enter ||
-      key == LogicalKeyboardKey.numpadEnter ||
-      key == LogicalKeyboardKey.gameButtonA;
-
   /// OK on a game tab: tap = watch (on key-up), hold = stats. Last
   /// channels has no hold, so it plays on key-down as before.
   KeyEventResult _onSelectKey(KeyEvent event) {
@@ -273,7 +268,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       return KeyEventResult.ignored;
     }
     if (!_focus.hasPrimaryFocus) return KeyEventResult.ignored;
-    if (_isSelect(event.logicalKey)) return _onSelectKey(event);
+    if (isTvActivateKey(event.logicalKey)) return _onSelectKey(event);
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     // Windows keyboard: Esc closes, like Back on a remote.

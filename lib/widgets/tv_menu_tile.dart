@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
+import '../services/remote_controls.dart';
 import '../utils/tv_theme.dart';
 
 /// Shared focusable settings destination row. Custom leading and trailing widgets retain the
@@ -88,11 +89,7 @@ class _TvMenuTileState extends State<TvMenuTile> {
         skipTraversal: true,
         onKeyEvent: (_, event) {
           final key = event.logicalKey;
-          if (event is KeyRepeatEvent &&
-              (key == LogicalKeyboardKey.enter ||
-                  key == LogicalKeyboardKey.select ||
-                  key == LogicalKeyboardKey.numpadEnter ||
-                  key == LogicalKeyboardKey.gameButtonA)) {
+          if (event is KeyRepeatEvent && isTvActivateKey(key)) {
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;

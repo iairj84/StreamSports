@@ -3661,10 +3661,7 @@ class _GroupRowState extends State<_GroupRow> {
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    final isActivateKey = event.logicalKey == LogicalKeyboardKey.select ||
-        event.logicalKey == LogicalKeyboardKey.enter ||
-        event.logicalKey == LogicalKeyboardKey.numpadEnter ||
-        event.logicalKey == LogicalKeyboardKey.gameButtonA;
+    final isActivateKey = isTvActivateKey(event.logicalKey);
     if (widget.moving) return _handleMovingKey(event, isActivateKey);
     if (!isActivateKey) return KeyEventResult.ignored;
 
@@ -4308,11 +4305,7 @@ class _TimelineGuideState extends State<_TimelineGuide>
       focusEntry();
       return KeyEventResult.handled;
     }
-    if (event is KeyDownEvent &&
-        (key == LogicalKeyboardKey.select ||
-            key == LogicalKeyboardKey.enter ||
-            key == LogicalKeyboardKey.numpadEnter ||
-            key == LogicalKeyboardKey.gameButtonA)) {
+    if (event is KeyDownEvent && isTvActivateKey(key)) {
       if (_playingButtonFocus.hasFocus) {
         widget.onPlayingChannel?.call();
       } else if (_nowButtonFocus.hasFocus) {

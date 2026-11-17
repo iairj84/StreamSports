@@ -4,6 +4,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/remote_controls.dart';
+
 /// Prevent a held activation key from selecting items in a newly opened route. Ignore repeats
 /// and the inherited key-up until a fresh non-repeat key-down arrives.
 class SwallowHeldActivate extends StatefulWidget {
@@ -18,7 +20,7 @@ class _SwallowHeldActivateState extends State<SwallowHeldActivate> {
   bool _armed = false;
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (_armed || !_isActivateKey(event.logicalKey)) {
+    if (_armed || !isTvActivateKey(event.logicalKey)) {
       return KeyEventResult.ignored;
     }
     if (event is KeyDownEvent) {
@@ -36,12 +38,6 @@ class _SwallowHeldActivateState extends State<SwallowHeldActivate> {
         child: widget.child,
       );
 }
-
-bool _isActivateKey(LogicalKeyboardKey key) =>
-    key == LogicalKeyboardKey.select ||
-    key == LogicalKeyboardKey.enter ||
-    key == LogicalKeyboardKey.numpadEnter ||
-    key == LogicalKeyboardKey.gameButtonA;
 
 class HoldToActivate extends StatefulWidget {
   const HoldToActivate({
@@ -92,10 +88,7 @@ class _HoldToActivateState extends State<HoldToActivate> {
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    final isActivateKey = event.logicalKey == LogicalKeyboardKey.select ||
-        event.logicalKey == LogicalKeyboardKey.enter ||
-        event.logicalKey == LogicalKeyboardKey.numpadEnter ||
-        event.logicalKey == LogicalKeyboardKey.gameButtonA;
+    final isActivateKey = isTvActivateKey(event.logicalKey);
     if (!isActivateKey) return KeyEventResult.ignored;
 
     if (event is KeyDownEvent) {

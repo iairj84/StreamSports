@@ -329,6 +329,21 @@ String remoteKeyLabel(KeyEvent event) {
   return 'Button 0x${keyId.toRadixString(16).toUpperCase()}';
 }
 
+/// The remote's OK button in all its spellings: the directional-pad Select,
+/// the keyboard Enter (including the numpad form some remotes send), and the
+/// game-controller A button. Handlers that activate the focused item test
+/// this instead of spelling the four keys out, so a new spelling only needs
+/// adding in one place.
+///
+/// Deliberately narrower than [isReservedRemoteKey]: some handlers treat
+/// Space differently (play/pause), and text entry only trusts the remote's
+/// own OK key — those keep their own conditions.
+bool isTvActivateKey(LogicalKeyboardKey key) =>
+    key == LogicalKeyboardKey.select ||
+    key == LogicalKeyboardKey.enter ||
+    key == LogicalKeyboardKey.numpadEnter ||
+    key == LogicalKeyboardKey.gameButtonA;
+
 /// Buttons the app's own navigation depends on, so they are never taken for a
 /// remap — losing Down or Back on a TV remote would strand the viewer.
 bool isReservedRemoteKey(KeyEvent event) {

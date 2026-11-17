@@ -139,4 +139,24 @@ void main() {
     expect(isReservedRemoteKey(_press(PhysicalKeyboardKey.mediaPlayPause)),
         isFalse);
   });
+
+  test('activate means select, enter, numpad enter, or gamepad A — nothing else',
+      () {
+    for (final key in [
+      LogicalKeyboardKey.select,
+      LogicalKeyboardKey.enter,
+      LogicalKeyboardKey.numpadEnter,
+      LogicalKeyboardKey.gameButtonA,
+    ]) {
+      expect(isTvActivateKey(key), isTrue, reason: '$key');
+    }
+    for (final key in [
+      LogicalKeyboardKey.space,
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.escape,
+      LogicalKeyboardKey.keyA,
+    ]) {
+      expect(isTvActivateKey(key), isFalse, reason: '$key');
+    }
+  });
 }

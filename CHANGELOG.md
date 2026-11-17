@@ -1,4 +1,7 @@
 # Changelog
+## 0.2.53 — 17 November 2026
+- One shared OK-button check for TV remotes: the select/enter/numpad-enter/gamepad-A test lived in six copies across five files and is now a single helper, so a new remote spelling only needs adding once. Handlers with deliberately narrower key sets keep their own conditions.
+- Workspace cleanup: removed about 100 MB of ignored local clutter (a stale 0.2.32 APK, an already-imported asset drop, and stray build logs).
 ## 0.2.52 — 17 November 2026
 - Translation safety net: a new parity test checks every dictionary key still exists in the code, that {placeholders} match between English and translations, and that new user-visible strings are either translated or recorded. Backup and device-transfer screens fixed three labels that interpolated values before lookup, which had made them untranslatable.
 - Continuous integration: pushes and pull requests now run analysis and the full test suite, sharded four ways.
