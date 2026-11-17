@@ -250,7 +250,7 @@ class _BackupScreenState extends State<BackupScreen> {
     final choice = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(tr('Backup from ${_describe(backup)}')),
+        title: Text(tr('Backup from {description}', {'description': _describe(backup)})),
         content: Text(tr(
             'Restoring replaces this device’s playlists, settings, sports picks, favorites, channel links and channel names with the copy in this backup. Anything saved since then is lost.')),
         actions: [

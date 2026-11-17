@@ -1,0 +1,313 @@
+1 channel cleaned up.
+1 channel rename reset.
+1 channel renamed from your phone.
+1 enabled playlist
+1 of {n} channels changes.
+A backup file holds your playlist logins, so keep it somewhere private. For a direct copy between two boxes, Transfer to another device sends the same data encrypted over your Wi-Fi.
+A backup is a copy of this device’s playlists, settings, sports picks, favorites, channel links and channel names. It is kept inside the app; use your phone below to keep a copy somewhere else.
+A transfer replaces the receiving device’s playlists, settings, sports picks, favorites and channel links. Anything only on that device is lost.
+About StreamSports
+Accept and replace
+Add a guide URL to your playlist to download listings.
+Add playlist
+All channels
+Allow this app to install updates, then press Install again.
+App updates
+Apply
+Apply to {n} channels
+Applying…
+Available: {v}
+Back to live
+Back to the shipped defaults
+Backup & restore
+Backup from {description}
+Based on VesperTV by NoXqc and contributors. Modified and distributed under GPL-3.0, without warranty. Channel content comes from your playlists. Program listings and sports coverage depend on the available sources.
+Both devices need to be on the same Wi-Fi. Nothing goes through a server, and the data is encrypted on the way.
+Broadcaster
+Channel names
+Channel preview
+Channel updates
+Channels
+Channels or shows on now…
+Channels unavailable. Try again.
+Check for updates
+Check that the other device shows the same code, then send. Its playlists, settings and sports picks will be replaced.
+Check the link here, then press Add.
+Checking…
+Choose Save to phone or Restore from phone.
+Choose a channel
+Choose a game
+Choose a language or commentary
+Choose day
+Choose which playlist appears first
+Clean up channel names
+Clean up names
+Clear guide listings
+Clear guide listings?
+Clear listings
+Closed captions
+Code for {peer}
+Coloured and extra buttons
+Comma-separated, for labels the rules miss: SPT, MOVIE, 24/7. Each one is removed wherever it appears.
+Confirm on the TV before anything is replaced.
+Connection
+Connection, buffer, video and audio details
+Copy this device to another
+Could not connect to this playlist. Check the details and try again.
+Could not save playlist: {p}
+Could not save the playlist. Please try again.
+Could not update playlists. Please try again.
+Could not update the library. Please try again.
+Couldn't find anything usable in that text.
+Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.
+Couldn't reach the provider's server. Check your internet connection, or the server may be down.
+Create a backup now
+Credits
+Current
+Decline
+Devices & app
+Download a copy to the phone, to keep it somewhere off this device
+Download size: {size}
+Download the update again.
+Download this device’s backup onto your phone, or pick a backup the phone already has and send it here to set this device up.
+Download update
+Downloaded program listings will be removed. Your playlists, favorites and saved guide assignments stay saved.
+Downloaded. Install it to finish updating.
+Downloading… {p}%
+Each player button can do any of these. The ones shown are what they do today.
+Every button back to its default
+Every guide URL on a playlist is downloaded together. A guide that uses different channel IDs is attached to channels with the same name automatically.
+Every hour
+Every remapped button goes back to doing what it did before.
+Every {p} hours
+Every {p} minutes
+Extra buttons
+Fill missing listings
+Finding channel…
+Finding {game}…
+First 200 matches · narrow your search
+Game card size
+Go live
+Guide downloads run in the background and retain relevant listings only. Turning a source off stops future updates and keeps downloaded listings until they expire.
+Guide listings cleared. Use Refresh guide to download them again.
+Guide updates
+Hide betting lines
+Hide scores
+Hold OK on a category to move it.
+Home, volume and power
+If that code matches the other device, accept. This device’s playlists, settings and sports picks will be replaced with a copy from it.
+Install update
+Installed build
+Jumps straight to full screen on whatever is already playing. Hold Right for the resume hint.
+Keeps a playing channel in a small system window after you leave the app. Off: playback stops when you leave.
+Last update failed
+Launcher icon
+Leave blank to use the panel's own xmltv.php. Enter one URL per line when your provider publishes several guides. Set this if the provider's EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed's ids match this panel's.
+Left alone: {name}
+Left and right
+Listed broadcaster
+Listening for a button. Back cancels.
+Live TV, sports, movies and series from your own playlists.
+Live buffer
+Loading channels...
+Loading playlists...
+Loading settings...
+Make it yours
+Make the other device match this one
+Mono · 1
+Most remotes send keys the app has no default for. If a button does nothing, remap it below.
+Move a backup with your phone
+Moves through channels in Live TV, rows in the guide, and lines in a menu.
+Movies & series
+Moving {name} — Up/Down to move, OK to drop
+Muted
+Name shown in StreamSports
+No backups yet. Create one before changing playlists or settings you may want back.
+No categories match your search.
+No channel renames to reset.
+No channel would change.
+No devices found. Start “Receive on this device” on the other device, then search again.
+No games with a matched channel
+No guide URLs yet. Add one while adding or editing a playlist.
+No listings downloaded yet
+No playable data arrived within 30 seconds. The server may be slow or unreachable.
+No playable stream for this title.
+Not available on this stream
+Not downloaded yet
+Not remapped
+Not reported
+Nothing to apply
+Nothing to change with these rules. Try turning one back on, or rename channels by hand.
+Now on {key}. Press another button, or Remove.
+OK / Select
+OK = stats and standings · ▶❚❚ = watch
+On-demand seeking
+One URL per line — every guide is refreshed
+Only for remotes with spare buttons beyond the D-pad. Choose an action, then press the button. These work in Live TV.
+Open-source licences
+Paste the link and tap Send to TV.
+Picture-in-picture when you press Home
+Play / pause
+Playback
+Playback & preferences
+Playback at startup
+Playback stopped progressing and automatic recovery did not succeed. Try again or choose another channel.
+Playlist guides
+Playlist order
+Playlists & guide
+Playlists updated
+Preferred playlist
+Preview
+Program listings
+Program unavailable
+Projectivy and other launchers
+Projectivy keeps its own picture for each app, and its chooser only offers pictures already on this device. Save one below, then set it per app with "From picture". In Projectivy, turn off Settings > Appearance > Categories > Tint custom icons so the colors are left alone.
+Re-checks visible categories in this playlist for new content.
+Re-fetches your channels from every provider on launch, then refreshes the guide. Off: playlists update on their usual schedule instead.
+Ready to play
+Receiving the settings…
+Refresh automatically
+Refresh guide
+Refreshing listings…
+Remote control
+Remove all {n} channel renames and restore provider names everywhere? Matching uses the new names again from the next check.
+Removes downloaded program listings only. Refresh the guide to download them again.
+Removes every starred item and favorite group from this tab's Favorites.
+Rename a channel and every screen uses the new name: the guide, Sports matching, the channel picker and the player. Your playlist is never edited, so updates cannot undo it.
+Rename channel
+Rename channels from your phone
+Rename from my phone
+Renaming with a remote is painful. Scan this code with your phone camera, edit the names there and they appear on the TV straight away.
+Replace this device with the other one
+Reset
+Reset all renames
+Reset all renames?
+Reset player buttons
+Reset remapped buttons
+Reset remapped buttons?
+Restore
+Restore from my phone
+Restore or delete this backup
+Restore the backup from your phone?
+Restoring replaces this device’s playlists, settings, sports picks, favorites, channel links and channel names with the copy in this backup. Anything saved since then is lost.
+Retry the current channel
+Rewind
+Right at the end of the row
+Rules
+Save a backup to my phone
+Save artwork
+Save changes
+Saved backups
+Saved to Pictures/StreamSports. Choose it in your launcher.
+Saving needs storage permission on this Android version.
+Saving to the device works in the Android app.
+Saving...
+Scan a code with your phone to keep a backup there, or to send one to this device. This is how a backup reaches a new box without a computer or an account.
+Search again
+Search categories
+Search channels or on now
+Search your channels and type the new names.
+Select a row below to leave that channel alone.
+Selected extra guides run after each playlist guide update. Only missing listings are filled; your working guides and manual links stay intact.
+Send a backup the phone holds to this device, then confirm here
+Send settings
+Server error {code}
+Set up another device
+Show betting lines
+Show multiview in the player and Settings. Each screen uses a provider connection.
+Show scores
+Showing the first 200 of {n}.
+Skip this build
+Some categories could not be updated. Please try again.
+Some listings could not be updated. Existing guide data has been kept.
+Some playlists could not be updated. Please try again.
+Sport category feed
+Sports options
+Start over
+Start-up buffering
+Starts or pauses the player; in Live TV it is a spare button you can remap below.
+Steps between categories and channels, and through time in the guide. In the player, Left opens the channel list and Right returns to the last channel — both can be changed above.
+Stereo · 2
+Stop
+Storage
+Strip the padding providers add to every name — region tags, quality markers and slot numbers. The playlist is never edited: clean names are saved as renames, so a provider update cannot undo them.
+Switch between portrait and landscape
+TV guide
+Tap Check for updates to look for a newer build.
+Tap Send to TV — the names change here.
+The file could not be saved.
+The installer is open. Confirm the update to finish.
+The provider calls this {name}
+The provider closed the live stream and it could not be resumed.
+The provider has no stream at this address: the channel or title may have been removed.
+The provider is limiting requests. Wait before retrying.
+The provider refused the stream: check that your account is active and not already in use on another device.
+The provider rejected the request.
+The provider's server had a problem. Try again in a moment.
+The transfer failed.
+The update could not be installed.
+The update downloads inside the app and installs over this one. Playlists, favorites and guide data stay as they are.
+The video decoder could not play this stream. Try another version of this channel or check Stream info for the reported format.
+These are handled by the TV itself and never reach the app, so they cannot be remapped.
+These are two different settings, not two versions of one. Start-up buffering decides how much a stream collects before it plays; the live buffer only applies to live channels and holds extra video so provider dropouts do not interrupt the picture. Change either on its own.
+This build will not be offered again.
+This device
+This device is running the newest build.
+This device: {address}
+This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.
+This removes "{name}"'s login and cached catalog from this device. Its favorite channels stay in your shared Favorites list, but will no longer play unless you add this playlist back.
+This replaces this device’s playlists, settings, sports picks, favorites, channel links and channel names with the copy the phone sent. Anything saved since that copy was made is lost.
+Try another day, or add leagues in Sports options.
+Turn off With channel to see all games.
+Turn off to stop using this playlist. Channels and settings stay saved.
+Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.
+Undo
+Undo stays available on this screen until you leave it or apply again.
+Up and down
+Up one level, and out of the player back to the guide.
+Up to ${BackupService.keep} backups are kept; older ones are removed
+Update available
+Update now
+Update playlists at startup
+Update schedule and supplementary guide sources
+Updated from the current player
+Updated {p}
+Updates come from this app's own releases.
+Updating results…
+Use provider name
+Use the same Wi-Fi or local network on both devices. If a VPN is enabled, allow local network (LAN) access in its settings.
+Version {v}
+Viewing tools
+Volume
+Waiting for stream
+Waiting for the other device. On it, choose “Send from this device” and pick this one.
+Waiting for the stream. Details appear as the player receives them.
+Watch from start
+Watch multiple channels
+Watch multiple channels together
+Watches the highlighted channel or opens the item. Hold it on a channel for that channel’s tools.
+What your remote does
+When watching
+Your TV
+Your own words
+Your playlists
+available
+behind live
+channels
+extra live video kept on hand so short dropouts pass unnoticed. Applies from the next channel.
+server
+{action}: press a button
+{changed} of {n} channels change.
+{count} channels
+{count} enabled playlists
+{count} of {total} categories
+{group} · {p} · was {was}
+{key}
+{key} does
+{new} is ready. This device is running {current}.
+{n} channel renames reset.
+{n} channels cleaned up.
+{n} channels renamed from your phone.
+{n} named by hand are left alone.
+{n} programs · {p}
+{p} live channels

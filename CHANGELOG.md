@@ -1,4 +1,8 @@
 # Changelog
+## 0.2.52 — 17 November 2026
+- Translation safety net: a new parity test checks every dictionary key still exists in the code, that {placeholders} match between English and translations, and that new user-visible strings are either translated or recorded. Backup and device-transfer screens fixed three labels that interpolated values before lookup, which had made them untranslatable.
+- Continuous integration: pushes and pull requests now run analysis and the full test suite, sharded four ways.
+- The patched Android player fork documents its three local changes against upstream 2.12.2 in third_party/video_player_android/PATCHES.md.
 ## 0.2.51 — 16 November 2026
 - Sports hub rows no longer lose focus when the list refreshes or reorders mid-press: if the focused card is gone from its row, the row holds focus instead of letting the key fall through to a distant row.
 ## 0.2.50 — 16 November 2026

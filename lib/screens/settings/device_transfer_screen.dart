@@ -364,7 +364,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
                     style: Theme.of(context).textTheme.bodyMedium),
               if (status.address != null) ...[
                 const SizedBox(height: 8),
-                Text(tr('This device: ${status.address}'),
+                Text(tr('This device: {address}', {'address': status.address}),
                     style: Theme.of(context).textTheme.bodySmall),
               ],
             ]),
@@ -414,7 +414,7 @@ class _CodeCard extends StatelessWidget {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12)),
         child: Column(children: [
-          Text(tr('Code for $peer'),
+          Text(tr('Code for {peer}', {'peer': peer}),
               style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 8),
           Text(code,
