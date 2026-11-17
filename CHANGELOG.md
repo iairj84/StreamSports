@@ -1,4 +1,6 @@
 # Changelog
+## Unreleased
+- 17 November 2026 — Added AGENTS.md: a short project, documentation, skill-workflow and working-rules guide for coding agents.
 ## 0.2.54 — 17 November 2026
 - Tennis listings name players as "Sinner, Jannik - Alcaraz, Carlos" again: matching kept reworking the channel name until the commas were gone, so the exact-fixture check never saw them. Renamed channels also fall back to their provider name here.
 - The channel picker's search no longer reports "Search unavailable" when only its optional day-ahead guide read fails; names and now/next results stand on their own.
