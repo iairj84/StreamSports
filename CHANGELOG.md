@@ -1,4 +1,6 @@
 # Changelog
+## 0.2.51 — 16 November 2026
+- Sports hub rows no longer lose focus when the list refreshes or reorders mid-press: if the focused card is gone from its row, the row holds focus instead of letting the key fall through to a distant row.
 ## 0.2.50 — 16 November 2026
 - Sports matching stays warm between hub visits: the title dictionary builds after the first screen and after every guide refresh, the matching worker idles for 20 minutes instead of two on capable devices, and every entry point indexes channels in the same preferred-first order so returning to the hub reuses the index instead of rebuilding it.
 ## 0.2.49 — 15 November 2026

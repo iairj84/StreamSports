@@ -3794,7 +3794,11 @@ class _SportsScreenState extends State<SportsScreen>
     final i = s.games.indexWhere((g) => pending == null
         ? (_cardNodes[_gameKey(g)]?.hasFocus ?? false)
         : _gameKey(g) == pending.key);
-    if (i < 0) return KeyEventResult.ignored;
+    // A refresh or reorder can retire the focused card mid-hold, leaving
+    // the row unable to place it. Stay put rather than fall through to
+    // default traversal, which flings focus to a distant row — horizontal
+    // movement here belongs to the row, same as its ends below.
+    if (i < 0) return KeyEventResult.handled;
     final target = i + delta;
     if (_tvNavigation && target < 0) {
       _pendingRowFocus = null;
