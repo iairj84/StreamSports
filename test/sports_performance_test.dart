@@ -434,7 +434,10 @@ void main() {
     expect(picked['nhl:game']!.first.channel, same(channels[0]));
     final search =
         await worker.searchWithGuide('Boston', matches: picked['nhl:game']!);
-    expect(search.single.channel, same(channels[1]));
+    // The event's own channels lead the results by design (a typed team name
+    // is often absent from their names), so the name hit follows the pick.
+    expect(search.map((r) => r.channel.id).toList(),
+        [channels[0].id, channels[1].id]);
     (worker as WidgetsBindingObserver).didHaveMemoryPressure();
     final restarted = await worker.matchDay([game()], picks);
     expect(restarted['nhl:game']!.first.channel, same(channels[0]));

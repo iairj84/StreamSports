@@ -2180,7 +2180,9 @@ void main() {
             playlist.dispose();
             epg.dispose();
             prefs.dispose();
-            await tester.pump(const Duration(minutes: 2));
+            // Past the matcher worker's idle leash (20 minutes) so its release
+            // timer cannot outlive the tree.
+            await tester.pump(const Duration(minutes: 21));
           }, () => MockClient((_) async => http.Response('{}', 200))));
 
   testWidgets(

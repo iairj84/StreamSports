@@ -89,8 +89,11 @@ void main() {
           await tester.tap(find.text('Xtream Codes'));
           await tester.pumpAndSettle();
         }
+        // The form is a lazy ListView: on a short TV viewport a field scrolled
+        // out of the built window is still mounted but counts as offstage.
         Finder field(String label) => find.byWidgetPredicate(
-            (w) => w is TextField && w.decoration?.labelText == label);
+            (w) => w is TextField && w.decoration?.labelText == label,
+            skipOffstage: false);
         Future<void> enter(String label, String text) async {
           final f = field(label);
           await tester.ensureVisible(f);

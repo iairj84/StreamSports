@@ -2680,17 +2680,24 @@ class SportsChannelMatcher {
         channelEvidence(i);
         if (!_eligible(i, g)) continue;
         var text = _names[i];
+        // Tennis exactness reads the provider's own wording (commas, both
+        // names in order), so it gets the raw name, not the normalized text.
+        var raw = _channels[i].name;
         if (!fitsName(text)) {
           final original = _originalNames[i];
-          if (original.isEmpty || !fitsName(original)) continue;
+          final originalRaw = _channels[i].originalName;
+          if (original.isEmpty || originalRaw == null || !fitsName(original)) {
+            continue;
+          }
           text = original;
+          raw = originalRaw;
         }
         if (g.league.kind == SportsKind.tennis &&
             !tennisProgrammeIsExact(
                 g,
                 EpgProgram(
                     channelId: '',
-                    title: text,
+                    title: raw,
                     start: g.start,
                     stop: g.start.add(const Duration(hours: 12))))) {
           continue;
@@ -2764,9 +2771,16 @@ class SportsChannelMatcher {
             // A channel that is the league's own network ("NHL Network") names
             // the league, never a fixture, so its category cannot promote it to
             // confident coverage for every game in the league.
+            // A Formula One feed is only known coverage once its build-up
+            // window opens: an hour and a half before lights out the race is
+            // not on air, so an F1 channel is still just a possible guess.
+            final f1WindowOpen = !isFormulaOne(g) ||
+                g.state != GameState.pre ||
+                isF1BuildUp(g, now);
             final category = (coverage.reason == MatchReason.league ||
                         coverage.reason == MatchReason.sport) &&
-                    !context.isLeagueBrand(_names[i])
+                    !context.isLeagueBrand(_names[i]) &&
+                    f1WindowOpen
                 ? context.categoryScore(hints.group)
                 : null;
             final sameDay = hints.date != null &&
@@ -3682,8 +3696,16 @@ class SportsChannelMatcher {
     // index moved and the whole search restarts).
     Future<List<ChannelSearchResult>?> fetchDayBest() async {
       final dayStart = DateTime(now.year, now.month, now.day);
-      final dayRows = await _guideHits(
-          dayStart, dayStart.add(const Duration(days: 2)), words.toSet());
+      final List<EpgProgram> dayRows;
+      try {
+        dayRows = await _guideHits(
+            dayStart, dayStart.add(const Duration(days: 2)), words.toSet());
+      } catch (_) {
+        // The day window is an optional extra: names and the now/next slots
+        // have already produced what they can, so a failed guide-store read
+        // must not turn a working search into "Search unavailable".
+        return null;
+      }
       if (isCancelled?.call() == true) return const [];
       if (version != _preparedFor) {
         return searchWithGuide(query,

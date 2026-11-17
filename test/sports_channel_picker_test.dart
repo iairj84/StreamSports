@@ -533,8 +533,17 @@ void main() {
           .widget<TextField>(
               find.byKey(const ValueKey('sports-channel-search')))
           .onSubmitted!('Evening');
+      // The search resolves through an async guide read, so give the real
+      // event loop a turn before settling frames.
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('game-channel:test::0')));
+      final firstResult = find.byKey(const ValueKey('game-channel:test::0'));
+      // Reopening keeps the previous scroll offset, so the row can be
+      // mounted below the viewport: bring it back before tapping it.
+      await tester.ensureVisible(firstResult);
+      await tester.pumpAndSettle();
+      await tester.tap(firstResult);
       await tester.pumpAndSettle();
       expect(chosen?.multiview, true);
       expect(chosen?.channel?.id, channels.first.id);

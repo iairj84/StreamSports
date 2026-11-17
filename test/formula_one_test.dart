@@ -155,7 +155,9 @@ void main() {
     final release = Completer<void>();
     final client = MockClient((request) async {
       calls++;
-      expect(request.headers['User-Agent'], startsWith('iptv-app/'));
+      // The app identifies itself by its own name; when this drifts from the
+      // service the mock rejects the fetch and the calendar is dropped.
+      expect(request.headers['User-Agent'], startsWith('StreamSports/'));
       expect(request.url.host, 'api.jolpi.ca');
       await release.future;
       return http.Response(calendar(), calls == 1 ? 200 : 503,

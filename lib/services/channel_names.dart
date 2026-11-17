@@ -18,6 +18,11 @@ class ChannelRenames {
   static StorageService? _storage;
   static Map<String, Map<String, String>>? _cache;
 
+  /// How many channel objects currently carry a rename, so [apply] can skip a
+  /// full pass over a large catalogue when there is nothing to stamp back and
+  /// nothing to restore (the common case: an install with no renames).
+  static int _stamped = 0;
+
   /// Called once at startup, after the storage service exists.
   static void bind(StorageService storage) {
     _storage = storage;
@@ -42,6 +47,10 @@ class ChannelRenames {
   /// Stamps every override onto [channels] and restores provider names whose
   /// override is gone. Safe to call repeatedly on the same objects.
   static void apply(Iterable<Channel> channels) {
+    // No saved override and no channel carrying one: the loop below could only
+    // rewrite '' onto channels, so skip it. Playlist loads call this with the
+    // whole catalogue, and one wasted pass costs a map lookup per channel.
+    if (_stamped <= 0 && _all().isEmpty) return;
     for (final channel in channels) {
       applyTo(channel, nameFor(channel.playlistId, channel.rawId));
     }
@@ -55,10 +64,12 @@ class ChannelRenames {
       if (original != null) {
         channel.name = original;
         channel.originalName = null;
+        if (_stamped > 0) _stamped--;
       }
       return;
     }
     if (channel.name == trimmed) return;
+    if (channel.originalName == null) _stamped++;
     channel.originalName ??= channel.name;
     channel.name = trimmed;
   }

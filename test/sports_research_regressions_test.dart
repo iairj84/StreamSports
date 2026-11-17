@@ -341,8 +341,10 @@ void main() {
       'football/college-football',
       'basketball/nba'
     ]) {
-      final league = [...kSportsLeagues, ...kSportsLeagueBank]
-          .firstWhere((l) => l.espnPath == path);
+      // Conference leagues share these ESPN paths but set their own group,
+      // so pick the whole-division entry this test is about.
+      final league = [...kSportsLeagues, ...kSportsLeagueBank].firstWhere(
+          (l) => l.espnPath == path && (l.espnGroup == null || path == 'basketball/nba'));
       await service.replayGames(league, now);
     }
     expect(requests[0].queryParameters['groups'], '50');
