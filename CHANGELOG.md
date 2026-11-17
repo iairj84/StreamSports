@@ -1,4 +1,9 @@
 # Changelog
+## 0.2.54 — 17 November 2026
+- Tennis listings name players as "Sinner, Jannik - Alcaraz, Carlos" again: matching kept reworking the channel name until the commas were gone, so the exact-fixture check never saw them. Renamed channels also fall back to their provider name here.
+- The channel picker's search no longer reports "Search unavailable" when only its optional day-ahead guide read fails; names and now/next results stand on their own.
+- Formula One coverage is treated as a known feed only once the build-up window opens, instead of flagging a race channel as live coverage an hour and a half early.
+- Loading a playlist with no renamed channels no longer reads the whole catalogue twice, which halves that work on very large lists.
 ## 0.2.53 — 17 November 2026
 - One shared OK-button check for TV remotes: the select/enter/numpad-enter/gamepad-A test lived in six copies across five files and is now a single helper, so a new remote spelling only needs adding once. Handlers with deliberately narrower key sets keep their own conditions.
 - Workspace cleanup: removed about 100 MB of ignored local clutter (a stale 0.2.32 APK, an already-imported asset drop, and stray build logs).
