@@ -5,11 +5,6 @@
 - Events opens with a My Teams row above the sport rows: every game involving a followed team in one place, ordered live, then upcoming, then final. The row follows the selected day and the time and channel filters, ignores the sport and league filters, keeps the games in their sport rows too, and hides on days none of your teams play.
 - The in-player Scores panel cycles through a My Teams scope after All, showing only games involving followed teams; the scope is hidden when no teams are followed.
 
-## Unreleased
-
-- Events opens with a My Teams row above the sport rows: every game involving a followed team in one place, ordered live, then upcoming, then final. The row follows the selected day and the time and channel filters, ignores the sport and league filters, keeps the games in their sport rows too, and hides on days none of your teams play.
-- The in-player Scores panel cycles through a My Teams scope after All, showing only games involving followed teams; the scope is hidden when no teams are followed.
-
 ## 0.2.59 — 18 November 2026
 
 - On the Teams tab, pressing up from the first followed team now lands on Add team instead of jumping to Close, so the remote walks up through Add team and the Leagues/Teams tabs in order.
