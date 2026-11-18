@@ -8,6 +8,7 @@ import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/widgets/sports_schedule_calendar.dart';
+import 'package:nox_iptv/utils/sports_calendar.dart';
 import 'package:nox_iptv/widgets/sports_schedule_panel.dart';
 import 'sports_schedule_panel_test.dart' show DayScores;
 
@@ -121,8 +122,20 @@ void main() {
     expect(scores.days.length, 1, reason: 'No extra daily requests');
     expect(browse.summaries.length, 30);
     expect(browse.summaries.values.every((s) => !s.incomplete), isTrue);
-    expect(browse.summaries[DateTime(2026, 11, 1)]!.sports,
-        {'basketball': 24, 'soccer': 24});
+    // November 1st is 25 hours where daylight saving ends, so the hourly
+    // fixture grid starting at local midnight legitimately places one extra
+    // game on the 1st there. Count what the grid actually puts on the day
+    // (mirroring Scores.scheduleGames, which tags all 50 games of a call with
+    // the requested league) instead of assuming 24-hour days.
+    final monthStart = DateTime(2026, 11, 1);
+    var nov1 = 0;
+    for (var i = 0; i < 50; i++) {
+      if (sportsCalendarDay(monthStart.add(Duration(hours: i))) == monthStart) {
+        nov1++;
+      }
+    }
+    expect(browse.summaries[monthStart]!.sports,
+        {'basketball': nov1, 'soccer': nov1});
     await tester.tap(find.byKey(const ValueKey('schedule-load-month')));
     await tester.pumpAndSettle();
     expect(scores.calls, 2, reason: 'Fresh complete summaries are reused');

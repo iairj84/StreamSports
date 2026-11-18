@@ -34,6 +34,14 @@ END:VEVENT
 String calendar(List<String> rows) =>
     'BEGIN:VCALENDAR\nVERSION:2.0\n${rows.join()}END:VCALENDAR\n';
 
+/// The local calendar day the default [entry] session starts on. Fixtures are
+/// fixed UTC instants (03:50 UTC) while the service buckets by local day, so
+/// tests must query the session's local day instead of assuming UTC.
+DateTime sessionDay() {
+  final start = DateTime.utc(2026, 10, 23, 3, 50).toLocal();
+  return DateTime(start.year, start.month, start.day);
+}
+
 class _Guide extends EpgService {
   _Guide(super.storage);
   List<EpgProgram> programmes = [];
@@ -184,11 +192,11 @@ void main() {
     pending
         .complete(http.Response.bytes(utf8.encode(calendar([entry()])), 200));
     await first;
-    expect(service.gamesForDay(DateTime(2026, 10, 23)), isEmpty);
+    expect(service.gamesForDay(sessionDay()), isEmpty);
     cancelled = false;
     await service.warm(cancelled: () => cancelled);
     expect(calls, 2);
-    expect(service.gamesForDay(DateTime(2026, 10, 23)), isNotEmpty);
+    expect(service.gamesForDay(sessionDay()), isNotEmpty);
   });
 
   test('failures back off, retain usable schedules and stop after stale limit',
@@ -207,9 +215,9 @@ void main() {
     await service.warm(cancelled: () => false);
     await service.warm(cancelled: () => false);
     expect(calls, 2);
-    expect(service.gamesForDay(DateTime(2026, 10, 23)), isNotEmpty);
+    expect(service.gamesForDay(sessionDay()), isNotEmpty);
     now = now.add(const Duration(days: 2));
-    expect(service.gamesForDay(DateTime(2026, 10, 23)), isEmpty);
+    expect(service.gamesForDay(sessionDay()), isEmpty);
   });
 
   test(
@@ -230,23 +238,23 @@ void main() {
         .warmMotorsport([sportsLeagueById('eng.1')!], cancelled: () => false);
     expect(calls, 0);
     final leagues = [sportsLeagueById('racing.supercars')!];
-    final pending = service.gamesForDay(leagues, DateTime(2026, 10, 23));
+    final pending = service.gamesForDay(leagues, sessionDay());
     await service.warmMotorsport(leagues, cancelled: () => false);
-    final cached = service.cachedGamesForDay(leagues, DateTime(2026, 10, 23));
+    final cached = service.cachedGamesForDay(leagues, sessionDay());
     expect(cached.single.league.id, 'racing.supercars');
     expect(tsdb.isCompleted, false);
     expect(
         service.cachedGamesForDay(
-            [sportsLeagueById('racing.f1')!], DateTime(2026, 10, 23)),
+            [sportsLeagueById('racing.f1')!], sessionDay()),
         isEmpty,
         reason: 'Disabling a calendar league must actually hide its sessions');
-    expect(service.cachedGamesForDay(leagues, DateTime(2026, 10, 23)),
+    expect(service.cachedGamesForDay(leagues, sessionDay()),
         same(cached));
     tsdb.complete(http.Response('{}', 200));
     await pending;
     expect(
         service
-            .cachedGamesForDay(leagues, DateTime(2026, 10, 23))
+            .cachedGamesForDay(leagues, sessionDay())
             .single
             .league
             .id,

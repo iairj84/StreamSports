@@ -9,6 +9,7 @@ import 'package:nox_iptv/models/sports_progress.dart';
 import 'package:nox_iptv/services/k_league_scoreboard.dart';
 import 'package:nox_iptv/services/easl_scoreboard.dart';
 import 'package:nox_iptv/services/sports_service.dart';
+import 'package:nox_iptv/utils/sports_calendar.dart';
 import 'package:nox_iptv/utils/extended_sports.dart';
 
 Map<String, Object?> fixture(
@@ -36,6 +37,14 @@ String board(List<Map<String, Object?>> rows) => jsonEncode({
       'resultCode': '200',
       'data': {'scheduleList': rows}
     });
+
+/// The local calendar day the 14:00 KST fixture (05:00 UTC) falls on. The
+/// service buckets by local day, so tests must query the fixture's local day
+/// instead of assuming the machine runs near UTC.
+DateTime kstFixtureDay() {
+  final start = DateTime.utc(2026, 10, 20, 5).toLocal();
+  return DateTime(start.year, start.month, start.day);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -161,21 +170,24 @@ void main() {
       expect(request.headers['Accept-Language'], 'en');
       await gate.future;
       return http.Response(board([fixture(date: '2026.10.20')]), 200);
-    }), clock: () => DateTime(2026, 10, 20));
+    }), clock: () => kstFixtureDay());
     final progress = <SportsWorkProgress>[];
     final a = service
-        .gamesForDay([league], DateTime(2026, 10, 20), onStatus: progress.add);
-    final b = service.gamesForDay([league], DateTime(2026, 10, 21));
+        .gamesForDay([league], kstFixtureDay(), onStatus: progress.add);
+    final b =
+        service.gamesForDay([league], sportsCalendarDay(kstFixtureDay(), 1));
     gate.complete();
     expect(await a, hasLength(1));
     expect(await b, isEmpty);
     expect(calls, 1);
     expect(progress.last.total, 1);
-    expect(await service.gamesForDay([league], DateTime(2026, 10, 20)),
+    expect(await service.gamesForDay([league], kstFixtureDay()),
         hasLength(1));
     expect(calls, 1);
     expect(
-        service.cachedGamesForDay([league], DateTime(2026, 10, 21)), isEmpty);
+        service.cachedGamesForDay(
+            [league], sportsCalendarDay(kstFixtureDay(), 1)),
+        isEmpty);
   });
 
   test('month boundaries fetch both months once and live data expires',
@@ -238,7 +250,7 @@ void main() {
 
   test('an unreachable score provider does not suppress another provider',
       () async {
-    final day = DateTime(2026, 10, 20);
+    final day = kstFixtureDay();
     var koreanRequests = 0;
     final service = SportsService.withClient(MockClient((request) async {
       if (request.url.host != 'www.kleague.com') {

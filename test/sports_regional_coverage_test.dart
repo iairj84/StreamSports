@@ -60,6 +60,14 @@ URL:https://www.racetvguide.com/how-to-watch/$id/
 END:VEVENT
 ''').join()}END:VCALENDAR
 ''';
+/// The local calendar day the RaceTV fixture (03:00 UTC) starts on. The
+/// service buckets by local day, so tests must query the session's local day
+/// instead of assuming the machine runs UTC.
+DateTime raceTvDay() {
+  final start = DateTime.utc(2026, 11, 1, 3).toLocal();
+  return DateTime(start.year, start.month, start.day);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('new score leagues are opt-in with unique existing identities preserved',
@@ -165,7 +173,7 @@ void main() {
     final scores = SportsService.withClient(client,
         clock: () => now, motorsport: calendarService);
     final supercars = sportsLeagueById('racing.supercars')!;
-    final date = DateTime(2026, 11, 1);
+    final date = raceTvDay();
     final first = await scores.scheduleGames(supercars, date, date);
     expect(first.incomplete, isFalse);
     expect(first.games.single.league.id, supercars.id);
@@ -191,7 +199,7 @@ void main() {
     await source.warmMotorsport(selected, cancelled: () => false);
     expect(
         source
-            .cachedGamesForDay(selected, DateTime(2026, 11, 1))
+            .cachedGamesForDay(selected, raceTvDay())
             .map((g) => g.league.id),
         ['racing.supercars']);
   });

@@ -1,5 +1,6 @@
 # Changelog
 ## Unreleased
+- 17 November 2026 — Fixed eight Windows-only test failures: the month/day bucketing tests assumed the machine runs UTC while fixtures are fixed UTC instants near midnight, so off-UTC machines bucketed them a day away (or counted an extra hour on the 25-hour daylight-saving day). Tests now query each fixture's local calendar day and November 1st counts are derived from the fixture grid.
 - 17 November 2026 — Added AGENTS.md: a short project, documentation, skill-workflow and working-rules guide for coding agents.
 ## 0.2.54 — 17 November 2026
 - Tennis listings name players as "Sinner, Jannik - Alcaraz, Carlos" again: matching kept reworking the channel name until the commas were gone, so the exact-fixture check never saw them. Renamed channels also fall back to their provider name here.
