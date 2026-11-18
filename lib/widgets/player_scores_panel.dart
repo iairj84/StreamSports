@@ -7,6 +7,7 @@ import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/playlist_manager.dart';
 import '../services/sports_channel_matcher.dart';
+import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
 import '../utils/interface_colors.dart';
@@ -27,7 +28,11 @@ class PlayerScoresPanel extends StatefulWidget {
       this.focusNode,
       required this.onClose,
       required this.onPlay,
-      this.watchingGame});
+      this.watchingGame,
+      this.scores});
+
+  /// Injected for tests; production uses the shared singleton.
+  final SportsService? scores;
 
   /// The player owns this node so it can hand the remote over on open and take
   /// it back on close.
@@ -45,14 +50,20 @@ class PlayerScoresPanel extends StatefulWidget {
 
 /// One choice in the Up/Down cycle: the live-only row, everything, or a sport.
 class _Scope {
-  const _Scope(this.label, this.sport, {required this.liveOnly});
+  const _Scope(this.label, this.sport,
+      {required this.liveOnly, this.involves});
 
   final String label;
   final String? sport;
   final bool liveOnly;
 
+  /// Set on the My Teams scope: only games involving a followed team pass.
+  final bool Function(SportsGame)? involves;
+
   bool accepts(SportsGame game) =>
-      (!liveOnly || game.isLive) && (sport == null || _sportOf(game) == sport);
+      (!liveOnly || game.isLive) &&
+      (sport == null || _sportOf(game) == sport) &&
+      (involves == null || involves!(game));
 
   static String _sportOf(SportsGame game) => game.league.espnPath.split('/').first;
 }
@@ -62,6 +73,7 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
   final _cards = <FocusNode>[];
   final _scroll = ScrollController();
   List<SportsGame> _games = const [];
+  SportsFollows? _follows;
   int _scope = 1;
   int _index = 0;
   bool _loading = true;
@@ -98,6 +110,7 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
 
   Future<void> _load() async {
     final storage = context.read<StorageService>();
+    _follows = SportsFollows.load(storage);
     final leagues = [
       for (final id in storage.getSportsLeagues() ?? const <String>[])
         sportsLeagueById(id)
@@ -110,8 +123,9 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
       final now = DateTime.now();
       // A conference and its Top 25 poll publish the same scoreboard row: one
       // game, one card, even though the leagues are both selected.
-      final games = dedupeSportsEvents(
-          await SportsService.instance.gamesForDay(leagues, now));
+      final games = dedupeSportsEvents(await (widget.scores ??
+              SportsService.instance)
+          .gamesForDay(leagues, now));
       if (!mounted) return;
       final redZone = _redZoneCard(leagues, now);
       // Finals stay: they are the end of the running order, not noise.
@@ -162,6 +176,11 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     return [
       const _Scope('LIVE', null, liveOnly: true),
       const _Scope('All', null, liveOnly: false),
+      // No followed teams, no scope: the Up/Down cycle skips empty scopes,
+      // so hiding it keeps the cycle tight instead of landing on blank rows.
+      if (_follows case final SportsFollows follows
+          when follows.teams.isNotEmpty)
+        _Scope('My Teams', null, liveOnly: false, involves: follows.involves),
       for (final sport in sports)
         _Scope(shortSportLabel(sport), sport, liveOnly: false),
     ];

@@ -114,9 +114,18 @@ class _Section {
   final String id;
   final String label;
   final List<SportsGame> games;
+  bool get isMyTeams => id == 'my-teams';
+
+  /// Card identity for focus nodes and widget keys. The My Teams row
+  /// duplicates the sport rows' cards, so its cards need their own focus
+  /// nodes; every other row keeps the plain game key that navigation and
+  /// tests already use.
+  String cardKey(SportsGame game) => isMyTeams
+      ? 'my-teams:${SportsChannelPicks.eventKey(game)}'
+      : SportsChannelPicks.eventKey(game);
   late final cardIndices = {
     for (final (index, game) in games.indexed)
-      ValueKey('card-${SportsChannelPicks.eventKey(game)}'): index,
+      ValueKey('card-${cardKey(game)}'): index,
   };
 }
 
@@ -590,7 +599,7 @@ class _SportsScreenState extends State<SportsScreen>
     _pendingRowFocus = (
       section: section.id,
       heading: heading,
-      key: _gameKey(section.games[index.clamp(0, section.games.length - 1)]),
+      key: section.cardKey(section.games[index.clamp(0, section.games.length - 1)]),
       origin: pending?.origin ?? FocusManager.instance.primaryFocus,
     );
     _rowFocusAttempts = 0;
@@ -604,7 +613,9 @@ class _SportsScreenState extends State<SportsScreen>
     final row = sections.indexWhere((s) => s.id == pending.section);
     final index = row < 0
         ? -1
-        : sections[row].games.indexWhere((g) => _gameKey(g) == pending.key);
+        : sections[row]
+            .games
+            .indexWhere((g) => sections[row].cardKey(g) == pending.key);
     if (index < 0) {
       _pendingRowFocus = null;
       return;
@@ -661,8 +672,8 @@ class _SportsScreenState extends State<SportsScreen>
         // Preserve the column, clamping only for a shorter neighbouring row.
         // Never choose a more distant sport just because its card aligns better.
         final column = sections[row].games.indexWhere((g) => pending == null
-            ? (_cardNodes[_gameKey(g)]?.hasFocus ?? false)
-            : _gameKey(g) == pending.key);
+            ? (_cardNodes[sections[row].cardKey(g)]?.hasFocus ?? false)
+            : sections[row].cardKey(g) == pending.key);
         _focusRowCard(
             sections[next], column.clamp(0, sections[next].games.length - 1));
       }
@@ -1728,6 +1739,14 @@ class _SportsScreenState extends State<SportsScreen>
     });
   }
 
+  /// The My Teams row ignores the sport/league filter — your teams wherever
+  /// they play — while the day, time and channel filters still apply.
+  List<SportsGame> _myTeamsGames() {
+    final now = _now;
+    return dedupeSportsEvents(_countableGames.where(
+        (g) => _timeFilter.accepts(g, now) && _follows.involves(g))).toList();
+  }
+
   List<_Section> _makeSections({bool includeAllFavorites = false}) {
     final visible = _scopedGames(favorites: !includeAllFavorites).toList();
     List<SportsGame> followedFirst(Iterable<SportsGame> games) =>
@@ -1739,7 +1758,16 @@ class _SportsScreenState extends State<SportsScreen>
       }
       final sports = bySport.keys.toList()
         ..sort((a, b) => sportLabel(a).compareTo(sportLabel(b)));
+      final mine = _myTeamsGames();
       return [
+        // Hidden on days none of the followed teams play, so the sport rows
+        // never shift for an empty strip.
+        if (mine.isNotEmpty)
+          _Section('my-teams', tr('My Teams'), [
+            ...followedFirst(mine.where((g) => g.isLive)),
+            ...followedFirst(mine.where((g) => g.state == GameState.pre)),
+            ...followedFirst(mine.where((g) => g.state == GameState.post)),
+          ]),
         for (final sport in sports)
           _Section('sport:$sport', sportLabel(sport), [
             ...followedFirst(bySport[sport]!.where((g) => g.isLive)),
@@ -1951,9 +1979,9 @@ class _SportsScreenState extends State<SportsScreen>
         if (delta > 0 && heading.hasFocus) {
           final key = _lastCardInRow[section.id];
           final game =
-              section.games.where((g) => _gameKey(g) == key).firstOrNull ??
+              section.games.where((g) => section.cardKey(g) == key).firstOrNull ??
                   section.games.first;
-          _cardNode(_gameKey(game)).requestFocus();
+          _cardNode(section.cardKey(game)).requestFocus();
           return;
         }
         if (delta < 0 && !heading.hasFocus) {
@@ -3809,8 +3837,8 @@ class _SportsScreenState extends State<SportsScreen>
             : 0;
     if (delta == 0) return KeyEventResult.ignored;
     final i = s.games.indexWhere((g) => pending == null
-        ? (_cardNodes[_gameKey(g)]?.hasFocus ?? false)
-        : _gameKey(g) == pending.key);
+        ? (_cardNodes[s.cardKey(g)]?.hasFocus ?? false)
+        : s.cardKey(g) == pending.key);
     // A refresh or reorder can retire the focused card mid-hold, leaving
     // the row unable to place it. Stay put rather than fall through to
     // default traversal, which flings focus to a distant row — horizontal
@@ -3832,7 +3860,7 @@ class _SportsScreenState extends State<SportsScreen>
     }
     // Row ends: stay put rather than leave the row.
     if (target < 0 || target >= s.games.length) return KeyEventResult.handled;
-    final node = _cardNode(_gameKey(s.games[target]));
+    final node = _cardNode(s.cardKey(s.games[target]));
     void focus() {
       final ctx = node.context;
       if (ctx == null) return;
@@ -3883,8 +3911,8 @@ class _SportsScreenState extends State<SportsScreen>
         fillWidth: _verticalGames,
         compact: _compactCards,
         scale: _cardScale,
-        key: ValueKey('card-${_gameKey(g)}'),
-        focusNode: _cardNode(_gameKey(g)),
+        key: ValueKey('card-${s.cardKey(g)}'),
+        focusNode: _cardNode(s.cardKey(g)),
         game: g,
         match: _displayedMatch(g, preview),
         matching: _pending(g),
@@ -3898,7 +3926,7 @@ class _SportsScreenState extends State<SportsScreen>
         onFocus: () {
           _lockBrowse();
           _zone = zoneIndex;
-          _lastCardInRow[s.id] = _gameKey(g);
+          _lastCardInRow[s.id] = s.cardKey(g);
           _focusedSectionId = s.id;
           _focusedCardKey = _gameKey(g);
           if (!_verticalGames) _ensureRowVisible(s.id);
@@ -3932,7 +3960,12 @@ class _SportsScreenState extends State<SportsScreen>
                     skipTraversal: true,
                     onKeyEvent: (_, event) => _onHeadingKey(s, event),
                     child: InkWell(
-                      key: ValueKey('sport-heading:${s.id.substring(6)}'),
+                      // The My Teams heading is not a sport and selects
+                      // nothing: tapping it drops into its first card, and it
+                      // carries a star instead of a sport icon.
+                      key: ValueKey(s.isMyTeams
+                          ? 'my-teams-heading'
+                          : 'sport-heading:${s.id.substring(6)}'),
                       focusNode: _chipNode(s.id),
                       onFocusChange: (focused) {
                         if (focused) {
@@ -3942,7 +3975,9 @@ class _SportsScreenState extends State<SportsScreen>
                           _ensureRowVisible(s.id);
                         }
                       },
-                      onTap: () => _selectSport(s.id.substring(6)),
+                      onTap: () => s.isMyTeams
+                          ? _focusRowCard(s, 0)
+                          : _selectSport(s.id.substring(6)),
                       child: ListenableBuilder(
                         listenable: _chipNode(s.id),
                         builder: (context, child) {
@@ -3974,7 +4009,10 @@ class _SportsScreenState extends State<SportsScreen>
                         child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 3),
                             child: Row(children: [
-                              Icon(sportIcon(s.id.substring(6)),
+                              Icon(
+                                  s.isMyTeams
+                                      ? Icons.star
+                                      : sportIcon(s.id.substring(6)),
                                   size: 18,
                                   color: Theme.of(context).colorScheme.primary),
                               const SizedBox(width: 7),
@@ -4056,8 +4094,8 @@ class _SportsScreenState extends State<SportsScreen>
                         return _GameCard(
                             fillWidth: _verticalGames,
                             compact: _compactCards,
-                            key: ValueKey('card-${_gameKey(g)}'),
-                            focusNode: _cardNode(_gameKey(g)),
+                            key: ValueKey('card-${s.cardKey(g)}'),
+                            focusNode: _cardNode(s.cardKey(g)),
                             game: g,
                             match: _displayedMatch(g, preview),
                             matching: _pending(g),
@@ -4073,7 +4111,7 @@ class _SportsScreenState extends State<SportsScreen>
                             onFocus: () {
                               _lockBrowse();
                               _zone = zoneIndex;
-                              _lastCardInRow[s.id] = _gameKey(g);
+                              _lastCardInRow[s.id] = s.cardKey(g);
                               _focusedSectionId = s.id;
                               _focusedCardKey = _gameKey(g);
                               _ensureRowVisible(s.id);

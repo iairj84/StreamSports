@@ -52,3 +52,28 @@ same rule fixes Standings when a conference pick is selected there.
 
 Poll views (Top 25) stayed out of this: they filter games by rank, not by a
 roster, so Add team does not offer them as team lists.
+
+## A My Teams row, not a pinned strip
+
+Followed teams already sorted first inside each sport row, but the viewer still
+hunted row by row. A separate strip pinned above the list was considered and
+rejected: it needs its own focus zone (up into it, down out of it), which is the
+exact plumbing that caused the Teams-tab focus bug, and it holds screen space on
+days none of your teams play.
+
+So My Teams is a synthetic first `_Section` in the grouped Events list, built
+from the same games the sport rows show. It rides the existing row focus, scroll
+and lazy-build machinery unchanged — up from the first sport row lands on it, up
+again reaches the toolbar — and it vanishes on team-less days so the rows below
+never shift for an empty strip.
+
+Duplicating cards across rows forced one piece of new plumbing: two rows shared
+a card's focus node and widget key, and a focus node can only belong to one
+row. Only the My Teams row gets section-scoped card keys (`my-teams:<game>`);
+every other row keeps the plain game key, so existing navigation and tests are
+untouched. The heading is the same exception: it carries a star and drops focus
+into its first card instead of selecting a sport.
+
+The in-player Scores panel needed nothing structural either: its Up/Down scope
+cycle (Live, All, each sport) already skips empty scopes, so My Teams is one
+more scope with a followed-team predicate, hidden when nothing is followed.
