@@ -5,12 +5,6 @@
 - On the Teams tab, pressing up from the first followed team now lands on Add team instead of jumping to Close, so the remote walks up through Add team and the Leagues/Teams tabs in order.
 - Add team lists a conference's own teams: picking SEC Football (or any college conference) asks the provider for that conference's standings instead of handing back every known team in the sport, and Top 25 views are no longer offered as team lists since a poll has no roster.
 
-## Unreleased
-
-- On the Teams tab, pressing up from the first followed team now lands on Add team instead of jumping to Close, so the remote walks up through Add team and the Leagues/Teams tabs in order.
-- Add team lists a conference's own teams: picking SEC Football (or any college conference) asks the provider for that conference's standings instead of handing back every known team in the sport, and a conference never falls back to the sport's whole team directory when its table is unavailable.
-- Top 25 views are no longer offered as team lists in Add team, since a poll filters games by rank and has no roster.
-
 ## 0.2.58 — 18 November 2026
 
 - Leagues and teams are managed in one screen now: every competition sits under a sport that opens in place, ordered the way viewers reach for them (American football, basketball, baseball, hockey, soccer, then the rest), so choosing baseball shows baseball's leagues instead of the whole catalogue, and search still finds any league in any sport.
