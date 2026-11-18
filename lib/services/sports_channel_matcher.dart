@@ -18,6 +18,7 @@ import '../utils/bounded_index_cache.dart';
 import '../utils/channel_name_matching.dart';
 import '../utils/combat_sports.dart';
 import '../utils/endurance_racing.dart';
+import '../utils/stable_hash.dart';
 import '../utils/extended_sports.dart';
 import '../utils/formula_one.dart';
 import '../utils/epg_timeline.dart';
@@ -1024,7 +1025,7 @@ class SportsChannelMatcher {
     // Rolling hash over the same catalogue fields a JSON encode plus SHA-256
     // used to cover per channel. Tens of thousands of encodes cost seconds
     // on a TV box on every cold index; only in-memory comparison needs it.
-    var catalogueFingerprint = channels.length;
+    final catalogueHash = StableHash(channels.length);
     final tokenIndex = <String, List<int>>{};
     final byCanonical = <String, List<int>>{};
     final byEpgId = <String, List<int>>{};
@@ -1041,8 +1042,13 @@ class SportsChannelMatcher {
         slice.reset();
       }
       final c = channels[i];
-      catalogueFingerprint = Object.hash(catalogueFingerprint, c.id, c.rawId,
-          c.name, c.originalName, c.group, c.epgId);
+      catalogueHash
+        ..add(c.id)
+        ..add(c.rawId)
+        ..add(c.name)
+        ..add(c.originalName)
+        ..add(c.group)
+        ..add(c.epgId);
       final storedText = textCache?[c.name];
       if (storedText != null) reusedNames++;
       final norm = storedText?.$1 ?? _fixtureText(c.name);
@@ -1081,7 +1087,7 @@ class SportsChannelMatcher {
         }
       }
     }
-    _catalogueFingerprint = catalogueFingerprint;
+    _catalogueFingerprint = catalogueHash.value;
     // Publish a complete index atomically; concurrent callers await it.
     _channels = channels;
     _names = names;
@@ -2096,7 +2102,10 @@ class SportsChannelMatcher {
     if (disk != null) await disk.load(now);
     String diskKey(SportsGame game) => sha256
         .convert(utf8.encode(jsonEncode([
-          10, // Matching semantics version; do not restore older decisions.
+          11, // Matching semantics version; do not restore older decisions.
+          // Both digests are deterministic, so a restart with the same
+          // catalogue and guide lands on the same entry instead of re-deriving
+          // the whole board.
           _catalogueFingerprint,
           (_epg as _WorkerGuide).fingerprint,
           limit,
@@ -3197,7 +3206,7 @@ class SportsChannelMatcher {
       final entryKey = '${includeGuide ? 'full' : 'quick'}:${eventKeys[id]}';
       _eventMatchCache[entryKey] = out[id]!;
       _eventMatchAge[entryKey] = now;
-      final until = validUntil[id] ?? _gameBoundary(game, now);
+      final until = validUntil[id] ?? sportsMatchMemoryUntil(game, now);
       _eventMatchUntil[entryKey] = until;
       if (evidence != null) {
         _eventGuideEvidence[entryKey] = evidence;

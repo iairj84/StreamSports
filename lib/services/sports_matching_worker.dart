@@ -986,12 +986,11 @@ void _sportsWorkerMain(SendPort host) {
           case 'endGuideSnapshot':
             guide.diskCacheAllowed = value == true;
             // Rolling hash over the same evidence the old SHA-256 digest
-            // covered. Only compared against the previous in-memory
-            // snapshot, so cross-run digest stability is not required; this
-            // avoids a JSON encode plus hash update per programme row on
-            // every snapshot turnover.
-            var fingerprint =
-                Object.hash(guide.lastUpdated, guide.queryRevision);
+            // covered, without a JSON encode per programme row. StableHash, not
+            // Object.hash: stored match keys include this fingerprint, so it
+            // has to come out the same in the next process.
+            final fingerprint = StableHash(StableHash.of(
+                [guide.lastUpdated?.millisecondsSinceEpoch, guide.queryRevision]));
             final changed = <String>{};
             var synopsisChanged = false;
             bool synopsis(EpgProgram? p) {
@@ -1025,15 +1024,14 @@ void _sportsWorkerMain(SendPort host) {
                     changedRow(entry.key, old, p);
                   }
                 }
-                fingerprint = Object.hash(
-                    fingerprint,
-                    entry.key,
-                    p.channelId,
-                    p.title,
-                    p.description,
-                    p.start.millisecondsSinceEpoch,
-                    p.stop.millisecondsSinceEpoch,
-                    p.isLive);
+                fingerprint
+                  ..add(entry.key)
+                  ..add(p.channelId)
+                  ..add(p.title)
+                  ..add(p.description)
+                  ..add(p.start.millisecondsSinceEpoch)
+                  ..add(p.stop.millisecondsSinceEpoch)
+                  ..add(p.isLive);
               }
               if (!resetEvidence) {
                 for (final entry in previous.entries) {
@@ -1042,22 +1040,25 @@ void _sportsWorkerMain(SendPort host) {
                   }
                 }
               }
-              fingerprint = Object.hash(fingerprint, 0);
+              fingerprint.add(0);
             }
-            if (guide.fingerprint != fingerprint ||
+            if (guide.fingerprint != fingerprint.value ||
                 guide.fingerprintRevision != guide.queryRevision) {
               guide.changeRevision++;
               matcher._guideSnapshotChanged(
                   resetEvidence ? null : guide.reads.changes(changed),
                   reset: resetEvidence,
                   synopsisChanged: synopsisChanged);
-              // Future guide rows can change without affecting the now/next slice.
+              // Future guide rows can change without affecting the now/next
+              // slice. Their fingerprint is part of every stored key, so these
+              // entries can no longer be read; drop them rather than let them
+              // sit in the file until it fills.
               if (guide.fingerprintRevision != null) {
                 matcher._diskCache?.clear();
               }
             }
             guide.fingerprintRevision = guide.queryRevision;
-            guide.fingerprint = fingerprint;
+            guide.fingerprint = fingerprint.value;
             previousCurrent = const {};
             previousNext = const {};
           case 'allowGuideDiskCache':

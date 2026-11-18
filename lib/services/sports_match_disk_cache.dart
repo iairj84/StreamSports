@@ -11,8 +11,13 @@ class StoredSportsMatch {
 /// Small derived-data cache. Production reads/encoding run in the matching
 /// isolate; keys fingerprint the catalogue, guide and fixture, never URLs.
 class SportsMatchDiskCache {
-  SportsMatchDiskCache(this.file);
+  SportsMatchDiskCache(this.file,
+      {this.maxAge = const Duration(hours: 6)});
   final File file;
+
+  /// Ceiling on how old an entry may be, whatever its own expiry says. Keeps a
+  /// leftover day-old file from steering the next day's schedule.
+  final Duration maxAge;
   static const maxBytes = 2 * 1024 * 1024;
   static const maxEntries = 512;
   final _entries = <String, StoredSportsMatch>{};
@@ -43,10 +48,12 @@ class SportsMatchDiskCache {
     }
   }
 
+  /// Each entry carries its own expiry: a fixture's match is worth keeping
+  /// until the evidence behind it changes, not for a flat five minutes.
   bool _valid(StoredSportsMatch entry, DateTime now) =>
       !now.isBefore(entry.savedAt) &&
       now.isBefore(entry.expiresAt) &&
-      now.difference(entry.savedAt) < const Duration(minutes: 5);
+      now.difference(entry.savedAt) < maxAge;
 
   StoredSportsMatch? read(String key, DateTime now) {
     final entry = _entries[key];

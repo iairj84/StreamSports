@@ -25,6 +25,38 @@ DateTime? sportsMatchBoundary(SportsGame game, DateTime checkedAt) {
   return next;
 }
 
+/// How long this fixture's matched channels stay usable from disk.
+///
+/// A match is expensive to derive (a whole-day programme scan) and rarely
+/// changes, so it is remembered past the handful of minutes the live board
+/// rechecks: five minutes for a game on air or about to start, half an hour for
+/// one later today, six hours once it is over. The next known transition —
+/// kick-off, programme start or stop, listing expiry — still ends it early,
+/// because that is when the evidence itself moves.
+DateTime sportsMatchMemoryUntil(SportsGame game, DateTime now) {
+  final horizon = switch (game.state) {
+    GameState.live => const Duration(minutes: 5),
+    GameState.post => const Duration(hours: 6),
+    GameState.pre => game.start.difference(now) <= const Duration(minutes: 45)
+        ? const Duration(minutes: 5)
+        : const Duration(minutes: 30),
+  };
+  final cap = now.add(horizon);
+  var until = cap;
+  void boundary(DateTime? at) {
+    if (at != null && at.isAfter(now) && at.isBefore(until)) until = at;
+  }
+
+  boundary(sportsMatchBoundary(game, now));
+  // The shared boundary helper tracks the fixture and its listings; the rows
+  // this game was matched through move too, so they end the memory as well.
+  for (final programme in game.guideProgrammes) {
+    boundary(programme.start);
+    boundary(programme.stop);
+  }
+  return until;
+}
+
 /// Read-only inputs for matching. The scorer can run without preferences,
 /// platform plugins, network clients or the widget tree.
 abstract interface class SportsMatchGuide {
