@@ -58,6 +58,8 @@ python3 tools/cut_release.py --notes-file release-notes.txt  # bump, changelog, 
 ## Working rules
 
 - Small focused changes, one concern per commit.
+- "Commit" means commit and release: a change on main that no APK carries is
+  not delivered. Finish with a release unless the request says otherwise.
 - Run analyze and the relevant tests (or a build) before saying done.
 - Ask before deleting files or changing dependencies (pubspec.yaml/lock).
 - Never commit secrets, keystores, .env, private datasets or build output; scan with Gitleaks before releases.
