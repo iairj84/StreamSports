@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.56 — 18 November 2026
+
+- Update playlists at startup refreshes the channels only: the full guide download that followed every launch is gone, and the guide updates on its own schedule, which already runs at launch when its listings are stale.
+- After the in-app update finishes downloading, focus moves to Install update, so a remote finishes the update with one press instead of hunting for the button.
+- Sports remembers each game's matched channels between launches: the stored-match keys were built from per-process hashes, so every start re-derived the whole board, and entries expired after five minutes. Keys are now deterministic, a match lives as long as its evidence (five minutes on air, half an hour later today, six hours once final), and a guide change still invalidates it.
+
 ## 0.2.55 — 17 November 2026
 
 - Back from a sports guide returns the cursor to the category row you picked, instead of jumping to an earlier row in the rail.
