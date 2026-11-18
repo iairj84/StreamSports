@@ -35,3 +35,20 @@ Bulk "Show/Hide listed" acts on the open sports only, which is why a closed spor
 can never be changed by accident. Hiding everything remains a draft: an empty
 selection is never persisted, and Restore selection brings back the last saved
 set.
+
+## A conference pick reads its conference
+
+College conferences are stored as separate leagues bound to a scoreboard group
+(`espnGroup`) and keep `hasStandings: false`, because they reuse the parent
+competition rather than owning a feed. The team picker inherited that literally:
+it asked for the sport's team directory, so "SEC Football" listed every college
+football team ESPN knows (763 of them, across every division).
+
+ESPN's standings endpoint honours `group` (`/standings?group=8` returns the SEC
+alone, 16 rows), and the parameter survives the season retry. So a league with
+an `espnGroup` now reads grouped standings, and it is never allowed to fall back
+to the whole-sport directory — an honest empty list beats 763 wrong teams. The
+same rule fixes Standings when a conference pick is selected there.
+
+Poll views (Top 25) stayed out of this: they filter games by rank, not by a
+roster, so Add team does not offer them as team lists.

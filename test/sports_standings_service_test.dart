@@ -91,6 +91,29 @@ void main() {
     expect(service.lastLeagueId, 'nba');
     await service.teamDirectory(sportsLeagueById('baseball.npb')!);
     expect(calls, 2);
+    final conference =
+        await service.teamDirectory(sportsLeagueById('college-football.sec')!);
+    expect(conference.hasRows, isFalse,
+        reason: 'A conference has no directory of its own, only its table.');
+    expect(calls, 2);
+  });
+
+  test('a conference pick reads only its own standings', () async {
+    final requests = <Uri>[];
+    final service = SportsStandingsService(client: MockClient((r) async {
+      requests.add(r.url);
+      return http.Response(table(teams: 3), 200);
+    }));
+    addTearDown(service.close);
+    final result =
+        await service.load(sportsLeagueById('college-football.sec')!);
+    expect(requests, hasLength(1),
+        reason: 'A conference never inherits the whole sport directory.');
+    expect(requests.single.path,
+        '/apis/v2/sports/football/college-football/standings');
+    expect(requests.single.queryParameters['group'], '8');
+    expect(result.tables.single.rows, hasLength(3));
+    expect(result.failed, isFalse);
   });
 
   test('table season overrides premature root metadata without extra requests',

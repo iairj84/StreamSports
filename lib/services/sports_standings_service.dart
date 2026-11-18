@@ -120,7 +120,11 @@ class SportsStandingsService {
   /// Shares the request limiter and 16-entry cache; it never changes browsing.
   Future<LeagueStandings> teamDirectory(SportsLeague league,
       {bool refresh = false}) {
-    if (league.source != 'ESPN' || league.kind != SportsKind.team) {
+    // A conference pick must never inherit its sport's whole directory: every
+    // known college team is the opposite of the list its viewer asked for.
+    if (league.source != 'ESPN' ||
+        league.kind != SportsKind.team ||
+        league.espnGroup != null) {
       return Future.value(const LeagueStandings(directory: true));
     }
     final key = 'directory:${league.id}';
@@ -293,16 +297,27 @@ class SportsStandingsService {
           year,
         ));
       }
+      // A conference pick narrows the sport's own standings rather than reading
+      // the whole division: ESPN answers `group` with that conference alone.
+      final group = league.espnGroup;
+      Uri standingsUri(String? season) {
+        final base = Uri.parse(
+            'https://site.api.espn.com/apis/v2/sports/${league.espnPath}/standings');
+        final params = {
+          if (group != null) 'group': group,
+          if (season != null) 'season': season,
+        };
+        return params.isEmpty ? base : base.replace(queryParameters: params);
+      }
+
       // Friendly internationals have teams, not a single league table.
       if (league.source == 'ESPN' &&
-          league.hasStandings &&
+          (league.hasStandings || group != null) &&
           league.id != 'field-hockey.womens-college-field-hockey' &&
           league.id != 'rugby.289234') {
-        final uri = Uri.parse(
-            'https://site.api.espn.com/apis/v2/sports/${league.espnPath}/standings');
         try {
           result = await compute(parseLeagueStandings,
-              (await _read(uri), league, _clock(), false));
+              (await _read(standingsUri(null)), league, _clock(), false));
           final year = result.fallbackYear;
           // One season retry: correct a premature rollover before considering
           // a previous season. Never crawl through historical seasons.
@@ -311,7 +326,7 @@ class SportsStandingsService {
               league.id != 'rugby.270559' &&
               league.id != 'rugby.289262') {
             final older = await compute(parseLeagueStandings, (
-              await _read(uri.replace(queryParameters: {'season': '$year'})),
+              await _read(standingsUri('$year')),
               league,
               _clock(),
               false
@@ -332,7 +347,8 @@ class SportsStandingsService {
       if (league.source == 'ESPN' &&
           league.id != 'field-hockey.womens-college-field-hockey' &&
           !result.hasRows &&
-          league.kind == SportsKind.team) {
+          league.kind == SportsKind.team &&
+          group == null) {
         result = await compute(parseLeagueStandings, (
           await _read(Uri.parse(
               'https://site.api.espn.com/apis/site/v2/sports/${league.espnPath}/teams?limit=1000')),
@@ -342,7 +358,8 @@ class SportsStandingsService {
         ));
       }
       if (league.id == 'field-hockey.womens-college-field-hockey' &&
-          (!result.hasRows || result.directory)) {
+          (!result.hasRows || result.directory) &&
+          group == null) {
         try {
           if (!result.hasRows) {
             result = await compute(parseFieldHockeyTeams, (

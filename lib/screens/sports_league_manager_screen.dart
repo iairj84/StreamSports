@@ -377,8 +377,13 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
 
   /// Sport, then league, then every team that league lists.
   Future<void> _addTeam() async {
-    final sports = sportsStandingsLeagues.map(_sportOf).toSet().toList()
-      ..sort(_sportRank);
+    // A poll view filters games by rank; it has no roster of its own, so it is
+    // not a team list to choose from.
+    final leagues = [
+      for (final league in sportsStandingsLeagues)
+        if (!league.rankedOnly) league
+    ];
+    final sports = leagues.map(_sportOf).toSet().toList()..sort(_sportRank);
     final sport = await showSportsChoices<String>(context,
         title: 'Add a team',
         description: 'Choose a sport, then the league the team plays in.',
@@ -389,14 +394,12 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
             SportsChoice(
                 sport,
                 sportLabel(sport),
-                '${sportsStandingsLeagues.where((l) => _sportOf(l) == sport).length} leagues',
+                '${leagues.where((l) => _sportOf(l) == sport).length} leagues',
                 icon: sportIcon(sport),
                 key: ValueKey('add-team-sport-$sport')),
         ]);
     if (!mounted || sport == null) return;
-    final leagues = sportsStandingsLeagues
-        .where((l) => _sportOf(l) == sport)
-        .toList()
+    final sportLeagues = leagues.where((l) => _sportOf(l) == sport).toList()
       ..sort((a, b) {
         final priority =
             leagueDisplayPriority(a).compareTo(leagueDisplayPriority(b));
@@ -407,7 +410,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         selected: '',
         showSelection: false,
         choices: [
-          for (final league in leagues)
+          for (final league in sportLeagues)
             SportsChoice(league.id, league.name, leagueDescription(league),
                 icon: sportIcon(sport),
                 key: ValueKey('add-team-league-${league.id}')),
