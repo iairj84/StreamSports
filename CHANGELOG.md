@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- On the Teams tab, pressing up from the first followed team now lands on Add team instead of jumping to Close, so the remote walks up through Add team and the Leagues/Teams tabs in order.
+
 ## 0.2.58 — 18 November 2026
 
 - Leagues and teams are managed in one screen now: every competition sits under a sport that opens in place, ordered the way viewers reach for them (American football, basketball, baseball, hockey, soccer, then the rest), so choosing baseball shows baseball's leagues instead of the whole catalogue, and search still finds any league in any sport.

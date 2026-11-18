@@ -50,6 +50,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   final _searchFocus = FocusNode(debugLabel: 'leagues-search');
   final _closeFocus = FocusNode(debugLabel: 'leagues-close');
   final _allFocus = FocusNode(debugLabel: 'leagues-show-all');
+  final _addTeamFocus = FocusNode(debugLabel: 'teams-add');
   final _scroll = ScrollController();
   String _query = '';
   String _tab = 'leagues';
@@ -111,6 +112,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     _searchFocus.dispose();
     _closeFocus.dispose();
     _allFocus.dispose();
+    _addTeamFocus.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -773,6 +775,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
       Row(children: [
         OutlinedButton.icon(
             key: const ValueKey('add-team'),
+            focusNode: _addTeamFocus,
             style: bulkStyle,
             onPressed: _addTeam,
             icon: const Icon(Icons.add, size: 16),
@@ -807,7 +810,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                   striped: true,
                   rowHeight: 48,
                   resetScrollKey: _tab,
-                  onExitUp: _closeFocus.requestFocus,
+                  onExitUp: _addTeamFocus.requestFocus,
                 )),
       Padding(
           padding: const EdgeInsets.only(top: 4),
