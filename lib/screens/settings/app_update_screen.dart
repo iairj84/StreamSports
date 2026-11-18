@@ -8,6 +8,7 @@ import '../../services/app_update_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
+import '../../widgets/tv_menu_tile.dart';
 
 /// Manual update path: check, download and install a newer published build.
 /// The same service drives the startup prompt; this screen is where a viewer
@@ -27,9 +28,18 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
   /// otherwise fall back to the top of the screen instead of Install.
   final FocusNode _actionFocus = FocusNode(debugLabel: 'app-update-action');
 
+  /// Channel rows keep caller-owned nodes so a test (and any future
+  /// re-focus) can address them directly. RadioGroup was tried here and
+  /// reverted: it maps Up/Down to intra-group selection, which wraps at
+  /// the ends and traps a TV remote inside the two options.
+  final FocusNode _stableFocus = FocusNode(debugLabel: 'app-update-stable');
+  final FocusNode _earlyFocus = FocusNode(debugLabel: 'app-update-early');
+
   @override
   void dispose() {
     _actionFocus.dispose();
+    _stableFocus.dispose();
+    _earlyFocus.dispose();
     super.dispose();
   }
 
@@ -92,32 +102,46 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     final busy = update.checking || update.downloading;
     final scheme = Theme.of(context).colorScheme;
 
+    // Plain rows, not RadioGroup: the group maps Up/Down to intra-group
+    // selection (wrapping at the ends), which traps a TV remote inside
+    // these two options so Download/Install below can never be reached.
+    // The leading icon carries the selected state instead.
     final channel = SettingsSection(
       title: tr('Update channel'),
       children: [
-        RadioGroup<String>(
-          groupValue: update.channel,
-          onChanged: (value) {
-            if (busy || value == null) return;
-            unawaited(update.setChannel(value));
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                value: AppConstants.updateChannelStable,
-                title: Text(tr('Stable')),
-                subtitle: Text(tr(
-                    'Promoted builds only. Choose this unless you test early builds.')),
-              ),
-              RadioListTile<String>(
-                value: AppConstants.updateChannelEarly,
-                title: Text(tr('Early builds')),
-                subtitle:
-                    Text(tr('Newest beta as well. For testing; may be rough.')),
-              ),
-            ],
+        TvMenuTile(
+          focusNode: _stableFocus,
+          enabled: !busy,
+          leading: Icon(
+            update.includeEarly
+                ? Icons.radio_button_unchecked
+                : Icons.radio_button_checked,
+            size: 22,
           ),
+          title: tr('Stable'),
+          subtitle: tr(
+              'Promoted builds only. Choose this unless you test early builds.'),
+          trailing: const SizedBox.shrink(),
+          onTap: () {
+            if (!busy) unawaited(update.setChannel(AppConstants.updateChannelStable));
+          },
+        ),
+        TvMenuTile(
+          focusNode: _earlyFocus,
+          enabled: !busy,
+          leading: Icon(
+            update.includeEarly
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+            size: 22,
+          ),
+          title: tr('Early builds'),
+          subtitle:
+              tr('Newest beta as well. For testing; may be rough.'),
+          trailing: const SizedBox.shrink(),
+          onTap: () {
+            if (!busy) unawaited(update.setChannel(AppConstants.updateChannelEarly));
+          },
         ),
       ],
     );

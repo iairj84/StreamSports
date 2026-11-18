@@ -1,5 +1,19 @@
 # Design notes
 
+## RadioGroup traps a TV remote
+
+The update channel picker shipped as `RadioGroup` + `RadioListTile` and had
+to be reverted to plain `TvMenuTile` rows: the group's shortcuts map
+Up/Down (and Left/Right) to intra-group selection with wraparound, so on a
+remote — where Up/Down *is* focus traversal — pressing Down on the last
+option wrapped back to the first instead of leaving for Download/Install
+below. The codebase's standing rule for exclusive choices on TV is one
+ordinary focusable per option with document-order traversal (`ModeButton`'s
+doc comment); the leading radio icon now carries the selected state so the
+rows keep their radio affordance without the group's key handling.
+`test/app_update_channel_test.dart` walks Down out of the section with
+arrow keys so a regression traps the test instead of the viewer.
+
 ## Update offers name their channel
 
 The roadmap required that a user can tell from the prompt whether a build is
