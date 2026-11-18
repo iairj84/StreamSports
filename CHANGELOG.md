@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.64 — 18 November 2026
+
+- Update channel options are plain rows again: RadioGroup trapped the remote inside Stable/Early builds so Download/Install below could never be reached.
+
 ## 0.2.63 — 18 November 2026
 
 - Update offers now name their channel: the startup prompt and App updates show Stable build or Early build under the version.
