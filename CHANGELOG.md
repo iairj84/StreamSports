@@ -1,4 +1,9 @@
 # Changelog
+## 0.2.55 — 17 November 2026
+
+- Back from a sports guide returns the cursor to the category row you picked, instead of jumping to an earlier row in the rail.
+- The schedule test suite now passes on Windows machines: the month and day filters are queried by each fixture's local calendar day.
+
 ## Unreleased
 - 17 November 2026 — Back from a sports guide returns the cursor to the browsed category row: selecting a group remounted the rail rows, and the scope replayed an older row instead of the browsed one. The screen now remembers the picked row and restores it.
 - 17 November 2026 — Fixed eight Windows-only test failures: the month/day bucketing tests assumed the machine runs UTC while fixtures are fixed UTC instants near midnight, so off-UTC machines bucketed them a day away (or counted an extra hour on the 25-hour daylight-saving day). Tests now query each fixture's local calendar day and November 1st counts are derived from the fixture grid.
