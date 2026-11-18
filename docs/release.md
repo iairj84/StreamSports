@@ -74,6 +74,8 @@ The Downloader code `1976156` resolves to that address and is what the installat
 
 The tag carries no version number on purpose. The app's updater ranks releases by the build number in the tag, so `beta-latest` is never offered as an update; keep it digit-free and keep the asset name fixed. The tool republishes the exact bytes it was given and then downloads the address again to compare checksums. It does not audit or sign the APK, so run `tools/audit_apk.py` and the signature checks first, and do not point the rolling release at bytes different from the versioned release's `app-release.apk`. A normal release with `app-release.apk` keeps resolving at `.../releases/latest/download/app-release.apk`. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
 
+Every build currently ships as a beta. Promoting a tested beta into a stable channel, with an in-app opt-in for early builds, is planned in [the roadmap](ROADMAP.md); until then keep publishing prereleases and refreshing `beta-latest` as described here.
+
 ## Distribution
 
 Publish the exact corresponding application and native-library sources, build scripts and notices alongside each binary. Use the [dependency inventory](dependencies/README.md); the Jellyfin sources JAR alone omits FFmpeg. Desktop builds are no longer included.

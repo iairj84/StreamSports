@@ -53,6 +53,6 @@ Screenshots use [sample data](docs/screenshots/README.md).
 
 ## Development, licence and attribution
 
-[Build instructions](docs/development.md) · [Release preparation](docs/release.md) · [Release checks](docs/release-readiness.md) · [Changelog](CHANGELOG.md)
+[Build instructions](docs/development.md) · [Release preparation](docs/release.md) · [Release checks](docs/release-readiness.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
 
 [GPL-3.0](LICENSE). StreamSports is based on [VesperTV](https://github.com/NoXqc/VesperTV) by NoXqc and contributors, independently renamed and maintained. The name, icon and banner are this project's own and are not VesperTV artwork. [Attribution](NOTICE.md) · [Trademark terms](TRADEMARKS.md)
