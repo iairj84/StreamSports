@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.58 — 18 November 2026
+
+- Leagues and teams are managed in one screen now: every competition sits under a sport that opens in place, ordered the way viewers reach for them (American football, basketball, baseball, hockey, soccer, then the rest), so choosing baseball shows baseball's leagues instead of the whole catalogue, and search still finds any league in any sport.
+- Followed teams sit beside followed leagues: a Teams tab lists who you follow, Add team walks sport, league and then every team that league's table or team directory lists, and removing a team offers an undo.
+- Leaving Sports while a channel or match check was still being written no longer throws that work away, so returning to the hub reuses what it already matched instead of re-checking the board.
+
 ## 0.2.57 — 18 November 2026
 
 - Opening the sports hub no longer re-checks the whole board: matches completed earlier in the hour are reused, and a check that has aged only asks for that event to be rechecked instead of blanking its channels, so the card keeps the feeds it already had until a new check replaces them. The guide discovery from the same visit is reused too, so returning does not rescan the day.
