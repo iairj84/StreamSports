@@ -5,12 +5,20 @@ import 'sports_channel_matcher.dart';
 /// Stores evidence identities, not match results; changed inputs remain pending.
 class SportsMatchBatchPlan {
   SportsMatchBatchPlan(
-      {this.maxLaterEvents = 128, this.maxLaterSpan = const Duration(hours: 8)})
+      {this.maxLaterEvents = 128,
+      this.maxLaterSpan = const Duration(hours: 8),
+      this.alreadyComplete = const {}})
       : assert(maxLaterEvents > 0),
         assert(maxLaterSpan > Duration.zero);
 
   final int maxLaterEvents;
   final Duration maxLaterSpan;
+
+  /// Events the caller has already checked against current inputs. They are
+  /// not batched again: a recheck is requested by leaving a key out (aged
+  /// evidence, changed fixture), so a new visit does not re-match a board it
+  /// already matched.
+  final Set<String> alreadyComplete;
   final _completed = <String, String>{};
   Map<String, String>? _orderedFor, _readyFor;
   List<SportsGame> _ordered = const [];
@@ -47,12 +55,18 @@ class SportsMatchBatchPlan {
         .toList();
     bool pending(SportsGame game) {
       final key = SportsChannelPicks.eventKey(game);
+      if (alreadyComplete.contains(key)) return false;
       return _completed[key] != identities[key];
     }
 
     // Changes elsewhere can add tournament context or remove a competing live
-    // fixture. Recheck the entire live cohort, normally using existing results.
+    // fixture. Recheck the entire live cohort, normally using existing results
+    // — unless the caller already checked every event in it against exactly
+    // these inputs, which is what returning to the hub looks like.
+    final cohortChecked = ready.every(
+        (g) => alreadyComplete.contains(SportsChannelPicks.eventKey(g)));
     if (ready.isNotEmpty &&
+        !cohortChecked &&
         (!identical(_readyFor, identities) ||
             ready.any(pending) ||
             ready.length != _readyKeys.length ||

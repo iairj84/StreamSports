@@ -92,6 +92,16 @@ void main() {
     expect(seen.length, games.length);
   });
 
+  test('a board an earlier visit already checked is not batched again', () {
+    final games = [game('live', live: true), game('later', hour: 3)];
+    final expected = ids(games);
+    final plan = SportsMatchBatchPlan(alreadyComplete: expected.keys.toSet());
+    expect(plan.next(games, expected, now), isEmpty);
+    // One aged live event brings its cohort back, not the rest of the day.
+    final recheck = SportsMatchBatchPlan(alreadyComplete: {'eng.1:later'});
+    expect(recheck.next(games, expected, now).map((g) => g.id), ['live']);
+  });
+
   test(
       'a previously checked upcoming fixture joins the live cohort at its boundary',
       () {

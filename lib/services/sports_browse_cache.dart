@@ -12,6 +12,12 @@ class SportsBrowseCache with WidgetsBindingObserver {
   static final shared = SportsBrowseCache().._observe();
   void _observe() => WidgetsBinding.instance.addObserver(this);
 
+  /// How long a completed board is reused by later visits. The read key
+  /// fingerprints the guide, catalogue and day, so changed evidence still
+  /// misses; inside this window each event's own boundary and age decide what
+  /// is rechecked, instead of the whole board being matched again on arrival.
+  static const retention = Duration(minutes: 60);
+
   final _entries = <Object, SportsBrowseSnapshot>{};
   SportsBrowseSnapshot? read(Object key, DateTime now) {
     _entries.removeWhere((_, value) =>
@@ -21,10 +27,12 @@ class SportsBrowseCache with WidgetsBindingObserver {
 
   void save(Object key, SportsMatchSession session, List<SportsGame> guideGames,
       Object? signature, DateTime now,
-      {required Iterable<SportsGame> games}) {
+      {required Iterable<SportsGame> games,
+      Object? guideDiscovery,
+      DateTime? guideDiscoveryUntil}) {
     // Bound memory independently of the number of enabled leagues/days.
     if (session.identities.length > 2000) return;
-    final until = now.add(const Duration(minutes: 5));
+    final until = now.add(retention);
     final boundaries = <String, DateTime>{};
     for (final game in games) {
       final eventBoundary = sportsMatchBoundary(game, now);
@@ -34,7 +42,9 @@ class SportsBrowseCache with WidgetsBindingObserver {
     }
     _entries.remove(key);
     _entries[key] = SportsBrowseSnapshot(session.copy(),
-        List.unmodifiable(guideGames), signature, now, until, boundaries);
+        List.unmodifiable(guideGames), signature, now, until, boundaries,
+        guideDiscovery: guideDiscovery,
+        guideDiscoveryUntil: guideDiscoveryUntil);
     while (_entries.length > 2) {
       _entries.remove(_entries.keys.first);
     }
@@ -46,12 +56,18 @@ class SportsBrowseCache with WidgetsBindingObserver {
 
 class SportsBrowseSnapshot {
   SportsBrowseSnapshot(this._session, this.guideGames, this.signature,
-      this.savedAt, this.expiresAt, this._boundaries);
+      this.savedAt, this.expiresAt, this._boundaries,
+      {this.guideDiscovery, this.guideDiscoveryUntil});
   final SportsMatchSession _session;
   final List<SportsGame> guideGames;
   final Object? signature;
   final Map<String, DateTime> _boundaries;
   final DateTime savedAt, expiresAt;
+
+  /// The completed guide discovery this board came from, so a later visit does
+  /// not rescan the whole day for the event list it already has.
+  final Object? guideDiscovery;
+  final DateTime? guideDiscoveryUntil;
 
   /// Every route owns its mutable state. Restoring never extends evidence age.
   SportsMatchSession restoreSession({DateTime? at}) {

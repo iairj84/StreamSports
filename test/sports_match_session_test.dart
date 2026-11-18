@@ -318,7 +318,7 @@ void main() {
     expect(session.checked, {'eng.1:one'});
   });
 
-  test('retention is bounded by programme end and stale age', () {
+  test('retention is bounded by programme end, not by check age', () {
     final short = ChannelMatch(channel, MatchReason.guide, 500,
         programme: EpgProgram(
             channelId: 'one',
@@ -337,7 +337,9 @@ void main() {
     expect(session.checked, isEmpty);
     session.updateInputs(
         [game()], _Picks(), 1, now.add(const Duration(minutes: 7)));
-    expect(session.matches.values.single, isEmpty);
+    expect(session.matches.values.single, [strong]);
+    expect(session.checked, isEmpty);
+    expect(session.recheckingCount, 1);
   });
   test('reused model inputs still detect pick changes and evidence expiry', () {
     final fixture = game(), picks = _Picks();
@@ -360,8 +362,9 @@ void main() {
     expect(session.checked, isEmpty);
     session
         .updateInputs([fixture], picks, 1, now.add(const Duration(minutes: 7)));
-    expect(session.matches.values.single, isEmpty);
+    expect(session.matches.values.single, [strong]);
     expect(session.checked, isEmpty);
+    expect(session.recheckingCount, 1);
   });
   test(
       'trying and replacing a pick retains alternatives and rejects stale work',
@@ -403,7 +406,7 @@ void main() {
     complete([strong, alternative]);
     expect(session.matches.values.single, [strong, alternative]);
   });
-  test('resume grace rejects partial downgrades and accepts completed recheck',
+  test('a stale check rejects partial downgrades and accepts a recheck',
       () {
     complete([strong]);
     final resumed = now.add(const Duration(minutes: 6));
@@ -422,8 +425,7 @@ void main() {
     session.apply(batch([]), session.identities, 1, resumed, complete: true);
     expect(session.matches.values.single, isEmpty);
   });
-  test('resume grace is not renewed by polls and never extends programme end',
-      () {
+  test('programme end still withdraws evidence; a stale check does not', () {
     final ending = ChannelMatch(channel, MatchReason.guide, 500,
         programme: EpgProgram(
             channelId: 'one',
@@ -442,7 +444,9 @@ void main() {
       session.updateInputs(
           [game()], _Picks(), 1, now.add(Duration(seconds: seconds)));
     }
-    expect(session.matches.values.single, isEmpty);
+    expect(session.matches.values.single, [strong]);
+    expect(session.checked, isEmpty);
+    expect(session.recheckingCount, 1);
   });
   test('bursts coalesce to one running job and only the latest follow-up',
       () async {

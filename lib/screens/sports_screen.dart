@@ -455,6 +455,11 @@ class _SportsScreenState extends State<SportsScreen>
     _guidePlaylistRevision = context.read<PlaylistManager>().liveRevision;
     _indexedPlaylistRevision = _guidePlaylistRevision;
     _lastMatchSignature = cached.signature;
+    // The snapshot's guide events came from a completed scan for this exact
+    // playlist and guide revision, so returning to the hub does not rescan
+    // the day to learn the same event list.
+    _completedGuideDiscovery = cached.guideDiscovery;
+    _guideDiscoveryUntil = cached.guideDiscoveryUntil;
   }
 
   List<SportsGame> _gameData = const [];
@@ -1026,7 +1031,8 @@ class _SportsScreenState extends State<SportsScreen>
     final playlist = context.read<PlaylistManager>();
     return (
       scope,
-      _now.millisecondsSinceEpoch ~/ 60000,
+      // No wall-clock bucket: the session ages each event on its own evidence,
+      // so a pass runs only when something actually needs rechecking.
       playlist.liveRevision,
       guide.changeRevision,
       guide.currentGuideRevision,
@@ -1060,7 +1066,9 @@ class _SportsScreenState extends State<SportsScreen>
           _lastMatchSignature = completedSignature;
           SportsBrowseCache.shared.save(_browseCacheKey, _matchSession,
               _guideGames, completedSignature, _now,
-              games: _games);
+              games: _games,
+              guideDiscovery: _completedGuideDiscovery,
+              guideDiscoveryUntil: _guideDiscoveryUntil);
           if (const bool.fromEnvironment('IPTV_PROFILE_SPORTS')) {
             debugPrint(
                 'IPTV_SPORTS saved events=${_games.length} guide=${_guideGames.length} checked=${_checkedGames.length} version=$_guideVersion');
@@ -1276,7 +1284,9 @@ class _SportsScreenState extends State<SportsScreen>
         publishDiscovery(await _matcher.discoverGuideEvents(
             onStatus: status, onProgress: publishGuideProgress));
 
-    final plan = SportsMatchBatchPlan();
+    // Match only events whose evidence is due a check. Every event the viewer
+    // can already press keeps its completed channels on screen untouched.
+    final plan = SportsMatchBatchPlan(alreadyComplete: _checkedGames);
     Map<String, String>? contextFor;
     while (_currentMatchScope(scope)) {
       // A newer guide/catalogue must start a new pass. No partially stale batch
@@ -1369,7 +1379,9 @@ class _SportsScreenState extends State<SportsScreen>
                   const Duration(seconds: 1)) {
             SportsBrowseCache.shared.save(
                 _browseCacheKey, _matchSession, _guideGames, null, now,
-                games: _games);
+                games: _games,
+                guideDiscovery: _completedGuideDiscovery,
+                guideDiscoveryUntil: _guideDiscoveryUntil);
             _lastProgressSnapshot = now;
           }
           setState(() {});
@@ -1413,7 +1425,9 @@ class _SportsScreenState extends State<SportsScreen>
                       complete: true)) {
                 SportsBrowseCache.shared.save(
                     _browseCacheKey, _matchSession, _guideGames, null, _now,
-                    games: _games);
+                    games: _games,
+                    guideDiscovery: _completedGuideDiscovery,
+                    guideDiscoveryUntil: _guideDiscoveryUntil);
                 setState(() {});
               }
             }

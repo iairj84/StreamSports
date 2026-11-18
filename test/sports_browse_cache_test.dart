@@ -115,7 +115,7 @@ void main() {
       'bounded age, clock rollback, scope and memory pressure invalidate snapshots',
       () {
     expect(cache.read('different-guide-or-playlist', now), isNull);
-    expect(cache.read('today', now.add(const Duration(minutes: 5))), isNull);
+    expect(cache.read('today', now.add(SportsBrowseCache.retention)), isNull);
     cache.save('today', session, [], 'signature', now, games: [game()]);
     expect(
         cache.read('today', now.subtract(const Duration(seconds: 1))), isNull);
@@ -138,6 +138,26 @@ void main() {
     expect(cache.read('partial', now)!.guideGames, hasLength(1));
     expect(cache.read('partial', now)!.signature, isNull);
   });
+  test('a visit earlier in the hour reuses the board without blanking it', () {
+    final long = ChannelMatch(channel, MatchReason.guide, 500,
+        programme: EpgProgram(
+            channelId: 'one',
+            title: 'Everton v Leeds',
+            start: now,
+            stop: now.add(const Duration(hours: 3))));
+    final live = SportsMatchSession()..updateInputs([game()], picks, 1, now);
+    live.apply({
+      'eng.1:one': [long]
+    }, live.identities, 1, now, complete: true);
+    cache.save('long', live, [], 'signature', now, games: [game()]);
+    final at = now.add(const Duration(minutes: 20));
+    final restored = cache.read('long', at)!.restoreSession(at: at);
+    restored.updateInputs([game()], picks, 1, at);
+    expect(restored.matches['eng.1:one'], [long]);
+    expect(restored.checked, isEmpty, reason: 'aged evidence is rechecked');
+    expect(restored.recheckingCount, 1);
+  });
+
   test('online boundary expires its event without discarding the snapshot', () {
     cache.save('online', session, [], 's', now,
         games: [

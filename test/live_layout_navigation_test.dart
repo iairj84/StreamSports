@@ -3402,7 +3402,6 @@ void main() {
         snapshot.signature,
         (
           scope,
-          scores.start.millisecondsSinceEpoch ~/ 60000,
           playlist.liveRevision,
           epg.changeRevision,
           epg.currentGuideRevision,

@@ -26,7 +26,9 @@ class SportsMatchSession {
   Set<String> checked = const {};
   final _completed = <String, String>{};
   final _checkedAt = <String, DateTime>{};
-  final _recheckUntil = <String, DateTime>{};
+  /// Completed matches whose check has aged out. They stay published while the
+  /// next pass rechecks them, and are not reported as checked meanwhile.
+  final _stale = <String>{};
   int? _catalogue;
   SportsMatchPicks? _decisionSource;
   int? _decisionRevision;
@@ -43,7 +45,7 @@ class SportsMatchSession {
         ..checked = checked
         .._completed.addAll(_completed)
         .._checkedAt.addAll(_checkedAt)
-        .._recheckUntil.addAll(_recheckUntil)
+        .._stale.addAll(_stale)
         .._retained.addAll(_retained)
         .._evidenceVersions.addAll(_evidenceVersions)
         .._evidenceVersion = _evidenceVersion
@@ -56,7 +58,7 @@ class SportsMatchSession {
     if (keys.isEmpty) return;
     _completed.removeWhere((key, _) => keys.contains(key));
     _checkedAt.removeWhere((key, _) => keys.contains(key));
-    _recheckUntil.removeWhere((key, _) => keys.contains(key));
+    _stale.removeWhere(keys.contains);
     _retained.removeWhere((key, _) => keys.contains(key));
     _evidenceVersions.removeWhere((key, _) => keys.contains(key));
     _publish({
@@ -65,7 +67,7 @@ class SportsMatchSession {
     });
   }
 
-  int get recheckingCount => _recheckUntil.length;
+  int get recheckingCount => _stale.length;
 
   void updateInputs(List<SportsGame> games, SportsMatchPicks picks,
       int catalogue, DateTime now,
@@ -153,18 +155,13 @@ class SportsMatchSession {
         continue;
       }
       final at = _checkedAt[e.key];
-      final expired =
+      // Age asks for another check; it never blanks what is already published.
+      // The card keeps the channels the viewer is about to press until a
+      // completed pass replaces them, or their evidence actually moves.
+      final aged =
           at == null || now.difference(at) >= const Duration(minutes: 5);
-      // After time away (for example PiP), age requests a fresh check instead
-      // of blanking the last good results first. This grace is never renewed
-      // by polls/partial replies and never extends a known programme end.
-      if (expired &&
-          _completed.containsKey(e.key) &&
-          e.value.any((m) => m.reason != MatchReason.pick)) {
-        _recheckUntil.putIfAbsent(
-            e.key, () => now.add(const Duration(minutes: 1)));
-      }
-      bool isFresh(ChannelMatch m) {
+      if (aged && _completed.containsKey(e.key)) _stale.add(e.key);
+      bool isUsable(ChannelMatch m) {
         if (picks is SportsMatchRejections &&
             sportsChannelRejected(
                 (picks as SportsMatchRejections)
@@ -176,16 +173,14 @@ class SportsMatchSession {
         if (m.reason == MatchReason.pick) {
           return m.channel.id == pickIds[e.key];
         }
-        final until = _recheckUntil[e.key];
-        if (expired && (until == null || !now.isBefore(until))) return false;
         return _programmeIsFresh(m, current[e.key]!, now);
       }
 
-      if (e.value.every(isFresh)) {
+      if (e.value.every(isUsable)) {
         kept[e.key] = e.value;
       } else {
-        kept[e.key] = e.value.where(isFresh).toList();
-        if (e.value.any((m) => m.reason != MatchReason.pick && !isFresh(m))) {
+        kept[e.key] = e.value.where(isUsable).toList();
+        if (e.value.any((m) => m.reason != MatchReason.pick && !isUsable(m))) {
           _completed.remove(e.key);
         }
       }
@@ -212,8 +207,8 @@ class SportsMatchSession {
     _completed.removeWhere((key, _) => !kept.containsKey(key));
     _checkedAt.removeWhere((key, _) => !kept.containsKey(key));
     _evidenceVersions.removeWhere((key, _) => !kept.containsKey(key));
-    _recheckUntil.removeWhere(
-        (key, _) => !kept.containsKey(key) || !_completed.containsKey(key));
+    _stale.removeWhere(
+        (key) => !kept.containsKey(key) || !_completed.containsKey(key));
     if (!mapEquals(identities, ids)) identities = ids;
     if (!mapEquals(_fixtures, fixtures)) _fixtures = fixtures;
     _games = current;
@@ -256,7 +251,7 @@ class SportsMatchSession {
       _evidenceVersions[e.key] = _evidenceVersion;
       if (complete) {
         _completed[e.key] = expected[e.key]!;
-        _recheckUntil.remove(e.key);
+        _stale.remove(e.key);
       }
     }
     return accepted && _publish(next ?? matches);
@@ -280,9 +275,14 @@ class SportsMatchSession {
       key: SportsChannelPicks.eventKey, scope: _catalogue);
 
   bool _publish(Map<String, List<ChannelMatch>> next) {
+    // Completion is tied to the evidence it was checked against: a guide
+    // revision change leaves the published match on screen (see updateInputs)
+    // but requests another check, so the next pass batches it again.
     final done = {
       for (final id in identities.keys)
-        if (_completed[id] == identities[id] && !_recheckUntil.containsKey(id))
+        if (_completed[id] == identities[id] &&
+            _evidenceVersions[id] == _evidenceVersion &&
+            !_stale.contains(id))
           id
     };
     final changed = !identical(matches, next) &&
