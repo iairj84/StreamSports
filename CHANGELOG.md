@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.61 — 18 November 2026
+
+- The in-player Scores panel remembers the scope you left it on — Live, All, My Teams or a sport — and reopens there whenever that scope still has games, instead of always falling back to Live.
+- Sports options has a new Hide My Teams scores toggle: scores are hidden only for games involving a followed team, and the Scores panel, Events rows, live list, schedule and details all show the record or kick-off time in their place, so switching scope cannot reveal the result.
+
 ## 0.2.60 — 18 November 2026
 
 - Events opens with a My Teams row above the sport rows: every game involving a followed team in one place, ordered live, then upcoming, then final. The row follows the selected day and the time and channel filters, ignores the sport and league filters, keeps the games in their sport rows too, and hides on days none of your teams play.
