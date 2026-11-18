@@ -232,9 +232,9 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
         unawaited(_warmSportsMatcher());
         _epgService.startAutoRefresh(
             _storage.getRefreshInterval(), _epgSources);
-        // Settings > General: an opt-in launch refresh of every playlist (and
-        // the guide that goes with it). Never awaited here — a slow provider
-        // must not hold up an otherwise usable app.
+        // Settings > General: an opt-in launch refresh of every playlist. The
+        // guide keeps its own schedule (startAutoRefresh above) instead of
+        // following this download; a slow provider never holds up the app.
         if (_storage.getUpdatePlaylistsAtStartup()) {
           unawaited(_updatePlaylistsAtStartup());
         }
@@ -338,16 +338,15 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
   }
 
   /// Settings > General's "Update playlists at startup": re-fetch each enabled
-  /// playlist from its provider, then refresh the guide. A playlist update is
-  /// exactly when new channels and their listings appear together, so the
-  /// guide follows immediately instead of waiting for the next interval tick.
-  /// Failures leave the cached channels and guide on screen untouched.
+  /// playlist from its provider. The guide is not refreshed here: a full XMLTV
+  /// download and parse costs far more than the channel list, and
+  /// [EpgService.startAutoRefresh] already follows its own schedule with the
+  /// playlist's current channel ids. Failures leave cached data untouched.
   Future<void> _updatePlaylistsAtStartup() async {
     try {
       for (final profile in _playlistManager.profiles.where((p) => p.enabled)) {
         await _playlistManager.loadPlaylist(profile.id);
       }
-      await _epgService.refreshAll();
     } catch (e) {
       debugPrint('Startup playlist update failed: ${e.runtimeType}');
     }

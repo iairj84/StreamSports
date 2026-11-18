@@ -269,7 +269,7 @@ class StorageService {
       _prefs.setInt(AppConstants.keyRefreshInterval, minutes);
 
   /// Settings > General: refresh every enabled playlist from its provider at
-  /// launch, then refresh the guide once it finishes.
+  /// launch. The guide keeps its own update schedule.
   bool getUpdatePlaylistsAtStartup() =>
       _prefs.getBool(AppConstants.keyUpdatePlaylistsAtStartup) ?? false;
   Future<void> setUpdatePlaylistsAtStartup(bool value) =>

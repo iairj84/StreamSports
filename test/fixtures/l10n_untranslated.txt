@@ -163,7 +163,7 @@ Program unavailable
 Projectivy and other launchers
 Projectivy keeps its own picture for each app, and its chooser only offers pictures already on this device. Save one below, then set it per app with "From picture". In Projectivy, turn off Settings > Appearance > Categories > Tint custom icons so the colors are left alone.
 Re-checks visible categories in this playlist for new content.
-Re-fetches your channels from every provider on launch, then refreshes the guide. Off: playlists update on their usual schedule instead.
+Re-fetches your channels from every provider on launch. Off: playlists update on their usual schedule instead. The guide keeps its own update schedule.
 Ready to play
 Receiving the settings…
 Refresh automatically

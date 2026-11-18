@@ -302,7 +302,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                   TvSwitchListTile(
                     title: Text(tr('Update playlists at startup')),
                     subtitle: Text(tr(
-                        'Re-fetches your channels from every provider on launch, then refreshes the guide. Off: playlists update on their usual schedule instead.')),
+                        'Re-fetches your channels from every provider on launch. Off: playlists update on their usual schedule instead. The guide keeps its own update schedule.')),
                     value: _updatePlaylistsAtStartup,
                     onChanged: (v) {
                       setState(() => _updatePlaylistsAtStartup = v);
