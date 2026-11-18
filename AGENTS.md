@@ -35,6 +35,26 @@ python3 tools/cut_release.py --notes-file release-notes.txt  # bump, changelog, 
 - Before putting a web tool online: security-review.
 - Commits: git-commit. Docs work: documentation-writer.
 
+## Verification workflow
+
+- During development run `flutter analyze` and the focused tests for the
+  change, plus `tools/audit_repository.py` and the tools unit tests when
+  touching `tools/`.
+- The full suite is verified by CI's 4-shard matrix (separate machines,
+  about 5 minutes). Do not run the 4 shards in parallel in one checkout:
+  measured about 37 minutes wall time with 8 timing/perf flakes on code
+  that passes the serial run clean, versus about 22 minutes for one serial
+  `flutter test --concurrency=1` run. Run the full suite locally only when
+  CI cannot cover the change.
+- Poll background jobs about every 60 seconds; longer sleeps just add idle
+  time after the job already finished.
+- Release in as few passes as possible: build the APK, review the
+  `tools/audit_apk.py` findings, then run `cut_release.py` with
+  `--skip-build --accept-audit-findings` once the only findings are the
+  known checkout-path matches. If a run stops after bumping, revert with
+  `git checkout -- pubspec.yaml CHANGELOG.md` before retrying so the
+  version does not bump twice.
+
 ## Working rules
 
 - Small focused changes, one concern per commit.
