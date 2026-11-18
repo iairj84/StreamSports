@@ -98,6 +98,36 @@ SportsGame game(
             shortName: 'Maple Leafs',
             abbreviation: 'TOR'));
 
+/// Removes a cache directory a worker may still be finishing with.
+///
+/// These tests hand the worker a cache path and finish while its background
+/// isolate is still writing the derived channel-name memo, which is delayed by
+/// half a second on purpose. On Windows the just-renamed file keeps a handle for
+/// a moment afterwards, so the directory cannot be deleted the first time even
+/// though nothing is leaked. Retry briefly, and report what is still locked if
+/// it never clears.
+Future<void> removeTempDir(Directory dir) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 5));
+  while (true) {
+    try {
+      if (await dir.exists()) await dir.delete(recursive: true);
+      return;
+    } on FileSystemException catch (error) {
+      if (!DateTime.now().isBefore(deadline)) {
+        final locked = await dir.exists()
+            ? await dir
+                .list()
+                .map((entry) => entry.path.split(Platform.pathSeparator).last)
+                .toList()
+            : const <String>[];
+        fail('Could not remove ${dir.path}; still locked: '
+            '${locked.join(', ')} ($error)');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late StorageService storage;
@@ -179,7 +209,7 @@ void main() {
     test('early hints cannot persist an $condition guide snapshot', () async {
       final now = DateTime.utc(2026, 10, 21, 12, 30);
       final dir = await Directory.systemTemp.createTemp('sports-cache-policy-');
-      addTearDown(() => dir.delete(recursive: true));
+      addTearDown(() => removeTempDir(dir));
       final file = File('${dir.path}/matches.json');
       guide.lastUpdated = condition == 'uninitialised' ? null : now;
       guide.isLoading = condition == 'refreshing';
@@ -200,7 +230,7 @@ void main() {
       () async {
     final now = DateTime.utc(2026, 10, 21, 12, 30);
     final dir = await Directory.systemTemp.createTemp('sports-cache-policy-');
-    addTearDown(() => dir.delete(recursive: true));
+    addTearDown(() => removeTempDir(dir));
     final file = File('${dir.path}/matches.json');
     final changing = _CountingGuide(storage)..lastUpdated = now;
     changing.onRead = () => changing.isLoading = true;
@@ -218,7 +248,7 @@ void main() {
       () async {
     final now = DateTime.utc(2026, 10, 21, 12, 30);
     final dir = await Directory.systemTemp.createTemp('sports-cache-policy-');
-    addTearDown(() => dir.delete(recursive: true));
+    addTearDown(() => removeTempDir(dir));
     final file = File('${dir.path}/matches.json');
     final counted = _CountingGuide(storage)..lastUpdated = now;
     addTearDown(counted.dispose);

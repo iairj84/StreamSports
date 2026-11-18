@@ -162,7 +162,7 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
       return await done.future.timeout(const Duration(minutes: 2),
           onTimeout: () {
         final error = TimeoutException('Sports matching timed out');
-        _stop(error);
+        _stop(error, Isolate.immediate);
         throw error;
       });
     } finally {
@@ -208,10 +208,14 @@ class _BackgroundSportsMatcher extends SportsChannelMatcher
     }
   }
 
-  void _stop([Object? error]) {
+  void _stop([Object? error, int priority = Isolate.beforeNextEvent]) {
     _idle?.cancel();
     _idle = null;
-    _worker?.kill(priority: Isolate.immediate);
+    // Stopping between events, not mid-event, lets a cache write finish and
+    // close its file. Killing immediately leaves that write abandoned with its
+    // handle open, and Windows will not delete the resulting temp file. Only an
+    // unresponsive job is worth interrupting.
+    _worker?.kill(priority: priority);
     _worker = null;
     _messages?.close();
     _faults?.close();

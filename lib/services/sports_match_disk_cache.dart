@@ -103,9 +103,12 @@ class SportsMatchDiskCache {
           entries[entry.key] = value;
         }
         final temp = File('${file.path}.tmp');
-        await temp
-            .writeAsString(jsonEncode({'version': 1, 'entries': entries}));
-        await temp.rename(file.path);
+        // Synchronous on purpose: the matching isolate is stopped between
+        // events, and a write still in flight would be abandoned with its
+        // handle open, leaving a temp file Windows will not delete. Writing it
+        // in one step lets the stop wait for the close.
+        temp.writeAsStringSync(jsonEncode({'version': 1, 'entries': entries}));
+        temp.renameSync(file.path);
       } catch (_) {
         // A cache failure must never interrupt playback or matching.
       }

@@ -110,13 +110,17 @@ class SportsChannelTextCache {
         if (bytes.length > maxBytes) return;
         temp = File('${file.path}.${DateTime.now().microsecondsSinceEpoch}'
             '.${identityHashCode(this)}.tmp');
-        await temp.writeAsBytes(bytes);
-        await temp.rename(file.path);
+        // Synchronous on purpose: this runs in the matching isolate, which can
+        // be stopped while it is writing. A write left in flight is abandoned
+        // with its handle open, and Windows then refuses to delete the temp
+        // file. Writing inside one event lets the stop wait for it to close.
+        temp.writeAsBytesSync(bytes);
+        temp.renameSync(file.path);
       } catch (_) {
         // The source playlist remains authoritative if storage is unavailable.
       } finally {
         try {
-          if (temp != null && await temp.exists()) await temp.delete();
+          if (temp != null && temp.existsSync()) temp.deleteSync();
         } catch (_) {}
       }
     }
