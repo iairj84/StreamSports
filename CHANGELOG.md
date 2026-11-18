@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.59 — 18 November 2026
+
+- On the Teams tab, pressing up from the first followed team now lands on Add team instead of jumping to Close, so the remote walks up through Add team and the Leagues/Teams tabs in order.
+- Add team lists a conference's own teams: picking SEC Football (or any college conference) asks the provider for that conference's standings instead of handing back every known team in the sport, and Top 25 views are no longer offered as team lists since a poll has no roster.
+
 ## Unreleased
 
 - On the Teams tab, pressing up from the first followed team now lands on Add team instead of jumping to Close, so the remote walks up through Add team and the Leagues/Teams tabs in order.
