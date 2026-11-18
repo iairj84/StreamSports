@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.63 — 18 November 2026
+
+- Update offers now name their channel: the startup prompt and App updates show Stable build or Early build under the version.
+
 ## 0.2.62 — 18 November 2026
 
 - Beta and stable release channels: cuts ship from beta, promotions copy the exact bytes to stable, and App updates gains a Stable/Early toggle.
