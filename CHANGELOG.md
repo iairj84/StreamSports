@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.57 — 18 November 2026
+
+- Opening the sports hub no longer re-checks the whole board: matches completed earlier in the hour are reused, and a check that has aged only asks for that event to be rechecked instead of blanking its channels, so the card keeps the feeds it already had until a new check replaces them. The guide discovery from the same visit is reused too, so returning does not rescan the day.
+- The roadmap now records the planned beta-to-main release channels, with beta builds promoted to main and an in-app option to be offered early builds.
+
 ## 0.2.56 — 18 November 2026
 
 - Update playlists at startup refreshes the channels only: the full guide download that followed every launch is gone, and the guide updates on its own schedule, which already runs at launch when its listings are stale.
