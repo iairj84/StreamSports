@@ -91,6 +91,7 @@ Go live
 Guide downloads run in the background and retain relevant listings only. Turning a source off stops future updates and keeps downloaded listings until they expire.
 Guide listings cleared. Use Refresh guide to download them again.
 Guide updates
+Hide My Teams scores
 Hide betting lines
 Hide scores
 Hold OK on a category to move it.
@@ -215,6 +216,7 @@ Server error {code}
 Set up another device
 Show betting lines
 Show multiview in the player and Settings. Each screen uses a provider connection.
+Show My Teams scores
 Show scores
 Showing the first 200 of {n}.
 Skip this build
