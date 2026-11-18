@@ -24,6 +24,12 @@ Future<UpdatePromptChoice?> showUpdatePrompt(
             Text(tr(
                 '{new} is ready. This device is running {current}.',
                 {'new': release.label, 'current': currentLabel})),
+            const SizedBox(height: 4),
+            Text(
+                release.isEarly ? tr('Early build') : tr('Stable build'),
+                style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Text(
                 tr('The update downloads inside the app and installs over this one. Playlists, favorites and guide data stay as they are.'),

@@ -552,6 +552,15 @@ const Map<String, String> kFr = {
       "GitHub limite temporairement les vérifications de MAJ depuis ce réseau — réessayez dans environ {n} minutes.",
   'GitHub is temporarily rate-limiting update checks from this network — try again shortly.':
       "GitHub limite temporairement les vérifications de MAJ depuis ce réseau — réessayez bientôt.",
+  'Update channel': "Canal de mise à jour",
+  'Stable': "Stable",
+  'Early builds': "Versions bêta",
+  'Promoted builds only. Choose this unless you test early builds.':
+      "Seulement les versions promues. Choisissez ceci sauf si vous testez les versions bêta.",
+  'Newest beta as well. For testing; may be rough.':
+      "La dernière bêta aussi. Pour tester; elle peut être instable.",
+  'Stable build': "Version stable",
+  'Early build': "Version bêta",
 
   // ── EPG settings ─────────────────────────────────────────────────────
   'No EPG URL set yet — add a playlist first.':

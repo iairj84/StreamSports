@@ -1,5 +1,18 @@
 # Design notes
 
+## Update offers name their channel
+
+The roadmap required that a user can tell from the prompt whether a build is
+early or promoted. `AppRelease` carries `isEarly` from whichever rolling
+release it was read (`beta-latest` vs `stable-latest`), and both the startup
+prompt and the App updates status show a Stable/Early build line under the
+version. One alternative was stuffing the channel into the versioned release
+notes, but the notes are written at cut time on beta when the channel isn't
+decided yet — the rolling release is the only thing that knows. The seven
+channel strings ship with real fr/es/it translations instead of joining the
+untranslated fixture, since an opt-in screen that shows English to half its
+audience defeats its own purpose.
+
 Decisions that shaped the code, and the alternatives that were rejected.
 
 ## Leagues and teams in one screen

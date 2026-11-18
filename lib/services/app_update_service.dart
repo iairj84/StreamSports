@@ -20,6 +20,7 @@ class AppRelease {
     required this.apkUrl,
     required this.sizeBytes,
     required this.notes,
+    this.isEarly = false,
   });
 
   /// The release tag exactly as published (`v0.1.5-2470`).
@@ -31,6 +32,10 @@ class AppRelease {
   final String apkUrl;
   final int sizeBytes;
   final String notes;
+
+  /// True when this build came from the `beta-latest` rolling release rather
+  /// than `stable-latest`, so the offer can name its channel.
+  final bool isEarly;
 
   String get label => buildNumber > 0 ? '$version ($buildNumber)' : version;
 
@@ -274,6 +279,7 @@ class AppUpdateService extends ChangeNotifier {
       apkUrl: (apk['browser_download_url'] as String?) ?? '',
       sizeBytes: (apk['size'] as num?)?.toInt() ?? 0,
       notes: notes,
+      isEarly: includeEarly,
     );
   }
 

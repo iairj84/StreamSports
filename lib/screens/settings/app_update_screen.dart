@@ -169,6 +169,10 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               else ...[
                 Text(tr('Available: {v}', {'v': release.label}),
                     style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                    release.isEarly ? tr('Early build') : tr('Stable build'),
+                    style: Theme.of(context).textTheme.bodySmall),
+
                 if (release.sizeLabel.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),

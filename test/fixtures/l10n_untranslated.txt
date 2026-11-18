@@ -313,8 +313,3 @@ server
 {n} named by hand are left alone.
 {n} programs · {p}
 {p} live channels
-Update channel
-Stable
-Early builds
-Promoted builds only. Choose this unless you test early builds.
-Newest beta as well. For testing; may be rough.

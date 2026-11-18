@@ -551,6 +551,15 @@ const Map<String, String> kEs = {
       "GitHub está limitando temporalmente las comprobaciones desde esta red; vuelve a intentarlo en {n} minutos aprox.",
   'GitHub is temporarily rate-limiting update checks from this network — try again shortly.':
       "GitHub está limitando temporalmente las comprobaciones desde esta red; vuelve a intentarlo en un rato.",
+  'Update channel': "Canal de actualización",
+  'Stable': "Estable",
+  'Early builds': "Versiones beta",
+  'Promoted builds only. Choose this unless you test early builds.':
+      "Solo versiones promocionadas. Elige esto a menos que pruebes las versiones beta.",
+  'Newest beta as well. For testing; may be rough.':
+      "También la última beta. Para probar; puede ser inestable.",
+  'Stable build': "Versión estable",
+  'Early build': "Versión beta",
 
   // ── EPG settings ─────────────────────────────────────────────────────
   'No EPG URL set yet — add a playlist first.':

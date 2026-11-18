@@ -551,6 +551,15 @@ const Map<String, String> kIt = {
       "GitHub sta limitando temporaneamente i controlli da questa rete: riprova tra circa {n} minuti.",
   'GitHub is temporarily rate-limiting update checks from this network — try again shortly.':
       "GitHub sta limitando temporaneamente i controlli da questa rete: riprova tra poco.",
+  'Update channel': "Canale di aggiornamento",
+  'Stable': "Stabile",
+  'Early builds': "Versioni beta",
+  'Promoted builds only. Choose this unless you test early builds.':
+      "Solo versioni promosse. Scegli questa opzione a meno che tu non stia provando le versioni beta.",
+  'Newest beta as well. For testing; may be rough.':
+      "Anche l'ultima beta. Per i test; potrebbe essere instabile.",
+  'Stable build': "Versione stabile",
+  'Early build': "Versione beta",
 
   // ── EPG settings ─────────────────────────────────────────────────────
   'No EPG URL set yet — add a playlist first.':
