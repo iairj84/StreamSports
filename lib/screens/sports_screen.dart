@@ -175,6 +175,7 @@ class _SportsScreenState extends State<SportsScreen>
   DateTime? _nextGame;
   bool _nextGameLooked = false;
   bool _hideScores = false;
+  bool _hideMyTeamsScores = false;
   bool _showOdds = true;
   SportsChannelFilter _channelFilter = SportsChannelFilter.possible;
   bool get _withChannel => _channelFilter != SportsChannelFilter.all;
@@ -763,6 +764,7 @@ class _SportsScreenState extends State<SportsScreen>
         ? remembered[1]
         : favoriteSportsLeague(_storage)?.id;
     _hideScores = _storage.getSportsHideScores();
+    _hideMyTeamsScores = _storage.getSportsHideMyTeamsScores();
     _showOdds = _storage.getSportsShowOdds();
     _onlineExtras = _storage.getSportsOnlineExtras();
     _cardSize = _storage.getSportsCardSize();
@@ -1934,6 +1936,7 @@ class _SportsScreenState extends State<SportsScreen>
         day: _day,
         follows: _follows,
         hideScores: _hideScores,
+        hideMyTeamsScores: _hideMyTeamsScores,
         matchGames: (games) => _matchGames(games, includePossible: true),
         onWatch: (channel) => _play(channel),
         onMenu: (game, matches, watch) => _openGame(game, matches, watch),
@@ -2118,6 +2121,15 @@ class _SportsScreenState extends State<SportsScreen>
     await _storage.setSportsHideScores(_hideScores);
   }
 
+  Future<void> _toggleMyTeamsScores() async {
+    setState(() => _hideMyTeamsScores = !_hideMyTeamsScores);
+    await _storage.setSportsHideMyTeamsScores(_hideMyTeamsScores);
+  }
+
+  bool _hideScoresFor(SportsGame? game) =>
+      _hideScores ||
+      (_hideMyTeamsScores && game != null && _follows.involves(game));
+
   Future<void> _toggleOdds() async {
     setState(() => _showOdds = !_showOdds);
     await _storage.setSportsShowOdds(_showOdds);
@@ -2182,7 +2194,9 @@ class _SportsScreenState extends State<SportsScreen>
   Future<void> _showGameDetails(SportsGame game) async {
     await _showSportsPanel<void>(
         (_) => SportsDetailsPanel(
-            league: game.league, game: game, hideScores: _hideScores),
+            league: game.league,
+            game: game,
+            hideScores: _hideScoresFor(game)),
         besidePreview: true);
     if (mounted && _events) _resumeEvents();
   }
@@ -2385,7 +2399,7 @@ class _SportsScreenState extends State<SportsScreen>
         matches: matches,
         onlineMatches: online,
         matching: gameMatches == null && _pending(game),
-        hideScores: _hideScores,
+        hideScores: _hideScoresFor(game),
         hasPick: _picks.channelIdFor(game) != null,
         allowDetails: !game.isGuideEvent,
         selectedId: _picks.channelIdFor(game),
@@ -2644,7 +2658,7 @@ class _SportsScreenState extends State<SportsScreen>
                             .toList()
                         : _matches[_gameKey(hero)],
                 matching: hero != null && _pending(hero),
-                hideScores: _hideScores,
+                hideScores: _hideScoresFor(hero),
                 showOdds: _showOdds,
                 playing: playing,
                 touch: _touch,
@@ -2771,6 +2785,7 @@ class _SportsScreenState extends State<SportsScreen>
                                 onWatchGame: (game, match) =>
                                     _activateGame(game, [match]),
                                 hideScores: _hideScores,
+                                hideMyTeamsScores: _hideMyTeamsScores,
                                 showOdds: _showOdds,
                                 clock: widget.clock,
                                 layoutBuilder: (filters, actions, content) =>
@@ -3411,6 +3426,13 @@ class _SportsScreenState extends State<SportsScreen>
               'Control score visibility while browsing.',
               icon: Icons.visibility_outlined),
           SportsChoice(
+              'my-teams-scores',
+              _hideMyTeamsScores
+                  ? tr('Show My Teams scores')
+                  : tr('Hide My Teams scores'),
+              'Hide scores only for followed teams.',
+              icon: Icons.visibility_outlined),
+          SportsChoice(
               'odds',
               _showOdds ? tr('Hide betting lines') : tr('Show betting lines'),
               'The book\'s spread and total on game cards.',
@@ -3482,6 +3504,8 @@ class _SportsScreenState extends State<SportsScreen>
                 ));
       case 'scores':
         await _toggleScores();
+      case 'my-teams-scores':
+        await _toggleMyTeamsScores();
       case 'odds':
         await _toggleOdds();
       case 'leagues':
@@ -3919,7 +3943,7 @@ class _SportsScreenState extends State<SportsScreen>
         matchStage: _channelStage,
         matchError: _channelError,
         hasCheckedCandidates: _matches.containsKey(_gameKey(g)),
-        hideScores: _hideScores,
+        hideScores: _hideScoresFor(g),
         showOdds: _showOdds,
         starred: _follows.involves(g),
         previewing: preview != null && _gameKey(preview) == _gameKey(g),
@@ -4103,7 +4127,7 @@ class _SportsScreenState extends State<SportsScreen>
                             matchError: _channelError,
                             hasCheckedCandidates:
                                 _matches.containsKey(_gameKey(g)),
-                            hideScores: _hideScores,
+                            hideScores: _hideScoresFor(g),
                             showOdds: _showOdds,
                             starred: _follows.involves(g),
                             previewing: preview != null &&

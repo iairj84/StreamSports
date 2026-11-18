@@ -504,6 +504,17 @@ class StorageService {
   Future<void> setSportsHideScores(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsHideScores), value);
 
+  bool getSportsHideMyTeamsScores() =>
+      _prefs.getBool(_vk(AppConstants.keySportsHideMyTeamsScores)) ?? false;
+  Future<void> setSportsHideMyTeamsScores(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keySportsHideMyTeamsScores), value);
+
+  String? getSportsScoresScope() =>
+      _prefs.getString(_vk(AppConstants.keySportsScoresScope));
+  Future<void> setSportsScoresScope(String? value) => value == null
+      ? _prefs.remove(_vk(AppConstants.keySportsScoresScope))
+      : _prefs.setString(_vk(AppConstants.keySportsScoresScope), value);
+
   /// Sports options: show the betting line on game cards (on by default).
   bool getSportsShowOdds() =>
       _prefs.getBool(_vk(AppConstants.keySportsShowOdds)) ?? true;

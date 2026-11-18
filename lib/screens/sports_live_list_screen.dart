@@ -29,6 +29,7 @@ class SportsLiveListScreen extends StatefulWidget {
     required this.day,
     required this.follows,
     required this.hideScores,
+    this.hideMyTeamsScores = false,
     required this.matchGames,
     required this.onWatch,
     required this.onMenu,
@@ -48,6 +49,7 @@ class SportsLiveListScreen extends StatefulWidget {
   final DateTime day;
   final SportsFollows follows;
   final bool hideScores;
+  final bool hideMyTeamsScores;
   final SportsChannelFilter channelFilter;
   final SportsService? scores;
   final DateTime Function()? clock;
@@ -418,7 +420,9 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
               match:
                   widget.channelFilter.preferred(_matches[_key(g)] ?? const []),
               matching: _matching,
-              hideScores: widget.hideScores,
+              hideScores: widget.hideScores ||
+                  (widget.hideMyTeamsScores &&
+                      widget.follows.involves(g)),
               starred: widget.follows.involves(g),
               narrow: _narrow,
               onFocus: () {

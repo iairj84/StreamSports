@@ -40,12 +40,16 @@ class _Scores extends SportsService {
           id: homeId,
           name: homeName,
           shortName: homeName,
-          abbreviation: homeName.substring(0, 3).toUpperCase()),
+          abbreviation: homeName.substring(0, 3).toUpperCase(),
+          record: '10-2-0',
+          score: '3'),
       away: const SportsTeam(
           id: 'visitors',
           name: 'Visitors',
           shortName: 'Visitors',
-          abbreviation: 'VIS'),
+          abbreviation: 'VIS',
+          record: '8-4-0',
+          score: '1'),
     );
   }
 
@@ -271,6 +275,56 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('BOS'), findsOneWidget);
     expect(find.text('RAN'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scores panel reopens on the remembered my teams scope',
+      (tester) async {
+    final (storage, _, playlist, _, _) = await _harness();
+    await storage.setSportsFollowedTeams(['nhl|bos']);
+    await storage.setSportsScoresScope('my-teams');
+    final start = DateTime(2026, 11, 18, 12);
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider.value(value: storage),
+          ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
+        ],
+        child: MaterialApp(
+            home: Scaffold(
+                body: PlayerScoresPanel(
+                    scores: _Scores(start), onClose: () {}, onPlay: (_) {})))));
+    await settle(tester);
+
+    // Remembered My Teams wins over the Live-first default.
+    expect(find.text('BOS'), findsOneWidget);
+    expect(find.text('RAN'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scores panel hides only my teams scores when toggled',
+      (tester) async {
+    final (storage, _, playlist, _, _) = await _harness();
+    await storage.setSportsFollowedTeams(['nhl|bos']);
+    await storage.setSportsHideMyTeamsScores(true);
+    final start = DateTime(2026, 11, 18, 12);
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider.value(value: storage),
+          ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
+        ],
+        child: MaterialApp(
+            home: Scaffold(
+                body: PlayerScoresPanel(
+                    scores: _Scores(start), onClose: () {}, onPlay: (_) {})))));
+    await settle(tester);
+
+    // Down to All so both games are on screen: the followed game shows
+    // records, the other game still shows its score.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(find.text('10-2-0'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget,
+        reason: 'Only the unfollowed game keeps its score.');
     expect(tester.takeException(), isNull);
   });
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -65,6 +67,14 @@ class _Scope {
       (sport == null || _sportOf(game) == sport) &&
       (involves == null || involves!(game));
 
+  String get id => involves != null
+      ? 'my-teams'
+      : liveOnly
+          ? 'live'
+          : sport == null
+              ? 'all'
+              : 'sport:$sport';
+
   static String _sportOf(SportsGame game) => game.league.espnPath.split('/').first;
 }
 
@@ -74,6 +84,8 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
   final _scroll = ScrollController();
   List<SportsGame> _games = const [];
   SportsFollows? _follows;
+  bool _hideScores = false;
+  bool _hideMyTeamsScores = false;
   int _scope = 1;
   int _index = 0;
   bool _loading = true;
@@ -108,9 +120,16 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
         : nflRedZoneGame(now, logoUrl: channel.logoUrl);
   }
 
+  bool _hideFor(SportsGame game) =>
+      _hideScores ||
+      (_hideMyTeamsScores && (_follows?.involves(game) ?? false));
+
   Future<void> _load() async {
     final storage = context.read<StorageService>();
     _follows = SportsFollows.load(storage);
+    _hideScores = storage.getSportsHideScores();
+    _hideMyTeamsScores = storage.getSportsHideMyTeamsScores();
+    final remembered = storage.getSportsScoresScope();
     final leagues = [
       for (final id in storage.getSportsLeagues() ?? const <String>[])
         sportsLeagueById(id)
@@ -149,8 +168,15 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
         _games = ordered;
         _loading = false;
         // Land on Live when there is something live to watch, then on the game
-        // the viewer is already watching.
+        // the viewer is already watching. A remembered scope wins when it
+        // still exists and still has games; watching-game landing overrides.
         _scope = ordered.any((g) => g.isLive) ? 0 : 1;
+        if (remembered != null) {
+          final scopes = _scopes;
+          final match = scopes.indexWhere((s) =>
+              s.id == remembered && ordered.any(s.accepts));
+          if (match >= 0) _scope = match;
+        }
         _index = 0;
         _landOnWatched();
       });
@@ -242,6 +268,9 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
       _scope = next;
       _index = 0;
     });
+    unawaited(context
+        .read<StorageService>()
+        .setSportsScoresScope(_scopes[next].id));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusCard(0, _visible);
     });
@@ -279,6 +308,11 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
   }
 
   String _status(SportsGame game) {
+    if (_hideFor(game)) {
+      if (game.isLive) return 'LIVE';
+      if (game.state == GameState.post) return 'Final';
+      return TimeFormat.hm.format(game.start.toLocal());
+    }
     if (game.isLive) {
       // Clock plus who has the ball: "3rd 04:12 · 2nd & 7 at NE 32".
       final progress = sportsLiveProgress(game);
@@ -299,7 +333,9 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
     final hasBall =
         possessionId != null && possessionId == side.id;
     // Before kick-off a 0-0 is noise: the records are the useful line.
-    final trailing = game.state == GameState.pre
+    // Hidden My Teams games show the record instead of the score so the
+    // spoiler cannot leak through the panel or the sport rows.
+    final trailing = game.state == GameState.pre || _hideFor(game)
         ? (side.record ?? '')
         : (side.score ?? '');
     return Row(children: [
