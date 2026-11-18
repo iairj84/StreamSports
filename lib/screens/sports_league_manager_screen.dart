@@ -4,11 +4,16 @@ import 'package:provider/provider.dart';
 import '../models/sports.dart';
 import '../services/storage_service.dart';
 import '../services/app_preferences.dart';
+import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
+import '../services/sports_standings_service.dart';
 import '../utils/guarded_dialog.dart';
 import '../utils/tv_theme.dart';
 import '../utils/sports_presentation.dart';
 import '../widgets/settings_scaffold.dart';
+import '../widgets/shown_mark.dart';
+import '../widgets/sports_panel.dart';
+import '../widgets/sports_team_picker.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/sports_header_controls.dart';
 import '../widgets/sports_filter_picker.dart'
@@ -16,11 +21,15 @@ import '../widgets/sports_filter_picker.dart'
 import '../widgets/compact_choice_list.dart';
 import '../widgets/tv_text_field_gate.dart';
 
-/// One list, one state per league: shown in Sports, or hidden. Tapping a row
-/// flips it. Nothing here is a favorite.
+/// Both decisions about what Sports shows, in one place: which leagues appear
+/// (grouped under a sport that opens in place) and which teams are followed.
+/// Tapping a league flips it. Nothing here is a favorite.
 class SportsLeagueManagerScreen extends StatefulWidget {
-  const SportsLeagueManagerScreen({super.key, this.embedded = false});
+  const SportsLeagueManagerScreen(
+      {super.key, this.embedded = false, this.standings, this.follows});
   final bool embedded;
+  final SportsStandingsService? standings;
+  final SportsFollows? follows;
   @override
   State<SportsLeagueManagerScreen> createState() =>
       _SportsLeagueManagerScreenState();
@@ -28,6 +37,8 @@ class SportsLeagueManagerScreen extends StatefulWidget {
 
 class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   late final StorageService _storage = context.read<StorageService>();
+  late final _standings = widget.standings ?? SportsStandingsService.instance;
+  late final SportsFollows _follows = widget.follows ?? SportsFollows.load(_storage);
   late Set<String> _shown;
   late String? _opening = _storage.getSportsFavoriteLeague();
   late Set<String> _savedShown;
@@ -41,8 +52,11 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   final _allFocus = FocusNode(debugLabel: 'leagues-show-all');
   final _scroll = ScrollController();
   String _query = '';
-  String? _sport;
-  late List<SportsLeague> _visibleLeagues;
+  String _tab = 'leagues';
+  /// Sports whose leagues are listed. A sport opens in place, so a viewer only
+  /// scrolls through the sports they care about.
+  final _expanded = <String>{};
+  List<SportsLeague> _visibleLeagues = const [];
   late final _searchText = {
     for (final l in _leagues)
       l.id:
@@ -66,15 +80,13 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     final terms =
         _query.toLowerCase().split(RegExp(r'\s+')).where((s) => s.isNotEmpty);
     _visibleLeagues = _leagues
-        .where((l) =>
-            (_sport == null || _sportOf(l) == _sport) &&
-            terms.every(_searchText[l.id]!.contains))
+        .where((l) => terms.every(_searchText[l.id]!.contains))
         .toList();
   }
 
-  void _changeFilter(VoidCallback change) {
+  void _changeQuery(String query) {
     setState(() {
-      change();
+      _query = query;
       _filter();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
@@ -86,6 +98,10 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     _shown = savedSportsLeagues(_storage).map((l) => l.id).toSet();
     _savedShown = Set.of(_shown);
     _savedOpening = _opening;
+    // Sports you already show start open; everything else stays closed.
+    for (final id in _shown) {
+      if (_byId[id] case final league?) _expanded.add(_sportOf(league));
+    }
     _filter();
   }
 
@@ -101,6 +117,11 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
 
   String _sportOf(SportsLeague league) => league.espnPath.split('/').first;
   String _groupOf(SportsLeague league) => sportLabel(_sportOf(league));
+
+  int _sportRank(String a, String b) {
+    final rank = sportDisplayPriority(a).compareTo(sportDisplayPriority(b));
+    return rank != 0 ? rank : sportLabel(a).compareTo(sportLabel(b));
+  }
 
   /// Picks that narrow [league]: its conferences and poll views.
   List<SportsLeague> _picksOf(SportsLeague league) =>
@@ -157,15 +178,23 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   }
 
   late final List<SportsLeague> _leagues = _orderedLeagues();
+  late final Map<String, List<SportsLeague>> _bySport = () {
+    final map = <String, List<SportsLeague>>{};
+    for (final league in _leagues) {
+      (map[_sportOf(league)] ??= []).add(league);
+    }
+    return map;
+  }();
+  late final List<String> _sports = [..._bySport.keys]..sort(_sportRank);
 
   List<SportsLeague> _orderedLeagues() {
-    final groups = <String, List<SportsLeague>>{};
     final leagues = {
       for (final l in [...kSportsLeagues, ...kSportsLeagueBank]) l.id: l
     }.values.toList();
     final order = {for (final (i, league) in leagues.indexed) league.id: i};
+    final groups = <String, List<SportsLeague>>{};
     for (final league in leagues) {
-      (groups[_groupOf(league)] ??= []).add(league);
+      (groups[_sportOf(league)] ??= []).add(league);
     }
     for (final group in groups.values) {
       group.sort((a, b) {
@@ -174,7 +203,10 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         return priority != 0 ? priority : order[a.id]!.compareTo(order[b.id]!);
       });
     }
-    final ordered = groups.values.expand((group) => group).toList();
+    final ordered = [
+      for (final sport in groups.keys.toList()..sort(_sportRank))
+        ...groups[sport]!
+    ];
     final picks = <String, List<SportsLeague>>{};
     for (final league in ordered) {
       final parent = league.parentLeagueId;
@@ -190,6 +222,12 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         ],
     ];
   }
+
+  /// Leagues the bulk buttons act on: the search results, or every league of
+  /// the sports currently open.
+  List<SportsLeague> get _listedLeagues => _query.isNotEmpty
+      ? _visibleLeagues
+      : [for (final sport in _expanded) ...?_bySport[sport]];
 
   Future<void> _persist(Set<String> shown, String? opening) async {
     await _storage.setSportsLeagues(shown.toList());
@@ -261,7 +299,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   }
 
   void _bulk(bool show) {
-    final ids = _visibleLeagues.map((l) => l.id).toSet();
+    final ids = _listedLeagues.map((l) => l.id).toSet();
     final next = _settle(show ? {..._shown, ...ids} : _shown.difference(ids));
     _apply(next, next.contains(_opening) ? _opening : null);
   }
@@ -274,10 +312,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
 
   void _clearFilters() {
     _search.clear();
-    _changeFilter(() {
-      _query = '';
-      _sport = null;
-    });
+    _changeQuery('');
     _searchFocus.requestFocus();
   }
 
@@ -289,24 +324,6 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     } catch (_) {}
     // Allow rollback/finalisation to complete before returning to Sports.
     if (mounted) popRouteIfCurrent(context, _changed);
-  }
-
-  Future<void> _chooseSport() async {
-    final sports = _leagues.map(_sportOf).toSet().toList()
-      ..sort((a, b) => sportLabel(a).compareTo(sportLabel(b)));
-    final result = await showSportsChoices<String>(context,
-        title: 'Filter by sport',
-        selected: _sport ?? '',
-        choices: [
-          const SportsChoice('', 'All sports', '', icon: Icons.public),
-          for (final sport in sports)
-            SportsChoice(sport, sportLabel(sport),
-                '${_leagues.where((l) => _sportOf(l) == sport).length} leagues',
-                icon: sportIcon(sport)),
-        ]);
-    if (mounted && result != null) {
-      _changeFilter(() => _sport = result.isEmpty ? null : result);
-    }
   }
 
   Future<void> _openMenu(SportsLeague league) async {
@@ -326,6 +343,82 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         ]);
     if (!mounted || action == null) return;
     await _apply({..._shown, league.id}, opening ? null : league.id);
+  }
+
+  Future<void> _removeTeam(FollowedTeam entry) async {
+    final name = _follows.nameOf(entry) ?? entry.teamId;
+    final logo = _follows.logoOf(entry);
+    try {
+      await _follows.unfollow(entry.leagueId, entry.teamId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Could not save that team. Please try again.')));
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Removed $name'),
+      action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            unawaited(_follows
+                .follow(entry.leagueId, entry.teamId, name: name, logoUrl: logo)
+                .then((_) {
+              if (mounted) setState(() {});
+            }));
+          }),
+    ));
+  }
+
+  /// Sport, then league, then every team that league lists.
+  Future<void> _addTeam() async {
+    final sports = sportsStandingsLeagues.map(_sportOf).toSet().toList()
+      ..sort(_sportRank);
+    final sport = await showSportsChoices<String>(context,
+        title: 'Add a team',
+        description: 'Choose a sport, then the league the team plays in.',
+        selected: '',
+        showSelection: false,
+        choices: [
+          for (final sport in sports)
+            SportsChoice(
+                sport,
+                sportLabel(sport),
+                '${sportsStandingsLeagues.where((l) => _sportOf(l) == sport).length} leagues',
+                icon: sportIcon(sport),
+                key: ValueKey('add-team-sport-$sport')),
+        ]);
+    if (!mounted || sport == null) return;
+    final leagues = sportsStandingsLeagues
+        .where((l) => _sportOf(l) == sport)
+        .toList()
+      ..sort((a, b) {
+        final priority =
+            leagueDisplayPriority(a).compareTo(leagueDisplayPriority(b));
+        return priority != 0 ? priority : a.name.compareTo(b.name);
+      });
+    final leagueId = await showSportsChoices<String>(context,
+        title: sportLabel(sport),
+        selected: '',
+        showSelection: false,
+        choices: [
+          for (final league in leagues)
+            SportsChoice(league.id, league.name, leagueDescription(league),
+                icon: sportIcon(sport),
+                key: ValueKey('add-team-league-${league.id}')),
+        ]);
+    if (!mounted || leagueId == null) return;
+    final league = sportsLeagueById(leagueId);
+    if (league == null) return;
+    await showSportsPanel<void>(
+        context: context,
+        besidePreview: true,
+        builder: (_) => SportsTeamPicker(
+            league: league, follows: _follows, standings: _standings));
+    if (mounted) setState(() {});
   }
 
   @override
@@ -365,22 +458,6 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         textStyle: const WidgetStatePropertyAll(
             TextStyle(fontSize: 11, fontWeight: FontWeight.w500)));
     final typing = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final shownCount =
-        _visibleLeagues.where((l) => _shown.contains(l.id)).length;
-    final choices = [
-      for (final l in _visibleLeagues)
-        CompactChoice(
-          id: l.id,
-          title: l.name,
-          group: _groupOf(l),
-          subtitle: _subtitleOf(l),
-          leading: SportsLogo(
-              url: l.logoUrl, size: 24, fallback: l.shortName, animate: false),
-          trailing: _ShownMark(shown: _shown.contains(l.id)),
-          onTap: () => _toggle(l),
-          onHold: () => _openMenu(l),
-        )
-    ];
     return LayoutBuilder(builder: (context, constraints) {
       // Scaffold may consume keyboard insets before they reach this panel.
       final compact = typing || constraints.maxHeight < 300;
@@ -389,214 +466,356 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
               widget.embedded ? 10 : 16, 4, widget.embedded ? 10 : 16, 8),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            SizedBox(
-                height: compact
-                    ? 40
-                    : (MediaQuery.textScalerOf(context).scale(15) * 1.2 +
-                            MediaQuery.textScalerOf(context).scale(10) * 1.2 +
-                            8)
-                        .clamp(40, double.infinity),
-                child: Row(children: [
-                  Expanded(
-                      child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        const Text(sportsManageLeaguesLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w600)),
-                        if (!compact)
-                          Text('Tap to show or hide · a pick replaces its full list',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: colors.onSurfaceVariant)),
-                      ])),
-                  IconButton(
-                      key: const ValueKey('close-leagues'),
-                      focusNode: _closeFocus,
-                      tooltip: 'Close',
-                      style: IconButton.styleFrom(
-                          minimumSize: const Size(34, 34),
-                          maximumSize: const Size(34, 34),
-                          padding: EdgeInsets.zero),
-                      onPressed: _close,
-                      icon: const Icon(Icons.close, size: 20)),
-                ])),
-            TvTextFieldGate(
-                key: const ValueKey('league-search-slot'),
-                focusNode: _searchFocus,
-                builder: (context, readOnly) => TextField(
-                      key: const ValueKey('league-manager-search'),
-                      controller: _search,
-                      focusNode: _searchFocus,
-                      readOnly: readOnly,
-                      style: const TextStyle(fontSize: 12),
-                      decoration: InputDecoration(
-                          isDense: true,
-                          constraints: television
-                              ? BoxConstraints.tightFor(height: searchHeight)
-                              : null,
-                          prefixIconConstraints: television
-                              ? BoxConstraints.tightFor(
-                                  width: 34, height: searchHeight)
-                              : null,
-                          suffixIconConstraints: television
-                              ? BoxConstraints.tightFor(
-                                  width: 34, height: searchHeight)
-                              : null,
-                          hintText: 'Search leagues or countries',
-                          prefixIcon: const Icon(Icons.search, size: 18),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 8),
-                          suffixIcon: _query.isEmpty
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Clear search',
-                                  icon: const Icon(Icons.clear, size: 17),
-                                  onPressed: () {
-                                    _search.clear();
-                                    _changeFilter(() => _query = '');
-                                    _searchFocus.requestFocus();
-                                  })),
-                      onChanged: (query) => _changeFilter(() => _query = query),
-                    )),
+            _header(compact, colors, scaler),
+            if (!compact) _tabs(),
             const SizedBox(height: 6),
-            if (!compact)
-              Row(children: [
-                Expanded(
-                    child: SportsFilterButton(
-                        key: const ValueKey('league-manager-sport'),
-                        caption: 'Sport',
-                        value:
-                            _sport == null ? 'All sports' : sportLabel(_sport!),
-                        onTap: _chooseSport)),
-              ]),
-            if (!compact)
-              Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Wrap(spacing: 6, runSpacing: 2, children: [
-                    OutlinedButton(
-                        key: const ValueKey('show-visible-leagues'),
-                        style: bulkStyle,
-                        onPressed: _saving || shownCount == choices.length
-                            ? null
-                            : () => _bulk(true),
-                        child: const Text('Show listed')),
-                    OutlinedButton(
-                        key: const ValueKey('hide-visible-leagues'),
-                        style: bulkStyle,
-                        onPressed: _saving || shownCount == 0
-                            ? null
-                            : () => _bulk(false),
-                        child: const Text('Hide listed')),
-                    OutlinedButton(
-                        key: ValueKey(_shown.isEmpty
-                            ? 'restore-league-selection'
-                            : 'show-all-leagues'),
-                        focusNode: _allFocus,
-                        style: bulkStyle,
-                        onPressed: _shown.isEmpty
-                            ? _restoreSelection
-                            : _saving || _allShown
-                                ? null
-                                : () =>
-                                    _apply({..._shown, ..._availableIds}, _opening),
-                        child: Text(_shown.isEmpty
-                            ? 'Restore selection'
-                            : _allShown
-                                ? 'All leagues shown'
-                                : 'Show all leagues')),
-                  ])),
-            Container(
-                padding: const EdgeInsets.fromLTRB(2, 5, 2, 6),
-                decoration: BoxDecoration(
-                    border: Border(
-                        bottom: BorderSide(
-                            color:
-                                colors.outlineVariant.withValues(alpha: .4)))),
-                child: Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                          text: '${choices.length}',
-                          style: TextStyle(
-                              color: colors.onSurface,
-                              fontWeight: FontWeight.w600)),
-                      const TextSpan(text: ' leagues · '),
-                      TextSpan(
-                          text: '${_shown.length} shown',
-                          style: TextStyle(
-                              color: colors.onSurface,
-                              fontWeight: FontWeight.w500)),
-                      TextSpan(
-                          text:
-                              ' · ${_shown.isEmpty ? 'Choose leagues to finish' : _saving ? 'Saving…' : 'Saved automatically'}'),
-                    ]),
-                    style: TextStyle(
-                        fontSize: 10, color: colors.onSurfaceVariant))),
-            Expanded(
-                child: choices.isEmpty
-                    ? Center(
-                        child: SingleChildScrollView(
-                            child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                            const Text('No matching leagues',
-                                style: TextStyle(fontSize: 12)),
-                            TextButton(
-                                key: const ValueKey('clear-league-filters'),
-                                onPressed: _clearFilters,
-                                child: const Text('Clear filters')),
-                          ])))
-                    : CompactChoiceList(
-                        controller: _scroll,
-                        autofocus: !_searchFocus.hasFocus,
-                        choices: choices,
-                        polished: true,
-                        striped: true,
-                        showNavigation: true,
-                        rowHeight: (television ? 44 : 48) *
-                            (MediaQuery.textScalerOf(context).scale(12) / 12)
-                                .clamp(1.0, 2.5),
-                        resetScrollKey: (_sport, _query),
-                        onExitUp: _searchFocus.requestFocus,
-                      )),
-            if (!compact)
-              Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                      _shown.isEmpty
-                          ? 'Your previous selection stays saved until you show a league.'
-                          : context.read<AppPreferences>().isTelevision
-                              ? 'OK: show or hide · Hold OK: options'
-                              : 'Tap to show or hide · Hold for options',
-                      style: TextStyle(
-                          fontSize: 10, color: colors.onSurfaceVariant))),
+            if (_tab == 'leagues')
+              ..._leagueBody(
+                  context,
+                  compact: compact,
+                  television: television,
+                  bulkStyle: bulkStyle,
+                  searchHeight: searchHeight)
+            else
+              Expanded(child: _teamsBody(context, bulkStyle: bulkStyle)),
           ]));
     });
   }
-}
 
-/// Touch-free state marker: a shown league is checked, a hidden one is empty.
-class _ShownMark extends StatelessWidget {
-  const _ShownMark({required this.shown});
-  final bool shown;
+  Widget _header(bool compact, ColorScheme colors, TextScaler scaler) =>
+      SizedBox(
+          height: compact
+              ? 40
+              : (scaler.scale(15) * 1.2 + scaler.scale(10) * 1.2 + 8)
+                  .clamp(40, double.infinity),
+          child: Row(children: [
+            Expanded(
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  const Text(sportsManageLeaguesLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
+                  if (!compact)
+                    Text(
+                        _tab == 'leagues'
+                            ? 'Pick a sport, then its leagues'
+                            : 'Follow the teams you care about',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 10, color: colors.onSurfaceVariant)),
+                ])),
+            if (compact) ...[_tabs(iconOnly: true), const SizedBox(width: 6)],
+            IconButton(
+                key: const ValueKey('close-leagues'),
+                focusNode: _closeFocus,
+                tooltip: 'Close',
+                style: IconButton.styleFrom(
+                    minimumSize: const Size(34, 34),
+                    maximumSize: const Size(34, 34),
+                    padding: EdgeInsets.zero),
+                onPressed: _close,
+                icon: const Icon(Icons.close, size: 20)),
+          ]));
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _tabs({bool iconOnly = false}) => Align(
+      alignment: Alignment.centerLeft,
+      child: SegmentedButton<String>(
+        key: const ValueKey('follow-tabs'),
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 10)),
+            textStyle: WidgetStatePropertyAll(
+                TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+        segments: [
+          ButtonSegment(
+              value: 'leagues',
+              tooltip: 'Leagues',
+              label: iconOnly ? null : const Text('Leagues'),
+              icon: const Icon(Icons.checklist_rounded, size: 16)),
+          ButtonSegment(
+              value: 'teams',
+              tooltip: 'Teams',
+              label: iconOnly ? null : const Text('Teams'),
+              icon: const Icon(Icons.star_outline_rounded, size: 16)),
+        ],
+        selected: {_tab},
+        onSelectionChanged: (values) => setState(() => _tab = values.first),
+      ));
+
+  List<Widget> _leagueBody(BuildContext context,
+      {required bool compact,
+      required bool television,
+      required ButtonStyle bulkStyle,
+      required double searchHeight}) {
     final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      label: shown ? 'Shown in Sports' : 'Hidden from Sports',
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: Icon(
-            shown ? Icons.check_circle : Icons.circle_outlined,
-            size: 18,
-            color: shown ? colors.primary : colors.onSurfaceVariant),
-      ),
-    );
+    final choices = _leagueChoices();
+    final listed = _listedLeagues;
+    final listedShown = listed.where((l) => _shown.contains(l.id)).length;
+    return [
+      TvTextFieldGate(
+          key: const ValueKey('league-search-slot'),
+          focusNode: _searchFocus,
+          builder: (context, readOnly) => TextField(
+                key: const ValueKey('league-manager-search'),
+                controller: _search,
+                focusNode: _searchFocus,
+                readOnly: readOnly,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                    isDense: true,
+                    constraints: television
+                        ? BoxConstraints.tightFor(height: searchHeight)
+                        : null,
+                    prefixIconConstraints: television
+                        ? BoxConstraints.tightFor(
+                            width: 34, height: searchHeight)
+                        : null,
+                    suffixIconConstraints: television
+                        ? BoxConstraints.tightFor(
+                            width: 34, height: searchHeight)
+                        : null,
+                    hintText: 'Search leagues or countries',
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear search',
+                            icon: const Icon(Icons.clear, size: 17),
+                            onPressed: () {
+                              _search.clear();
+                              _changeQuery('');
+                              _searchFocus.requestFocus();
+                            })),
+                onChanged: _changeQuery,
+              )),
+      if (!compact)
+        Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Wrap(spacing: 6, runSpacing: 2, children: [
+              OutlinedButton(
+                  key: const ValueKey('show-visible-leagues'),
+                  style: bulkStyle,
+                  onPressed: _saving || listed.isEmpty || listedShown == listed.length
+                      ? null
+                      : () => _bulk(true),
+                  child: const Text('Show listed')),
+              OutlinedButton(
+                  key: const ValueKey('hide-visible-leagues'),
+                  style: bulkStyle,
+                  onPressed: _saving || listedShown == 0
+                      ? null
+                      : () => _bulk(false),
+                  child: const Text('Hide listed')),
+              OutlinedButton(
+                  key: ValueKey(_shown.isEmpty
+                      ? 'restore-league-selection'
+                      : 'show-all-leagues'),
+                  focusNode: _allFocus,
+                  style: bulkStyle,
+                  onPressed: _shown.isEmpty
+                      ? _restoreSelection
+                      : _saving || _allShown
+                          ? null
+                          : () => _apply({..._shown, ..._availableIds}, _opening),
+                  child: Text(_shown.isEmpty
+                      ? 'Restore selection'
+                      : _allShown
+                          ? 'All leagues shown'
+                          : 'Show all leagues')),
+            ])),
+      Container(
+          padding: const EdgeInsets.fromLTRB(2, 5, 2, 6),
+          decoration: BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(
+                      color: colors.outlineVariant.withValues(alpha: .4)))),
+          child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: '${_leagues.length}',
+                    style: TextStyle(
+                        color: colors.onSurface, fontWeight: FontWeight.w600)),
+                const TextSpan(text: ' leagues · '),
+                TextSpan(
+                    text: '${_shown.length} shown',
+                    style: TextStyle(
+                        color: colors.onSurface, fontWeight: FontWeight.w500)),
+                TextSpan(
+                    text:
+                        ' · ${_shown.isEmpty ? 'Choose leagues to finish' : _saving ? 'Saving…' : 'Saved automatically'}'),
+              ]),
+              style:
+                  TextStyle(fontSize: 10, color: colors.onSurfaceVariant))),
+      Expanded(
+          child: choices.isEmpty
+              ? Center(
+                  child: SingleChildScrollView(
+                      child:
+                          Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Text('No matching leagues',
+                        style: TextStyle(fontSize: 12)),
+                    TextButton(
+                        key: const ValueKey('clear-league-filters'),
+                        onPressed: _clearFilters,
+                        child: const Text('Clear filters')),
+                  ])))
+              : CompactChoiceList(
+                  controller: _scroll,
+                  autofocus: !_searchFocus.hasFocus,
+                  choices: choices,
+                  polished: true,
+                  striped: true,
+                  showNavigation: true,
+                  rowHeight: (television ? 44 : 48) *
+                      (MediaQuery.textScalerOf(context).scale(12) / 12)
+                          .clamp(1.0, 2.5),
+                  resetScrollKey: _query,
+                  onExitUp: _searchFocus.requestFocus,
+                )),
+      if (!compact)
+        Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+                _shown.isEmpty
+                    ? 'Your previous selection stays saved until you show a league.'
+                    : television
+                        ? 'OK: open a sport or turn a league on or off · Hold OK: options'
+                        : 'Tap a sport to open it · tap a league to show or hide it',
+                style:
+                    TextStyle(fontSize: 10, color: colors.onSurfaceVariant))),
+    ];
+  }
+
+  List<CompactChoice> _leagueChoices() {
+    final rows = <CompactChoice>[];
+    if (_query.isNotEmpty) {
+      // A search looks across every sport; the tree would hide the answer.
+      for (final league in _visibleLeagues) {
+        rows.add(_leagueChoice(league, group: _groupOf(league)));
+      }
+      return rows;
+    }
+    for (final sport in _sports) {
+      final leagues = _bySport[sport] ?? const <SportsLeague>[];
+      final open = _expanded.contains(sport);
+      final shown = leagues.where((l) => _shown.contains(l.id)).length;
+      rows.add(CompactChoice(
+        id: 'sport:$sport',
+        title: sportLabel(sport),
+        subtitle: '$shown of ${leagues.length} shown',
+        leading: Padding(
+            padding: const EdgeInsets.only(left: 2),
+            child: Icon(sportIcon(sport), size: 20)),
+        trailing:
+            Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                size: 18),
+        onTap: () => setState(() {
+          if (!_expanded.remove(sport)) _expanded.add(sport);
+        }),
+      ));
+      if (!open) continue;
+      for (final league in leagues) {
+        rows.add(_leagueChoice(league, indent: 22));
+      }
+    }
+    return rows;
+  }
+
+  CompactChoice _leagueChoice(SportsLeague league,
+          {String? group, double indent = 0}) =>
+      CompactChoice(
+        id: league.id,
+        title: league.name,
+        group: group,
+        subtitle: _subtitleOf(league),
+        leading: Padding(
+            padding: EdgeInsets.only(left: indent),
+            child: SportsLogo(
+                url: league.logoUrl,
+                size: 24,
+                fallback: league.shortName,
+                animate: false)),
+        trailing: ShownMark(shown: _shown.contains(league.id)),
+        onTap: () => _toggle(league),
+        onHold: () => _openMenu(league),
+      );
+
+  Widget _teamsBody(BuildContext context, {required ButtonStyle bulkStyle}) {
+    final colors = Theme.of(context).colorScheme;
+    final teams = _follows.teams;
+    final choices = [
+      for (final entry in teams)
+        CompactChoice(
+          id: 'followed:${entry.key}',
+          title: _follows.nameOf(entry) ?? entry.teamId,
+          subtitle: sportsLeagueById(entry.leagueId)?.name ?? entry.leagueId,
+          leading: SportsLogo(
+              url: _follows.logoOf(entry),
+              size: 24,
+              fallback: _follows.nameOf(entry) ?? entry.teamId,
+              animate: false),
+          trailing: const ShownMark(
+              shown: true, shownLabel: 'Following', hiddenLabel: 'Not following'),
+          onTap: () => _removeTeam(entry),
+        )
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        OutlinedButton.icon(
+            key: const ValueKey('add-team'),
+            style: bulkStyle,
+            onPressed: _addTeam,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Add team')),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Text('${teams.length} followed',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    TextStyle(fontSize: 10, color: colors.onSurfaceVariant))),
+      ]),
+      const SizedBox(height: 6),
+      Expanded(
+          child: choices.isEmpty
+              ? Center(
+                  child: SingleChildScrollView(
+                      child:
+                          Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Text('No teams followed yet',
+                        style: TextStyle(fontSize: 12)),
+                    const SizedBox(height: 2),
+                    Text('Add team lists a league, then its teams.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 10, color: colors.onSurfaceVariant)),
+                  ])))
+              : CompactChoiceList(
+                  controller: _scroll,
+                  choices: choices,
+                  polished: true,
+                  striped: true,
+                  rowHeight: 48,
+                  resetScrollKey: _tab,
+                  onExitUp: _closeFocus.requestFocus,
+                )),
+      Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+              teams.isEmpty
+                  ? 'Followed teams feed My Teams and the Favorites filter.'
+                  : 'Tap a team to stop following it',
+              style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant))),
+    ]);
   }
 }

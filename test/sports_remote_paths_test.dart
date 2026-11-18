@@ -68,23 +68,23 @@ void main() {
     harness.viewport(tester, const Size(960, 540));
     final (storage, prefs) = await harness.preferences(true);
     addTearDown(prefs.dispose);
+    // One shown league leaves both bulk buttons usable for the focus walk.
+    await storage.setSportsLeagues(['nfl']);
     await tester.pumpWidget(harness.app(
         storage, prefs, const SportsLeagueManagerScreen(embedded: true)));
     await tester.pumpAndSettle();
     final search = find.byKey(const ValueKey('league-manager-search'));
-    final sport = find.byKey(const ValueKey('league-manager-sport'));
+    final tabs = find.byKey(const ValueKey('follow-tabs'));
     final bulk = find.byKey(const ValueKey('show-visible-leagues'));
     expect(tester.getSize(search).height, 34);
-    expect(tester.getRect(search).bottom, lessThan(tester.getRect(sport).top));
-    expect(tester.getRect(sport).bottom, lessThan(tester.getRect(bulk).top));
+    expect(tester.getRect(tabs).bottom, lessThan(tester.getRect(search).top));
+    expect(tester.getRect(search).bottom, lessThan(tester.getRect(bulk).top));
     expect(tester.getSize(bulk).height, 28);
     await key(tester, LogicalKeyboardKey.arrowUp);
     expect(focused('league-manager-search'), isTrue);
     await key(tester, LogicalKeyboardKey.arrowDown);
-    expect(focused('league-manager-sport'), isTrue);
-    await key(tester, LogicalKeyboardKey.arrowRight);
-    expect(focused('league-manager-sport'), isTrue,
-        reason: 'The Show filter is gone, so Sport is alone in its row.');
+    expect(focused('league-manager-search'), isFalse,
+        reason: 'Down leaves search for the bulk row, not the tree.');
     expect(find.byKey(const ValueKey('league-manager-state')), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -249,6 +249,8 @@ void main() {
     harness.viewport(tester, const Size(960, 540));
     final (storage, prefs) = await harness.preferences(true);
     addTearDown(prefs.dispose);
+    // One open sport keeps the first league row one press below its sport.
+    await storage.setSportsLeagues(['nfl']);
     await tester.pumpWidget(harness.app(
         storage, prefs, const SportsLeagueManagerScreen(embedded: true)));
     await tester.pumpAndSettle();
@@ -261,6 +263,8 @@ void main() {
     await key(tester, LogicalKeyboardKey.home);
     expect(FocusManager.instance.primaryFocus?.debugLabel,
         'choice-${choices.first.id}');
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'choice-nfl');
     await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
     await tester.pump(const Duration(milliseconds: 600));
     await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
@@ -270,9 +274,8 @@ void main() {
     expect(find.text('Set as opening league'), findsOneWidget);
     await tester.tap(find.text('Set as opening league'));
     await tester.pumpAndSettle();
-    expect(storage.getSportsFavoriteLeague(), choices.first.id);
-    expect(FocusManager.instance.primaryFocus?.debugLabel,
-        'choice-${choices.first.id}');
+    expect(storage.getSportsFavoriteLeague(), 'nfl');
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'choice-nfl');
     expect(tester.takeException(), isNull);
   });
   testWidgets(
@@ -401,56 +404,55 @@ void main() {
     const Size(960, 540)
   ]) {
     testWidgets(
-        'league filters and bulk changes affect only shown leagues, with remote paging at $size',
+        'the sport tree opens in place and bulk changes affect only the leagues it lists, with remote paging at $size',
         (tester) async {
       harness.viewport(tester, size);
       final (storage, prefs) = await harness.preferences(size.width == 960);
       addTearDown(prefs.dispose);
+      await storage.setSportsLeagues(['mlb']);
       await storage.setSportsAddedLeagues([]);
       await storage.setHiddenGuideLeagues(
           kAutomaticSportsLeagues.map((l) => l.id).toList());
       await tester.pumpWidget(harness.app(
           storage, prefs, const SportsLeagueManagerScreen(embedded: true)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('league-manager-sport')));
+      await tester.tap(find.byKey(const ValueKey('sport:football')));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.sports_baseball), findsOneWidget);
-      await tester.ensureVisible(find.text('Baseball').last);
-      await tester.tap(find.text('Baseball').last);
-      await tester.pumpAndSettle();
-      final ids = tester
-          .widget<CompactChoiceList>(find.byType(CompactChoiceList))
-          .choices
-          .map((c) => c.id)
-          .toSet();
-      expect(ids.length, greaterThan(2));
+      final ids = {
+        for (final choice
+            in tester
+                .widget<CompactChoiceList>(find.byType(CompactChoiceList))
+                .choices)
+          if (!choice.id.startsWith('sport:')) choice.id
+      };
+      expect(ids, containsAll(['mlb', 'nfl', 'college-football']));
+      expect(ids, isNot(contains('nhl')),
+          reason: 'Only the open sports list their leagues.');
+
       await tester.tap(find.byKey(const ValueKey('show-visible-leagues')));
       await tester.pumpAndSettle();
-      expect(savedSportsLeagues(storage).map((l) => l.id).toSet(),
-          {'nhl', ...ids});
+      final saved = savedSportsLeagues(storage).map((l) => l.id).toSet();
+      expect(saved,
+          containsAll(['mlb', 'nfl', 'college-football', 'baseball.college-baseball']),
+          reason: 'Show listed covers every league of the open sports.');
+      expect(saved, isNot(contains('nba')),
+          reason: 'A closed sport is never changed in bulk.');
+      expect(saved, isNot(contains('nhl')));
+
       await tester.tap(find.byKey(const ValueKey('hide-visible-leagues')));
       await tester.pumpAndSettle();
-      expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
-      expect(find.byKey(const ValueKey('league-manager-state')), findsNothing,
-          reason: 'One list: inclusion is the only filter');
-      await tester.tap(find.byKey(const ValueKey('league-manager-sport')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('All sports').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('hide-visible-leagues')));
-      await tester.pump();
-      expect(savedSportsLeagues(storage).map((l) => l.id), ['nhl']);
-      expect(find.byType(SnackBar), findsNothing);
+      expect(savedSportsLeagues(storage).map((l) => l.id).toSet(), saved,
+          reason: 'Hiding everything listed is a draft, never a save.');
       expect(find.textContaining('0 shown · Choose leagues to finish'),
           findsOneWidget);
-      expect(find.byType(CompactChoiceList), findsOneWidget,
-          reason: 'Clearing Enabled only reveals leagues to choose next.');
+      expect(find.byKey(const ValueKey('league-manager-state')), findsNothing,
+          reason: 'One list: inclusion is the only filter');
+
       await tester.tap(find.byKey(const ValueKey('restore-league-selection')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('1 shown · Saved automatically'),
+      expect(find.textContaining('${saved.length} shown · Saved automatically'),
           findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('hide-visible-leagues')));
-      await tester.pumpAndSettle();
+
       final search = find.byKey(const ValueKey('league-manager-search'));
       await tester.tap(search);
       if (prefs.isTelevision) {
@@ -461,7 +463,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('nba')));
       await tester.pumpAndSettle();
-      expect(savedSportsLeagues(storage).map((l) => l.id), ['nba']);
+      expect(savedSportsLeagues(storage).map((l) => l.id), contains('nba'));
       expect(tester.takeException(), isNull);
     });
   }

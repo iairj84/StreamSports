@@ -23,15 +23,6 @@ import '../widgets/standings_team_tile.dart';
 import '../widgets/sports_favorite_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
 
-final sportsStandingsLeagues = [...kSportsLeagues, ...kSportsLeagueBank]
-    .where((l) =>
-        (['ESPN', 'K League', 'EASL', 'NPB', 'KBO', 'ABL', 'B.League']
-                .contains(l.source) ||
-            const {'racing.motogp', 'racing.moto2', 'racing.moto3'}
-                .contains(l.id)) &&
-        l.id != 'rugby.live' &&
-        (l.kind == SportsKind.team || l.hasStandings))
-    .toList(growable: false);
 String _sport(SportsLeague league) => league.espnPath.split('/').first;
 String _directoryMessage(String leagueId) => switch (leagueId) {
       'rugby.289234' ||

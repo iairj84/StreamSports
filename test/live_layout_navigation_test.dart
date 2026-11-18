@@ -921,7 +921,7 @@ void main() {
       } else if (destination == 'manager') {
         await tester.tap(find.byTooltip('Sports options'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Choose leagues'));
+        await tester.tap(find.text('Leagues & teams'));
       } else if (destination == 'background') {
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       } else if (destination == 'covered') {
@@ -1023,7 +1023,7 @@ void main() {
       expect(FocusManager.instance.primaryFocus, same(chosen),
           reason: 'Late scores must not redirect the next remote activation');
       if (overlay) {
-        expect(find.text('Choose leagues'), findsOneWidget);
+        expect(find.text('Leagues & teams'), findsOneWidget);
         await tester.tap(find.byKey(const ValueKey('close-leagues')));
         await tester.pumpAndSettle();
       } else {
@@ -1102,7 +1102,7 @@ void main() {
     expect(find.byKey(const ValueKey('events-favorites-only')), findsNothing);
     final calls = scores.calls;
     await tapKey('leagues-gear');
-    expect(find.text('Choose leagues'), findsOneWidget);
+    expect(find.text('Leagues & teams'), findsOneWidget);
     await captureSports(tester, const Size(390, 844), 'leagues-gear');
     await tapKey('close-leagues');
     expect(scores.calls, calls,
@@ -1118,7 +1118,7 @@ void main() {
     await tapKey('basketball');
     expect(panel.browseState.sport, 'basketball');
     await tapKey('schedule-league');
-    expect(find.text('Choose leagues'), findsOneWidget);
+    expect(find.text('Leagues & teams'), findsOneWidget);
     expect(find.byKey(const ValueKey('eng.1')), findsNothing);
     await tapKey('nba');
     expect(panel.browseState.leagueId, 'nba');
@@ -3196,7 +3196,7 @@ void main() {
       await flush();
       await tester.tap(find.byTooltip('Sports options'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Choose leagues'));
+      await tester.tap(find.text('Leagues & teams'));
       await tester.pumpAndSettle();
       expect(find.byType(SportsLeagueManagerScreen), findsOneWidget);
       expect(tester.element(find.byType(VideoPlayerPane)), same(player));
@@ -3210,7 +3210,7 @@ void main() {
           reason: 'Back returns to Events');
       await tester.tap(find.byTooltip('Sports options'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Choose leagues'));
+      await tester.tap(find.text('Leagues & teams'));
       await tester.pumpAndSettle();
       final overlayPolls = scores.calls;
       await tester.pump(const Duration(seconds: 31));
@@ -5585,13 +5585,13 @@ void main() {
                   .ensureVisible(find.byKey(const ValueKey('leagues-gear')));
               await tester.tap(find.byKey(const ValueKey('leagues-gear')));
               await settleSports(tester);
-              expect(find.text('Choose leagues'), findsOneWidget);
+              expect(find.text('Leagues & teams'), findsOneWidget);
               await tester.tap(find.byKey(const ValueKey('close-leagues')));
               await settleSports(tester);
               // Secondary controls remain available in the options menu.
               await tester.tap(find.byIcon(Icons.more_horiz));
               await tester.pump(const Duration(milliseconds: 200));
-              expect(find.text('Choose leagues'), findsOneWidget);
+              expect(find.text('Leagues & teams'), findsOneWidget);
               expect(find.text('My Teams'), findsNothing);
               expect(find.text('Standings').hitTestable(), findsOneWidget);
               await tester.sendKeyEvent(LogicalKeyboardKey.escape);

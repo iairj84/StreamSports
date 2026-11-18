@@ -119,6 +119,15 @@ void main() {
       expect(storage.getSportsAllLeagues(), isTrue);
       expect(find.text('All leagues shown'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('sport:soccer')), 200,
+          scrollable: find
+              .descendant(
+                  of: find.byType(ListView), matching: find.byType(Scrollable))
+              .first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('sport:soccer')));
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('EFL Championship'), 250,
           scrollable: find
               .descendant(

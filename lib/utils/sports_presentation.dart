@@ -1,5 +1,39 @@
 import '../models/sports.dart';
 
+/// Competitions with a browsable table or team directory. Shared by Standings
+/// and the team picker so both offer exactly the same leagues.
+final sportsStandingsLeagues = [...kSportsLeagues, ...kSportsLeagueBank]
+    .where((l) =>
+        (['ESPN', 'K League', 'EASL', 'NPB', 'KBO', 'ABL', 'B.League']
+                .contains(l.source) ||
+            const {'racing.motogp', 'racing.moto2', 'racing.moto3'}
+                .contains(l.id)) &&
+        l.id != 'rugby.live' &&
+        (l.kind == SportsKind.team || l.hasStandings))
+    .toList(growable: false);
+
+/// Sports are ordered the way a US viewer reaches for them, then alphabetically
+/// by label. Within-sport ordering is [leagueDisplayPriority].
+const sportDisplayOrder = <String>[
+  'football',
+  'basketball',
+  'baseball',
+  'hockey',
+  'soccer',
+  'golf',
+  'tennis',
+  'mma',
+  'racing',
+  'boxing',
+  'rugby',
+  'cricket',
+];
+
+int sportDisplayPriority(String sport) {
+  final index = sportDisplayOrder.indexOf(sport);
+  return index < 0 ? sportDisplayOrder.length : index;
+}
+
 /// Small offline labels: no requests or work across the playlist catalogue.
 String leagueDescription(SportsLeague league) {
   if (league.kind == SportsKind.racing && league.source != 'ESPN') {

@@ -2169,6 +2169,9 @@ class _SportsScreenState extends State<SportsScreen>
     }
     setState(() {
       _leagues = _savedLeagues();
+      // The manager can add or remove followed teams; reload so the Favorites
+      // filter and My Teams use them without a restart.
+      _follows = SportsFollows.load(_storage);
       _updateFavoriteFeeds();
       _lastLoadCompleted = null;
       if (_onlyFavorites &&

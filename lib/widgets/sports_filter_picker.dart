@@ -15,7 +15,7 @@ import '../utils/sports_presentation.dart';
 
 typedef SportsFilterCounts = Map<String, ({int live, int upcoming})>;
 
-const sportsManageLeaguesLabel = 'Choose leagues';
+const sportsManageLeaguesLabel = 'Leagues & teams';
 
 /// Uses the same labelled dropdown as Sport/League; opening it does no work.
 class SportsFavoritesFilterButton extends StatelessWidget {
