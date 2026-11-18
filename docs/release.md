@@ -28,13 +28,25 @@ Set a public commit identity, such as a GitHub noreply address, before the first
 
 ## Android APK
 
-For a beta, one command performs the steps below in order: bump, changelog entry, build, audit, commit, tag, push, the versioned prerelease and the rolling beta download.
+Daily work lands on the `beta` branch. Every release cuts from `beta`: one command performs the steps below in order — bump, changelog entry, build, audit, commit, tag, push to `beta`, the versioned beta prerelease and the rolling **beta-only** download. Stable is never touched by a cut.
 
 ```sh
+git checkout beta
 python3 tools/cut_release.py --notes-file release-notes.txt
 ```
 
-Notes are one bullet per line and become both the changelog section and the release body. The script refuses to start while tracked source changes are uncommitted, restores the generated desktop registrant files a build rewrites, and stops on audit findings unless `--accept-audit-findings` says they were reviewed. `--dry-run` prints the plan, `--skip-build` reuses the APK already under `build/`, `--local` stops after the commit and tag, and `--version`/`--build` override the automatic bump. If only the mirror step fails, rerun `tools/publish_beta_mirror.py`; the versioned release is already published by then. The manual steps that follow describe the same release.
+Notes are one bullet per line and become both the changelog section and the release body. The script refuses to start anywhere but `beta` (override with `--allow-any-branch` for emergencies only), refuses while tracked source changes are uncommitted, restores the generated desktop registrant files a build rewrites, and stops on audit findings unless `--accept-audit-findings` says they were reviewed. `--dry-run` prints the plan, `--skip-build` reuses the APK already under `build/`, `--local` stops after the commit and tag, and `--version`/`--build` override the automatic bump. If only the mirror step fails, rerun `python3 tools/publish_beta_mirror.py <apk>`; the versioned release is already published by then. The manual steps that follow describe the same beta release.
+
+## Promoting a beta to stable
+
+When a beta has survived real use, copy its exact bytes to stable — no rebuild — then fast-forward `main` to match `beta`:
+
+```sh
+python3 tools/promote_stable.py --tag v<version>-<build>
+git fetch origin beta && git push origin origin/beta:main
+```
+
+Promotion republishes the versioned beta APK byte-for-byte into the rolling `stable-latest` release (`StreamSports-beta.apk`, the preserved download filename and Downloader code) and marks it GitHub latest, so `.../releases/latest/download/...` and the in-app Stable channel serve it. It never touches `beta-latest` and never rewrites the build number, so a device on beta is never offered a stable build with a lower build number. `main` only moves on promotion, so stable code always equals tested beta code.
 
 1. Set the four signing values from `.env.example`; keep the keystore outside source. Preserve the certificate for updates. Without these values, local release builds fall back to debug signing and are not distribution builds.
 2. Increase the version/build number in `pubspec.yaml`. Build from a neutral directory such as `/workspace/StreamSports` so generated source paths do not expose a personal home directory.

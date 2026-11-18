@@ -63,4 +63,19 @@ void main() {
       expect(release.sizeLabel, '80.0 MB');
     });
   });
+
+  group('rolling mirrors', () {
+    test('build comes out of the mirror body, not the digit-free tag', () {
+      final parsed = AppUpdateService.parseMirrorBuild(
+          'Rolling download.\n\n- Build: 0.2.61 (2554)\n- Size: 1 bytes\n');
+      expect(parsed.version, '0.2.61');
+      expect(parsed.build, 2554);
+    });
+
+    test('a mirror body without a build line offers no update', () {
+      final parsed = AppUpdateService.parseMirrorBuild('Rolling download.\n');
+      expect(parsed.version, isEmpty);
+      expect(parsed.build, 0);
+    });
+  });
 }

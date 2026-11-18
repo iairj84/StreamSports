@@ -3,12 +3,13 @@
 Planned work, newest thinking first. Nothing here is a date or a promise; it is
 where the next changes are heading and what already constrains them.
 
-## Release channels: beta first, then promote
+## Release channels: beta first, then promote (shipped)
 
-Today there is one channel: every build is a beta prerelease tagged
-`v<version>-<build>`, plus the rolling digit-free `beta-latest` mirror that the
-Downloader code and the install guide use. The next step is two channels that
-share one build.
+Two channels share one build. Every cut ships from the `beta` branch as a
+prerelease tagged `v<version>-<build>`, plus the rolling digit-free
+`beta-latest` mirror (`StreamSports-early.apk`, deliberately not GitHub
+latest) that testers on the Early channel are offered. The next step below
+is done:
 
 - **beta** — early builds, published exactly as now: a prerelease per version
   and the `beta-latest` mirror.

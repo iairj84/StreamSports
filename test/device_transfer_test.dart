@@ -48,6 +48,7 @@ void main() {
         AppConstants.keyVideoFill,
         AppConstants.keyEpgCache,
         AppConstants.keySkippedUpdateVersion,
+        AppConstants.keyUpdateChannel,
         AppConstants.keyWindowsBounds,
         'iptv_classic_layout_v1',
         'sports_coverage_v92',

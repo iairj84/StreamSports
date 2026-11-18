@@ -35,6 +35,7 @@ const Set<String> _deviceOnlyKeys = {
   AppConstants.keyVideoFill,
   AppConstants.keyLastUpdateCheck,
   AppConstants.keySkippedUpdateVersion,
+  AppConstants.keyUpdateChannel,
   AppConstants.keyRecentSearches,
   AppConstants.keyArchiveHistory,
   AppConstants.keyArchiveRecentSearches,

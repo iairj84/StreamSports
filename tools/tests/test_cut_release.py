@@ -94,5 +94,11 @@ class ReleaseBranchTests(unittest.TestCase):
         self.assertEqual(branch_from_remote_head(''), 'main')
         self.assertEqual(branch_from_remote_head('garbage'), 'main')
 
+    def test_releases_always_cut_from_beta(self):
+        from cut_release import release_branch
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(release_branch(tmp), 'beta')
+
 if __name__ == '__main__':
     unittest.main()

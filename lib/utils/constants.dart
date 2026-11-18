@@ -320,6 +320,14 @@ class AppConstants {
   /// When the in-app updater last asked GitHub for a newer build.
   static const String keyLastUpdateCheck = 'vesper_last_update_check';
 
+  /// Update channel the in-app updater follows: 'stable' (default, only
+  /// promoted builds from `stable-latest`) or 'early' (newest beta from
+  /// `beta-latest`). One app id, one versionCode stream; this only chooses
+  /// which rolling release is checked.
+  static const String keyUpdateChannel = 'vesper_update_channel';
+  static const String updateChannelStable = 'stable';
+  static const String updateChannelEarly = 'early';
+
   /// Next splash greeting to show (index into SplashGreeting.bank).
   static const String keySplashGreeting = 'vesper_splash_greeting';
 

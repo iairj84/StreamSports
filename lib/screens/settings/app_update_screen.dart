@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
 import '../../services/app_update_service.dart';
+import '../../utils/constants.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
 
@@ -88,6 +91,36 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     final release = update.available;
     final busy = update.checking || update.downloading;
     final scheme = Theme.of(context).colorScheme;
+
+    final channel = SettingsSection(
+      title: tr('Update channel'),
+      children: [
+        RadioGroup<String>(
+          groupValue: update.channel,
+          onChanged: (value) {
+            if (busy || value == null) return;
+            unawaited(update.setChannel(value));
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                value: AppConstants.updateChannelStable,
+                title: Text(tr('Stable')),
+                subtitle: Text(tr(
+                    'Promoted builds only. Choose this unless you test early builds.')),
+              ),
+              RadioListTile<String>(
+                value: AppConstants.updateChannelEarly,
+                title: Text(tr('Early builds')),
+                subtitle:
+                    Text(tr('Newest beta as well. For testing; may be rough.')),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
 
     final installed = SettingsSection(
       title: tr('Installed build'),
@@ -209,7 +242,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
       title: tr('App updates'),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: [installed, status],
+        children: [channel, installed, status],
       ),
     );
   }

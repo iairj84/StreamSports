@@ -118,6 +118,21 @@ class AppUpdateService extends ChangeNotifier {
       ? '—'
       : '${_info!.version} (${_info!.buildNumber})';
 
+  /// Which rolling release this install follows. Stable by default so a
+  /// viewer who never opts in is never offered a beta.
+  String get channel => _storage.getUpdateChannel();
+  bool get includeEarly => channel == AppConstants.updateChannelEarly;
+  String get rollingTag => includeEarly ? 'beta-latest' : 'stable-latest';
+
+  Future<void> setChannel(String next) async {
+    await _storage.setUpdateChannel(next);
+    _downloaded = null;
+    available = null;
+    _checkedThisSession = false;
+    notifyListeners();
+    await check(manual: true);
+  }
+
   Future<void> load() async {
     if (_info != null) return;
     _info = await PackageInfo.fromPlatform();
@@ -173,21 +188,18 @@ class AppUpdateService extends ChangeNotifier {
     return release;
   }
 
-  Future<AppRelease?> _latestRelease() async {
+  Future<Map<String, dynamic>? > _rollingRelease() async {
     final response = await http
         .get(
           Uri.parse(
-              'https://api.github.com/repos/${AppConstants.updateRepository}/releases?per_page=30'),
+              'https://api.github.com/repos/${AppConstants.updateRepository}/releases/tags/$rollingTag'),
           headers: const {
             'Accept': 'application/vnd.github+json',
             'User-Agent': AppConstants.appName,
           },
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode == 404) {
-      throw const AppUpdateException(
-          'No releases are published for this app yet.');
-    }
+    if (response.statusCode == 404) return null;
     if (response.statusCode == 403) {
       throw const AppUpdateException(
           'The update server is rate limiting this device. Try again later.');
@@ -197,43 +209,72 @@ class AppUpdateService extends ChangeNotifier {
           'The update server answered ${response.statusCode}. Try again later.');
     }
     final decoded = jsonDecode(response.body);
-    if (decoded is! List) return null;
-    AppRelease? best;
-    for (final entry in decoded) {
-      if (entry is! Map) continue;
-      if (entry['draft'] == true) continue;
-      final tag = (entry['tag_name'] as String?)?.trim() ?? '';
-      if (tag.isEmpty) continue;
-      final assets = entry['assets'];
-      if (assets is! List) continue;
-      Map? apk;
-      for (final asset in assets) {
-        if (asset is! Map) continue;
-        final name = (asset['name'] as String? ?? '').toLowerCase();
-        if (!name.endsWith('.apk')) continue;
-        apk = asset;
-        break;
-      }
-      if (apk == null) continue;
-      final url = apk['browser_download_url'] as String? ?? '';
-      if (url.isEmpty) continue;
-      final parsed = parseReleaseTag(tag);
-      final candidate = AppRelease(
-        tag: tag,
-        version: parsed.version,
-        buildNumber: parsed.build,
-        apkUrl: url,
-        sizeBytes: (apk['size'] as num?)?.toInt() ?? 0,
-        notes: (entry['body'] as String? ?? '').trim(),
-      );
-      if (best == null ||
-          candidate.buildNumber > best.buildNumber ||
-          (candidate.buildNumber == best.buildNumber &&
-              _compareVersions(candidate.version, best.version) > 0)) {
-        best = candidate;
-      }
+    if (decoded is! Map<String, dynamic>) return null;
+    if (decoded['draft'] == true) return null;
+    return decoded;
+  }
+
+  /// `... - Build: 0.2.61 (2554) ...` -> version + build of the rolling
+  /// mirror's payload. Rolling tags carry no digits on purpose, so the build
+  /// has to come from the body the mirror tool writes.
+  static ({String version, int build}) parseMirrorBuild(String body) {
+    final match =
+        RegExp(r'Build:\s*(\d+\.\d+\.\d+)\s*\((\d+)\)').firstMatch(body);
+    if (match == null) return (version: '', build: 0);
+    return (version: match.group(1)!, build: int.tryParse(match.group(2)!) ?? 0);
+  }
+
+  static Map<String, dynamic>? _firstApkAsset(Map<String, dynamic> entry) {
+    final assets = entry['assets'];
+    if (assets is! List) return null;
+    for (final asset in assets) {
+      if (asset is! Map<String, dynamic>) continue;
+      final name = (asset['name'] as String? ?? '').toLowerCase();
+      if (!name.endsWith('.apk')) continue;
+      if ((asset['browser_download_url'] as String? ?? '').isEmpty) continue;
+      return asset;
     }
-    return best;
+    return null;
+  }
+
+  Future<AppRelease?> _latestRelease() async {
+    final entry = await _rollingRelease();
+    if (entry == null) return null;
+    final apk = _firstApkAsset(entry);
+    if (apk == null) return null;
+    final body = (entry['body'] as String? ?? '').trim();
+    final parsed = parseMirrorBuild(body);
+    if (parsed.version.isEmpty || parsed.build <= 0) return null;
+    String notes = body;
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+                'https://api.github.com/repos/${AppConstants.updateRepository}/releases/tags/v${parsed.version}-${parsed.build}'),
+            headers: const {
+              'Accept': 'application/vnd.github+json',
+              'User-Agent': AppConstants.appName,
+            },
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final versioned = (decoded['body'] as String? ?? '').trim();
+          if (versioned.isNotEmpty) notes = versioned;
+        }
+      }
+    } catch (_) {
+      // Mirror body already describes the build; versioned notes are a bonus.
+    }
+    return AppRelease(
+      tag: 'v${parsed.version}-${parsed.build}',
+      version: parsed.version,
+      buildNumber: parsed.build,
+      apkUrl: (apk['browser_download_url'] as String?) ?? '',
+      sizeBytes: (apk['size'] as num?)?.toInt() ?? 0,
+      notes: notes,
+    );
   }
 
   /// Downloads [available] into the cache directory. Returns null on failure,

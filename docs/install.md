@@ -1,6 +1,6 @@
 # Install StreamSports
 
-**[Download StreamSports-beta.apk](https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk)** — this address always serves the newest beta build.
+**[Download StreamSports-beta.apk](https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk)** — this address always serves the newest promoted stable build.
 
 The same APK supports 32-bit and 64-bit ARM phones, Android TV and Google TV on Android 7.0 or newer. It does not support Samsung Tizen, LG webOS, iOS or x86 Android devices. The app includes no channels or subscriptions.
 
@@ -14,7 +14,7 @@ The same APK supports 32-bit and 64-bit ARM phones, Android TV and Google TV on 
 ## Android TV or Google TV
 
 1. Install [Downloader by AFTVnews](https://play.google.com/store/apps/details?id=com.esaba.downloader) from the TV's Play Store.
-2. In Downloader, enter the code **1976156** and choose **Go**. It opens the newest beta without typing an address.
+2. In Downloader, enter the code **1976156** and choose **Go**. It opens the newest stable build without typing an address.
 3. Allow Downloader to **install unknown apps** when prompted, then install the APK. On some TVs this permission is under **Settings → Apps → Special app access** or **Security & restrictions**.
 4. Open StreamSports from the TV's apps list and add your playlist.
 
@@ -32,8 +32,8 @@ The receiving device is **replaced**, not merged: its playlists, settings, sport
 
 ## Updates and troubleshooting
 
-- Download the current beta from the link above and install it over the existing app. Builds retain the application ID and signing certificate, so Android can update the app while keeping its data. Do not uninstall first.
-- Updates are manual from this page, or through **Settings → Devices & app → App updates**, which checks hourly and can skip a version. Versioned builds keep their own filenames under [Releases](https://github.com/iairj84/StreamSports/releases); the link above and the Downloader code always point at the newest one.
+- Download the current build from the link above and install it over the existing app. Builds retain the application ID and signing certificate, so Android can update the app while keeping its data. Do not uninstall first.
+- Updates are manual from this page, or through **Settings → Devices & app → App updates**, which checks hourly and can skip a version. The **Update channel** on that screen chooses what is offered: **Stable** (the default, promoted builds only) or **Early builds** (the newest beta as well, for testers). Versioned builds keep their own filenames under [Releases](https://github.com/iairj84/StreamSports/releases); the link above and the Downloader code always point at the newest stable build. Testers can fetch the newest beta directly from `https://github.com/iairj84/StreamSports/releases/download/beta-latest/StreamSports-early.apk`.
 - If Android refuses an update, check that the APK came from this repository and that enough storage is available. An installation signed by someone else cannot be updated with this APK.
 - If a device's security policy blocks installation, follow its supported installation process. Do not disable Play Protect to force installation.
 

@@ -44,6 +44,24 @@ class StorageService {
   Future<void> setLastUpdateCheck(DateTime at) =>
       _prefs.setInt(AppConstants.keyLastUpdateCheck, at.millisecondsSinceEpoch);
 
+  /// Update channel the updater follows. Defaults to stable so a viewer who
+  /// never opts in is never offered a beta.
+  String getUpdateChannel() {
+    final raw = _prefs.getString(AppConstants.keyUpdateChannel);
+    return raw == AppConstants.updateChannelEarly
+        ? AppConstants.updateChannelEarly
+        : AppConstants.updateChannelStable;
+  }
+
+  Future<void> setUpdateChannel(String channel) async {
+    await _prefs.setString(
+      AppConstants.keyUpdateChannel,
+      channel == AppConstants.updateChannelEarly
+          ? AppConstants.updateChannelEarly
+          : AppConstants.updateChannelStable,
+    );
+  }
+
   String getMultiviewLayout() =>
       _prefs.getString('multiview_layout') ?? 'automatic';
   Future<void> setMultiviewLayout(String layout) async {

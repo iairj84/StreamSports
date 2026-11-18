@@ -1,16 +1,18 @@
 """Cut a beta release in one run: bump, build, audit, publish, mirror.
 
-Usage: python3 tools/cut_release.py --notes-file NOTES.txt
+Usage (from the beta branch): python3 tools/cut_release.py --notes-file NOTES.txt
 
 Steps, stopping at the first failure:
   1. Bump the patch version and build number in pubspec.yaml.
   2. Add the notes as a new CHANGELOG.md section.
   3. flutter build apk --release --target-platform android-arm,android-arm64
   4. Audit the APK with tools/audit_apk.py; findings need --accept-audit-findings.
-  5. Commit the two edited files, push the commit to the default branch, create and
+  5. Commit the two edited files, push the commit to the beta branch, create and
      push the annotated tag.
   6. Publish a prerelease holding the versioned APK.
-  7. Refresh the rolling beta-latest release (tools/publish_beta_mirror.py).
+  7. Refresh ONLY the rolling beta-latest release (tools/publish_beta_mirror.py).
+     Stable moves exclusively via tools/promote_stable.py, which copies the
+     exact tested bytes to stable-latest without rebuilding.
 
 Options: --dry-run prints the plan and writes nothing; --skip-build reuses the
 APK already under build/; --local stops after the commit and tag; --version and
@@ -107,17 +109,20 @@ def branch_from_remote_head(text):
 
 
 def release_branch(root):
-    """The branch the release commit belongs on: the remote's default branch.
+    """The branch the release commit belongs on: always beta.
 
-    Releases ship from that branch, so pushing only the checked-out branch would
-    leave the version bump and changelog off it while the release tag pointed at a
-    commit nobody could find there.
+    Daily work and every cut land on beta; main moves only on promotion
+    (fast-forward beta into main after tools/promote_stable.py copies the
+    exact tested bytes to stable-latest). Pushing elsewhere would leave the
+    version bump off beta while the release tag pointed at a commit testers
+    cannot find there.
     """
-    result = subprocess.run(['git', 'ls-remote', '--symref', 'origin', 'HEAD'],
-                            cwd=root, capture_output=True, text=True, check=False)
-    if result.returncode == 0:
-        return branch_from_remote_head(result.stdout)
-    return 'main'
+    return 'beta'
+
+
+def current_branch(root):
+    result = git(root, 'branch', '--show-current', check=False)
+    return result.stdout.strip()
 
 
 def note_bullets(text):
@@ -160,6 +165,7 @@ def insert_changelog_entry(text, entry):
 
 
 def release_body(repository, version, build, notes, asset, size, digest):
+    from publish_beta_mirror import beta_download_url
     lines = [f'StreamSports {version} beta, build {build}.', '']
     lines += [f'- {note}' for note in notes]
     lines += [
@@ -170,7 +176,11 @@ def release_body(repository, version, build, notes, asset, size, digest):
         f'`adb install -r {asset}`. It installs over the previous build without losing '
         'playlists or settings.',
         '',
-        'This release is a prerelease, so the stable address keeps serving the newest beta:',
+        'This release is a beta prerelease. Testers on the Early channel are offered it via:',
+        '',
+        beta_download_url(repository),
+        '',
+        'The stable address keeps serving the newest promoted build only:',
         '',
         latest_download_url(repository),
         '',
@@ -283,8 +293,14 @@ def cut(root, args):
         raise ValueError('Uncommitted tracked changes would be left out of the release: '
                          + ', '.join(leftover))
 
+    branch_now = current_branch(root)
+    if branch_now != 'beta' and not getattr(args, 'allow_any_branch', False):
+        raise ValueError(
+            f"Releases cut from the beta branch; this checkout is on {branch_now or 'a detached HEAD'!r}. "
+            'Switch to beta (`git checkout beta`) or pass --allow-any-branch for an emergency cut.')
     if args.dry_run:
         print(f'Release plan for {version_label(version, build_number)}')
+        print(f'  branch          beta (this checkout: {branch_now or "?"})')
         print(f'  tag             {tag}')
         print(f'  title           {release_title(version)}')
         print(f'  asset           {asset}')
@@ -294,8 +310,8 @@ def cut(root, args):
         print('  audit           tools/audit_apk.py'
               + (' (findings accepted)' if args.accept_audit_findings else ''))
         print(f'  publish         prerelease {tag} with {asset}')
-        print('  mirror          beta-latest with StreamSports-beta.apk')
-        print(f'  stable address  {latest_download_url(repository)}')
+        print('  mirror          beta-latest with StreamSports-early.apk (beta only; stable untouched)')
+        print(f'  stable address  {latest_download_url(repository)} (unchanged by this cut)')
         if leftover:
             print('  warning         uncommitted tracked changes: ' + ', '.join(leftover))
         return 0
@@ -339,8 +355,8 @@ def cut(root, args):
     print(f"Published {release['html_url']} with {uploaded['name']} "
           f"({uploaded['size']} bytes).")
     mirror = publish(root, apk, repository, token)
-    print(f"Mirror {mirror['action']}: {mirror['address']} "
-          f"({mirror['address_bytes']} bytes verified).")
+    print(f"Beta mirror {mirror['action']}: {mirror['address']} "
+          f"(beta only; stable-latest untouched).")
     print(f'Released {version_label(version, build_number)}: {release["html_url"]}')
     return 0
 
@@ -359,6 +375,8 @@ def main(argv=None):
                         help='publish after reviewing reported audit findings')
     parser.add_argument('--local', action='store_true',
                         help='stop after the commit and tag, without pushing or publishing')
+    parser.add_argument('--allow-any-branch', action='store_true',
+                        help='cut from a branch other than beta (emergencies only)')
     parser.add_argument('--dry-run', action='store_true', help='print the plan and write nothing')
     args = parser.parse_args(argv)
     if not args.notes and not args.notes_file:

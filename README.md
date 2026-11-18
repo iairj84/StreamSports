@@ -4,9 +4,9 @@ A free IPTV player for Android phones, TV boxes and Android TV. Live TV with a g
 
 ## Download
 
-**[Download StreamSports-beta.apk](https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk)** and open it on the device. That address always serves the newest beta, so it keeps working after every build. On a TV box, install [Downloader by AFTVnews](https://play.google.com/store/apps/details?id=com.esaba.downloader) and enter code **1976156** instead.
+**[Download StreamSports-beta.apk](https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk)** and open it on the device. That address always serves the newest promoted stable build, so it keeps working after every promotion. On a TV box, install [Downloader by AFTVnews](https://play.google.com/store/apps/details?id=com.esaba.downloader) and enter code **1976156** instead.
 
-The same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7.0 or newer. Older builds stay on [Releases](https://github.com/iairj84/StreamSports/releases) under their own names, and **Settings → Devices & app → App updates** checks for a newer build hourly.
+The same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7.0 or newer. Older builds stay on [Releases](https://github.com/iairj84/StreamSports/releases) under their own names, and **Settings → Devices & app → App updates** checks for a newer build hourly — **Stable** by default, with an **Early builds** opt-in for testers on the beta channel.
 
 [Installation help](docs/install.md) · [Changelog](CHANGELOG.md) · [Build instructions](docs/development.md)
 
