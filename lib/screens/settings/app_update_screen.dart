@@ -19,6 +19,17 @@ class AppUpdateScreen extends StatefulWidget {
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
   String? _message;
 
+  /// The one action button, which swaps between Download and Install.
+  /// Downloading removes the button the remote was on, so focus would
+  /// otherwise fall back to the top of the screen instead of Install.
+  final FocusNode _actionFocus = FocusNode(debugLabel: 'app-update-action');
+
+  @override
+  void dispose() {
+    _actionFocus.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +53,12 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     setState(() => _message = file == null
         ? update.error
         : tr('Downloaded. Install it to finish updating.'));
+    if (file == null) return;
+    // The button now reads Install: put the cursor on it so the remote can
+    // finish the update with one press.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _actionFocus.context != null) _actionFocus.requestFocus();
+    });
   }
 
   Future<void> _install() async {
@@ -152,12 +169,14 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                 const SizedBox(height: 12),
                 if (!update.hasDownload)
                   FilledButton.icon(
+                    focusNode: _actionFocus,
                     icon: const Icon(Icons.download, size: 18),
                     label: Text(tr('Download update')),
                     onPressed: busy ? null : _download,
                   )
                 else
                   FilledButton.icon(
+                    focusNode: _actionFocus,
                     icon: const Icon(Icons.system_update_alt, size: 18),
                     label: Text(tr('Install update')),
                     onPressed: busy ? null : _install,
