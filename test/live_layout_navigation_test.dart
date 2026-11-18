@@ -4635,6 +4635,117 @@ void main() {
     epg.dispose();
     prefs.dispose();
   });
+  testWidgets(
+      'returning to the categories rail from a sports guide keeps the Sports row focused',
+      (tester) async {
+    tester.view.physicalSize = const Size(960, 540);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    setLayoutPreferences({});
+    final storage = StorageService();
+    await storage.init();
+    final prefs = AppPreferences(storage);
+    await prefs.init();
+    prefs.isTelevision = true;
+    final playlist = _RailPlaylist(storage, CatalogDatabase());
+    playlist.fixtureChannels.clear();
+    playlist.fixtureChannels.addAll([
+      Channel(
+          id: 'demo::fox',
+          rawId: 'fox',
+          playlistId: 'demo',
+          name: 'Fox',
+          group: 'USA',
+          url: 'https://example.test/fox'),
+      Channel(
+          id: 'demo::espn',
+          rawId: 'espn',
+          playlistId: 'demo',
+          name: 'ESPN',
+          group: 'Sports',
+          url: 'https://example.test/espn'),
+    ]);
+    final playback = _Playback(storage, playlist);
+    final epg = _Epg(storage);
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider.value(value: storage),
+          ChangeNotifierProvider.value(value: prefs),
+          ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
+          ChangeNotifierProvider<PlaybackService>.value(value: playback),
+          ChangeNotifierProvider<EpgService>.value(value: epg),
+        ],
+        child: MaterialApp(
+            theme: buildAppTheme(prefs.palette),
+            navigatorObservers: [appRouteObserver],
+            home: const TvHomeScreen())));
+    await tester.pumpAndSettle();
+    // Fox (USA) is playing while the user browses.
+    playback.currentChannel = playlist.fixtureChannels.first;
+    await tester.pump();
+
+    Future<void> key(LogicalKeyboardKey k) async {
+      await tester.sendKeyEvent(k);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    Future<void> back() async {
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    // The row label lives below the row's focus node, so locate the label
+    // in the categories rail and test whether focus overlaps it.
+    bool focusWithin(String label) {
+      final node = FocusManager.instance.primaryFocus;
+      final frame = node?.rect;
+      if (node == null || frame == null) return false;
+      final hits = find.descendant(
+        of: find.byKey(const ValueKey('live-categories-rail')),
+        matching: find.text(label, findRichText: true),
+      );
+      for (final e in hits.evaluate()) {
+        if (frame.overlaps(tester.getRect(find.byWidget(e.widget)))) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Into the categories rail, then down to the Sports row.
+    await key(LogicalKeyboardKey.arrowRight);
+    for (var i = 0; i < 10 && !focusWithin('Sports'); i++) {
+      await key(LogicalKeyboardKey.arrowDown);
+    }
+    expect(focusWithin('Sports'), isTrue,
+        reason: 'test setup must reach the Sports category row');
+    // Pick Sports: the guide switches to sports channels.
+    await key(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    // Walk back out of the guide to the rail (a first Back may only
+    // return a scrolled guide to now).
+    for (var i = 0; i < 4; i++) {
+      await back();
+      final n = FocusManager.instance.primaryFocus;
+      final inGrid = (n?.ancestors ?? const <FocusNode>[])
+          .any((a) => a.debugLabel == 'timeline-grid');
+      if (!inGrid) break;
+    }
+    // The cursor must be back on the browsed Sports row, not reset to the
+    // top of the rail (nor the playing channel's USA row).
+    expect(focusWithin('Sports'), isTrue);
+    expect(focusWithin('USA'), isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 11));
+    playback.dispose();
+    playlist.dispose();
+    epg.dispose();
+    prefs.dispose();
+  });
+
   for (final size in [
     const Size(390, 844),
     const Size(844, 390),

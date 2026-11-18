@@ -349,6 +349,32 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     setState(() => _movingGroupKey = null);
   }
 
+  /// The rail row whose channels are showing, remembered so Back returns to
+  /// the browsed group even though selecting it remounts the folder rows and
+  /// disposes their focus nodes (wiping the scope's remembered child).
+  String? _railRestoreKey;
+
+  /// Live rail-row focus nodes by group key, kept current by [_GroupRow]'s
+  /// attach/detach callbacks. Entries die with their rows; lookups verify the
+  /// node is still mounted before focusing.
+  final Map<String, FocusNode> _railRowNodes = {};
+
+  /// Whether the remembered row still names where the user browsed: any
+  /// other rail row taking focus (without a new select) expires it, so a
+  /// stale memory can never yank focus away from where the cursor is.
+  bool _railMemoryFresh = false;
+
+  /// Focuses the remembered rail row. Returns false when the memory is stale
+  /// or the row isn't mounted, for the existing fallbacks.
+  bool _restoreRailRowFocus() {
+    if (!_railMemoryFresh) return false;
+    final key = _railRestoreKey;
+    final node = key == null ? null : _railRowNodes[key];
+    if (node == null || node.context?.mounted != true) return false;
+    node.requestFocus();
+    return true;
+  }
+
   /// Group to grab focus on its next build — used by [_moveGroupToTop],
   /// whose row usually isn't built at all at its old scroll position.
   String? _focusGroupKeyOnBuild;
@@ -677,6 +703,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     void select() {
       _resetTimelineSearch(close: true);
       _selectedGroup = group;
+      if (group != null) {
+        // Remember the browsed row for Back-to-rail: selecting a group
+        // remounts the folder rows and wipes the scope's focus memory.
+        _railRestoreKey = collection != null
+            ? _groupKey(collection.playlistId, group)
+            : (playlistId != null ? _groupKey(playlistId, group) : group);
+        _railMemoryFresh = true;
+      }
       _selectedLiveCollection = collection;
       if (_compact) _phonePage = 2;
       // Otherwise the Timeline Guide's header keeps describing a program
@@ -804,6 +838,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         (_timelineGuideKey.currentState?.focusEntry() ?? false)) {
       return;
     }
+    // A remount wipes the scope child; when the browsed row unmounts
+    // while focused, Flutter replays an older child instead. Prefer the
+    // explicitly remembered row whenever it names the showing group.
+    if (target == 1 && _restoreRailRowFocus()) {
+      _railMemoryFresh = false;
+      return;
+    }
     // See _firstGroupRowFocusNode's own doc comment — only when nothing's
     // already focused in the groups column (so returning to a previously-
     // browsed group still restores where you left off, same as before).
@@ -818,7 +859,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     if (target == 1) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _col1Scope.hasFocus || !_col2Scope.hasFocus) return;
-        _firstGroupRowFocusNode.requestFocus();
+        if (!_restoreRailRowFocus()) _firstGroupRowFocusNode.requestFocus();
+        _railMemoryFresh = false;
       });
     }
   }
@@ -2554,6 +2596,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     _focusGroupKeyOnBuild ==
                         _groupKey(group.playlistId, group.title),
             onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
+            onNodeAttached: (node) =>
+                _railRowNodes[_groupKey(group.playlistId, group.title)] =
+                    node,
+            onNodeDetached: (node) {
+              final key = _groupKey(group.playlistId, group.title);
+              if (_railRowNodes[key] == node) _railRowNodes.remove(key);
+            },
+            onFocused: (focused) {
+              if (focused &&
+                  _groupKey(group.playlistId, group.title) !=
+                      _railRestoreKey) {
+                _railMemoryFresh = false;
+              }
+            },
           ),
         ),
       ],
@@ -3560,6 +3616,9 @@ class _GroupRow extends StatefulWidget {
     this.onMoveDone,
     this.focusOnBuild = false,
     this.onFocusedOnBuild,
+    this.onNodeAttached,
+    this.onNodeDetached,
+    this.onFocused,
   });
 
   final IconData icon;
@@ -3582,6 +3641,14 @@ class _GroupRow extends StatefulWidget {
   final bool focusOnBuild;
   final VoidCallback? onFocusedOnBuild;
 
+  /// Keeps the screen's rail-row registry current across the remount that
+  /// selecting a group triggers (see [_restoreRailRowFocus]).
+  final ValueChanged<FocusNode>? onNodeAttached;
+  final ValueChanged<FocusNode>? onNodeDetached;
+
+  /// Reports focus gains so focusing another row expires the remembered one.
+  final ValueChanged<bool>? onFocused;
+
   @override
   State<_GroupRow> createState() => _GroupRowState();
 }
@@ -3595,6 +3662,7 @@ class _GroupRowState extends State<_GroupRow> {
 
   @override
   void dispose() {
+    widget.onNodeDetached?.call(_focusNode);
     _longPressTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
@@ -3609,6 +3677,7 @@ class _GroupRowState extends State<_GroupRow> {
   @override
   void initState() {
     super.initState();
+    widget.onNodeAttached?.call(_focusNode);
     _maybeFocusOnBuild();
   }
 
@@ -3723,6 +3792,7 @@ class _GroupRowState extends State<_GroupRow> {
                   setState(() => _focused = value);
                   if (value) _ensureVisible(context);
                   if (!value && widget.moving) widget.onMoveDone?.call();
+                  widget.onFocused?.call(value);
                 },
                 child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
