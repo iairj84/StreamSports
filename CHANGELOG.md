@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.62 — 18 November 2026
+
+- Beta and stable release channels: cuts ship from beta, promotions copy the exact bytes to stable, and App updates gains a Stable/Early toggle.
+
 ## 0.2.61 — 18 November 2026
 
 - The in-player Scores panel remembers the scope you left it on — Live, All, My Teams or a sport — and reopens there whenever that scope still has games, instead of always falling back to Live.
