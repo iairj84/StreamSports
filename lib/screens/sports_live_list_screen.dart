@@ -14,6 +14,7 @@ import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../utils/route_observer.dart';
 import '../utils/sports_channel_filter.dart';
+import '../utils/sports_fixture_presentation.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/settings_scaffold.dart';
@@ -420,9 +421,12 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
               match:
                   widget.channelFilter.preferred(_matches[_key(g)] ?? const []),
               matching: _matching,
-              hideScores: widget.hideScores ||
-                  (widget.hideMyTeamsScores &&
-                      widget.follows.involves(g)),
+              hideScores: sportsShouldHideScore(
+                g,
+                hideAll: widget.hideScores,
+                hideMyTeams: widget.hideMyTeamsScores,
+                involves: widget.follows.involves,
+              ),
               starred: widget.follows.involves(g),
               narrow: _narrow,
               onFocus: () {

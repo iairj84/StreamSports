@@ -106,10 +106,6 @@ class SportsSchedulePanel extends StatefulWidget {
   final bool hideScores;
   final bool hideMyTeamsScores;
 
-  bool _hideFor(SportsGame game) =>
-      hideScores ||
-      (hideMyTeamsScores && (follows?.involves(game) ?? false));
-
   /// Sports options: the book's line on each fixture row.
   final bool showOdds;
   final bool? keyboardOpen;
@@ -187,6 +183,13 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
       _focusResults();
     }
   }
+
+  bool _hideFor(SportsGame game) => sportsShouldHideScore(
+        game,
+        hideAll: widget.hideScores,
+        hideMyTeams: widget.hideMyTeamsScores,
+        involves: widget.follows?.involves ?? (_) => false,
+      );
 
   final _resultsFocus = FocusNode(canRequestFocus: false);
   final _listKey = GlobalKey<CompactChoiceListState>();
@@ -1201,7 +1204,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
       widget.onGameDetails!(game);
       return;
     }
-    showSportsGameDetails(context, game, hideScores: widget._hideFor(game));
+    showSportsGameDetails(context, game, hideScores: _hideFor(game));
   }
 
   void _activateFixture(SportsGame game) {
@@ -1314,7 +1317,7 @@ class _SportsSchedulePanelState extends State<SportsSchedulePanel> {
               return SportsFixtureRow(
                   game: game,
                   time: _scheduleTime(game, _clockFormat),
-                  hideScores: widget._hideFor(game),
+                  hideScores: _hideFor(game),
                   showOdds: widget.showOdds,
                   use24h: use24h,
                   favorite: widget.follows?.involves(game) ?? false,

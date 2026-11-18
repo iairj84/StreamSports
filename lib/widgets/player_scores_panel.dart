@@ -67,13 +67,12 @@ class _Scope {
       (sport == null || _sportOf(game) == sport) &&
       (involves == null || involves!(game));
 
-  String get id => involves != null
-      ? 'my-teams'
-      : liveOnly
-          ? 'live'
-          : sport == null
-              ? 'all'
-              : 'sport:$sport';
+  String get id {
+    if (involves != null) return 'my-teams';
+    if (liveOnly) return 'live';
+    if (sport != null) return 'sport:$sport';
+    return 'all';
+  }
 
   static String _sportOf(SportsGame game) => game.league.espnPath.split('/').first;
 }
@@ -120,9 +119,12 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
         : nflRedZoneGame(now, logoUrl: channel.logoUrl);
   }
 
-  bool _hideFor(SportsGame game) =>
-      _hideScores ||
-      (_hideMyTeamsScores && (_follows?.involves(game) ?? false));
+  bool _hideFor(SportsGame game) => sportsShouldHideScore(
+        game,
+        hideAll: _hideScores,
+        hideMyTeams: _hideMyTeamsScores,
+        involves: _follows?.involves ?? (_) => false,
+      );
 
   Future<void> _load() async {
     final storage = context.read<StorageService>();

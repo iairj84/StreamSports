@@ -64,6 +64,7 @@ import '../services/sports_supplement_service.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
+import '../utils/sports_fixture_presentation.dart';
 import '../utils/time_format.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
@@ -2126,9 +2127,12 @@ class _SportsScreenState extends State<SportsScreen>
     await _storage.setSportsHideMyTeamsScores(_hideMyTeamsScores);
   }
 
-  bool _hideScoresFor(SportsGame? game) =>
-      _hideScores ||
-      (_hideMyTeamsScores && game != null && _follows.involves(game));
+  bool _hideScoresFor(SportsGame? game) => sportsShouldHideScore(
+        game,
+        hideAll: _hideScores,
+        hideMyTeams: _hideMyTeamsScores,
+        involves: _follows.involves,
+      );
 
   Future<void> _toggleOdds() async {
     setState(() => _showOdds = !_showOdds);

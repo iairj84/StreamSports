@@ -511,9 +511,8 @@ class StorageService {
 
   String? getSportsScoresScope() =>
       _prefs.getString(_vk(AppConstants.keySportsScoresScope));
-  Future<void> setSportsScoresScope(String? value) => value == null
-      ? _prefs.remove(_vk(AppConstants.keySportsScoresScope))
-      : _prefs.setString(_vk(AppConstants.keySportsScoresScope), value);
+  Future<void> setSportsScoresScope(String value) =>
+      _prefs.setString(_vk(AppConstants.keySportsScoresScope), value);
 
   /// Sports options: show the betting line on game cards (on by default).
   bool getSportsShowOdds() =>

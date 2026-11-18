@@ -30,3 +30,17 @@ String sportsLiveProgress(SportsGame game) {
 /// A delayed or cancelled fixture is not a completed result.
 bool sportsFixtureCompleted(SportsGame game) =>
     game.state == GameState.post && !_changedFixture.hasMatch(game.statusText);
+
+/// One spoiler gate for every score view: hide everything, or hide only games
+/// involving a followed team. `involves` is the viewer's follows check, so
+/// callers with no follows pass `(game) => false`.
+bool sportsShouldHideScore(
+  SportsGame? game, {
+  required bool hideAll,
+  required bool hideMyTeams,
+  required bool Function(SportsGame) involves,
+}) {
+  if (hideAll) return true;
+  if (!hideMyTeams || game == null) return false;
+  return involves(game);
+}
