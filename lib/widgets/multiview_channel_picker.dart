@@ -21,6 +21,7 @@ import 'player_dialog.dart';
 import '../screens/tv_home_screen.dart'
     show LiveGuideSelectionViewport, LiveGuideSelectionViewportState;
 import '../screens/sports_screen.dart';
+import '../utils/tv_theme.dart';
 
 class MultiviewChannelPicker extends StatefulWidget {
   const MultiviewChannelPicker(
@@ -621,7 +622,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                           visualDensity: VisualDensity.compact,
                           minimumSize: const Size(0, 32),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5)),
+                              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(5))),
                           textStyle: const TextStyle(fontSize: 12),
                           padding: const EdgeInsets.symmetric(horizontal: 6)),
                       onPressed: () {
@@ -640,7 +641,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                           visualDensity: VisualDensity.compact,
                           minimumSize: const Size(0, 32),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5)),
+                              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(5))),
                           textStyle: const TextStyle(fontSize: 12),
                           padding: const EdgeInsets.symmetric(horizontal: 6)),
                       onPressed: _loading ? null : _openSports,
@@ -722,7 +723,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                                         .colorScheme
                                         .surfaceContainerLow,
                                     border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(5),
+                                        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(5)),
                                         borderSide: BorderSide.none),
                                     isDense: true,
                                     prefixIcon:
@@ -794,7 +795,7 @@ class _MultiviewChannelPickerState extends State<MultiviewChannelPicker> {
                                                   VisualDensity.compact,
                                               shape: RoundedRectangleBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(5)),
+                                                      BorderRadius.circular(lookTokens(context).shapeFor(5))),
                                               backgroundColor: _group == null &&
                                                       (_query.text.trim().isEmpty
                                                           ? _shelf == shelf

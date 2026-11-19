@@ -1140,7 +1140,7 @@ class _UpNextBubble extends StatelessWidget {
           width: 320,
           child: Material(
             color: Colors.black87,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(12)),
             clipBehavior: Clip.antiAlias,
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -1151,7 +1151,7 @@ class _UpNextBubble extends StatelessWidget {
                     width: 56,
                     height: 56,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(8)),
                       child: hasLogo
                           ? CachedNetworkImage(
                               imageUrl: next.logoUrl!,
@@ -1267,7 +1267,7 @@ class _ZapInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         // Lighter than the bars: the picture should show through.
         color: playerPanelColor,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(6)),
         border: Border.all(color: const Color(0xFF36424F)),
       ),
       child: Row(

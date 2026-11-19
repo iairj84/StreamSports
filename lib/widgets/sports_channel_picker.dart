@@ -27,6 +27,7 @@ import '../services/sports_channel_matcher.dart';
 import '../services/sports_channel_attempts.dart';
 import '../utils/sports_channel_variants.dart';
 import 'tv_text_field_gate.dart';
+import '../utils/tv_theme.dart';
 
 /// Preserve the matcher's evidence ordering and its diversified tie order.
 /// A downgraded future/shared feed can retain a high score, but must stay below
@@ -402,11 +403,9 @@ class _SportsChannelPickerDialogState extends State<SportsChannelPickerDialog> {
                     interfaceColor(context, const Color(0xFF151C25)),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(
-                        SurfaceTokens.forStyle(context.read<AppPreferences?>()?.surfaceStyle ??
-            SurfaceStyle.classic)
-                            .isModern
-                        ? 10
-                        : 8)),
+                        lookTokens(context).rounded
+                            ? lookTokens(context).cardRadius
+                            : 8)),
                 title: Text(row.channel.name,
                     style: const TextStyle(fontSize: 16)),
                 content: const Text(
@@ -482,8 +481,11 @@ class _SportsChannelPickerDialogState extends State<SportsChannelPickerDialog> {
           return Dialog(
             backgroundColor: interfaceColor(context, const Color(0xFF151C25)),
             insetPadding: const EdgeInsets.all(12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    lookTokens(context).rounded
+                        ? lookTokens(context).cardRadius
+                        : 8)),
             child: SizedBox(
               width: math.min(840, size.width - 24),
               height: math.min(600, size.height - 48),
@@ -1814,9 +1816,7 @@ class SportsChannelRow extends StatelessWidget {
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: .16),
-                borderRadius: BorderRadius.circular(tokens.isModern
-                    ? tokens.blockRadius
-                    : 3)),
+                borderRadius: BorderRadius.circular(tokens.shapeFor(3))),
             child: channel.logoUrl?.isNotEmpty == true
                 ? CachedNetworkImage(
                     imageUrl: channel.logoUrl!,
@@ -2110,8 +2110,7 @@ class _ChannelTag extends StatelessWidget {
       decoration: BoxDecoration(
           color: (color ?? interfaceColor(context, Colors.white))
               .withValues(alpha: emphasis ? .14 : .06),
-          borderRadius: BorderRadius.circular(
-              tokens.isModern ? tokens.blockRadius : 3)),
+          borderRadius: BorderRadius.circular(tokens.shapeFor(3))),
       child: Text.rich(
           TextSpan(children: [
             if (icon != null)

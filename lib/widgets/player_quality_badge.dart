@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 import '../utils/video_quality.dart';
+import '../utils/tv_theme.dart';
 
 /// Picture quality of the stream that is actually playing, read from the
 /// decoder's selected video track — never from the provider's channel name,
@@ -96,21 +97,25 @@ class _PlayerQualityBadgeState extends State<PlayerQualityBadge> {
   Widget build(BuildContext context) {
     final label = _label;
     if (label == null) return const SizedBox.shrink();
+    final tokens = lookTokens(context);
     return Container(
       margin: const EdgeInsets.only(left: 8),
       padding: EdgeInsets.symmetric(
           horizontal: widget.compact ? 7 : 8, vertical: 3),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: .55),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(8)),
         border: Border.all(color: Colors.white.withValues(alpha: .35)),
       ),
       child: Text(label,
           style: TextStyle(
               fontSize: widget.compact ? 11 : 12,
               height: 1.15,
-              letterSpacing: .5,
-              fontWeight: FontWeight.w700,
+              letterSpacing:
+                  tokens.uppercaseLabels ? tokens.labelLetterSpacing + .2 : .5,
+              fontWeight: tokens.uppercaseLabels
+                  ? FontWeight.w800
+                  : FontWeight.w700,
               color: Colors.white)),
     );
   }

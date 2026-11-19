@@ -2,6 +2,7 @@ import '../utils/interface_colors.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/sports_progress.dart';
+import '../utils/tv_theme.dart';
 
 /// Cold-open feedback uses real progress, not a perpetual full-screen spinner.
 /// No ticker/shimmer: only this bounded region repaints when a feed completes.
@@ -310,7 +311,7 @@ class SportsEventMatchStatus extends StatelessWidget {
                           decoration: BoxDecoration(
                               color: color.withValues(
                                   alpha: i <= step ? .85 : .25),
-                              borderRadius: BorderRadius.circular(1))),
+                              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(1)))),
                     const SizedBox(width: 4),
                   ],
                   Flexible(

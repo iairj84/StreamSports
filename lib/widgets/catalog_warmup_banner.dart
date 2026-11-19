@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/playlist_manager.dart';
 import '../l10n/l10n.dart';
+import '../utils/tv_theme.dart';
 
 /// Prominent, persistent banner showing background catalog warm-up
 /// progress — shown above the content on every tab (not just tucked away
@@ -48,7 +49,7 @@ class CatalogWarmupBanner extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(4)),
               child: LinearProgressIndicator(value: progress, minHeight: 6),
             ),
             const SizedBox(height: 8),

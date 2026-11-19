@@ -5,6 +5,7 @@ import '../utils/guarded_dialog.dart';
 import '../utils/interface_colors.dart';
 import 'package:flutter/material.dart';
 import 'sports_hub_layout.dart';
+import '../utils/tv_theme.dart';
 
 bool compactSportsPortrait(BuildContext context) {
   final size = MediaQuery.sizeOf(context);
@@ -311,7 +312,7 @@ Future<T?> showSportsChoices<T>(
                         autofocus: choice.value == selected ||
                             (!showSelection && choice == choices.first),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(3)),
+                            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(3))),
                         selected: showSelection && choice.value == selected,
                         selectedTileColor: Theme.of(context)
                             .colorScheme
@@ -432,7 +433,7 @@ ButtonStyle sportsPopupButtonStyle(BuildContext context) =>
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)));
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(6))));
 
 /// A bounded, content-sized popup with a stationary title and footer.
 class SportsCompactDialog extends StatelessWidget {

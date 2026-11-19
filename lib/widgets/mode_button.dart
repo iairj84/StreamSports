@@ -37,7 +37,7 @@ class _ModeButtonState extends State<ModeButton> {
     final tokens = SurfaceTokens.forStyle(
         context.watch<AppPreferences?>()?.surfaceStyle ??
             SurfaceStyle.classic);
-    final radius = BorderRadius.circular(tokens.rounded ? tokens.blockRadius : 3);
+    final radius = BorderRadius.circular(tokens.shapeFor(3));
     // Flat focus fill; selection keeps a quieter accent outline.
     final focusForeground = scheme.onPrimaryContainer;
     final borderSide = _focused
@@ -63,7 +63,7 @@ class _ModeButtonState extends State<ModeButton> {
       // Flat focus fill; selection keeps a quieter accent outline.
       child: MinimalGlassFocus(
         active: false,
-        borderRadius: tokens.rounded ? tokens.blockRadius : 3,
+        borderRadius: tokens.shapeFor(3),
         child: Material(
           color: Colors.transparent,
           shape: RoundedRectangleBorder(

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/app_preferences.dart';
 import 'hold_to_activate.dart';
 import 'sports_hub_layout.dart';
+import '../utils/tv_theme.dart';
 
 final _panelOrigins = Expando<bool>();
 
@@ -63,7 +64,7 @@ Future<T?> showSportsPanel<T>({
                         elevation: 0,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(10)),
                           side: BorderSide(
                               color:
                                   Theme.of(context).colorScheme.outlineVariant),

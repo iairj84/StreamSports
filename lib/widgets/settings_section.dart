@@ -39,8 +39,7 @@ class SettingsSection extends StatelessWidget {
         DecoratedBox(
           decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest.withValues(alpha: .35),
-              borderRadius: BorderRadius.circular(
-                  tokens.rounded ? tokens.rowRadius : 5),
+              borderRadius: BorderRadius.circular(tokens.shapeFor(5)),
               border: Border.all(
                   color: scheme.outlineVariant.withValues(alpha: .65))),
           child:

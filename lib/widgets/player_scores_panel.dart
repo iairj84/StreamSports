@@ -16,6 +16,7 @@ import '../utils/interface_colors.dart';
 import '../utils/sports_fixture_presentation.dart';
 import '../utils/time_format.dart';
 import 'sports_filter_picker.dart';
+import '../utils/tv_theme.dart';
 
 /// Scores while watching.
 ///
@@ -449,7 +450,7 @@ class _PlayerScoresPanelState extends State<PlayerScoresPanel> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(10)),
             color: selected
                 ? Theme.of(context).colorScheme.primary.withValues(alpha: .22)
                 : Colors.transparent),

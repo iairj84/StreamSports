@@ -13,6 +13,7 @@ import '../../services/storage_service.dart';
 import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
+import '../../utils/tv_theme.dart';
 
 const List<String> _months = [
   'January',
@@ -406,7 +407,7 @@ class _NoticeCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-            color: background, borderRadius: BorderRadius.circular(12)),
+            color: background, borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(12))),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(icon, color: foreground),
           const SizedBox(width: 12),

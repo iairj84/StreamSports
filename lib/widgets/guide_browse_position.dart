@@ -1,5 +1,6 @@
 import '../utils/interface_colors.dart';
 import 'package:flutter/material.dart';
+import '../utils/tv_theme.dart';
 
 @immutable
 class GuideBrowsePosition {
@@ -55,7 +56,7 @@ class GuideBrowsePositionOverlay extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
                     decoration: BoxDecoration(
                         color: const Color(0xF018222D),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(4)),
                         border: Border.all(color: interfaceColor(context, Colors.white24))),
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

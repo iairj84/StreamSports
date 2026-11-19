@@ -67,7 +67,7 @@ class SportsFixtureRow extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: tokens.titleWeight,
-                      letterSpacing: tokens.rounded ? -0.2 : 0,
+                      letterSpacing: tokens.uppercaseLabels ? -0.2 : 0,
                       height: 1.25))),
           if (showScore &&
               possessionId != null &&

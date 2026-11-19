@@ -9,6 +9,7 @@ import '../../utils/constants.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
 import '../../widgets/tv_menu_tile.dart';
+import '../../utils/tv_theme.dart';
 
 /// Manual update path: check, download and install a newer published build.
 /// The same service drives the startup prompt; this screen is where a viewer
@@ -219,7 +220,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                   LinearProgressIndicator(
                       value: update.downloadProgress,
                       minHeight: 6,
-                      borderRadius: BorderRadius.circular(3)),
+                      borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(3))),
                   const SizedBox(height: 6),
                   Text(
                       tr('Downloading… {p}%', {

@@ -132,9 +132,7 @@ class _PosterCardState extends State<PosterCard> {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: InkWell(
         focusNode: _effectiveFocusNode,
-        borderRadius: BorderRadius.circular(lookTokens(context).rounded
-            ? lookTokens(context).blockRadius
-            : 5),
+        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(5)),
         // Desktop: a single click focuses the poster and updates the hero; double-click opens
         // details. Explicit focus avoids relying on a disabled tap handler. Remote and touch
         // activation remain separate.
@@ -165,9 +163,8 @@ class _PosterCardState extends State<PosterCard> {
                   height: widget.cardPosterHeight,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade900,
-                    borderRadius: BorderRadius.circular(lookTokens(context).rounded
-                        ? lookTokens(context).blockRadius
-                        : 5),
+                    borderRadius:
+                        BorderRadius.circular(lookTokens(context).shapeFor(5)),
                     border: _focused
                         ? Border.all(
                             color: scheme.primary,

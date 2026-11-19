@@ -159,7 +159,7 @@ class LiveNavigationBody extends StatelessWidget {
                         ? scheme.onSurface
                             .withValues(alpha: nested ? .025 : .045)
                         : Colors.transparent,
-            borderRadius: BorderRadius.circular(tokens.rounded ? tokens.blockRadius : 3),
+            borderRadius: BorderRadius.circular(tokens.shapeFor(3)),
             border: Border.all(
                 color: focused ? scheme.primary : Colors.transparent,
                 width: focused && tokens.focusRingOnly

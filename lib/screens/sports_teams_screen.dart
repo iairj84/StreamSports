@@ -22,6 +22,7 @@ import '../widgets/sports_filter_picker.dart';
 import '../widgets/standings_team_tile.dart';
 import '../widgets/sports_favorite_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
+import '../utils/tv_theme.dart';
 
 String _sport(SportsLeague league) => league.espnPath.split('/').first;
 String _directoryMessage(String leagueId) => switch (leagueId) {
@@ -768,7 +769,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                         : null,
                     enabledBorder: inline
                         ? OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(6)),
                             borderSide: BorderSide(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -777,7 +778,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
                         : null,
                     focusedBorder: inline
                         ? OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(6)),
                             borderSide: BorderSide(
                                 color: Theme.of(context).colorScheme.primary))
                         : null,
@@ -1119,7 +1120,7 @@ class _SportsTeamsScreenState extends State<SportsTeamsScreen> {
             padding: const WidgetStatePropertyAll(
                 EdgeInsets.symmetric(horizontal: 8)),
             shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(6)))),
             textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11.5))),
         segments: [
           ButtonSegment(

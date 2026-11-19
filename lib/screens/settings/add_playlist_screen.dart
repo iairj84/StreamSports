@@ -1574,7 +1574,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                                       context, Colors.white)
                                                   .withValues(alpha: 0.07),
                                               borderRadius:
-                                                  BorderRadius.circular(12),
+                                                  BorderRadius.circular(lookTokens(context).shapeFor(12)),
                                               border: Border(
                                                   left: BorderSide(
                                                       color: accent, width: 4)),

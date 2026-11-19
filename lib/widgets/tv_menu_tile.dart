@@ -140,8 +140,7 @@ class _TvMenuTileState extends State<TvMenuTile> {
                   height: 30,
                   decoration: BoxDecoration(
                       color: scheme.primary.withValues(alpha: .09),
-                      borderRadius: BorderRadius.circular(
-                          tokens.rounded ? tokens.blockRadius : 5)),
+                      borderRadius: BorderRadius.circular(tokens.shapeFor(5))),
                   child: Icon(widget.icon,
                       size: 19,
                       color: _focused

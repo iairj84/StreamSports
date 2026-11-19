@@ -648,7 +648,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.black87,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(20)),
                 border: Border.all(
                     color: Theme.of(context).colorScheme.primary, width: 1.5),
               ),
@@ -2115,7 +2115,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               .colorScheme
               .surfaceContainerHighest
               .withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(12)),
         ),
         child: _buildGuideSummary(channel, epg, compact: true),
       );
@@ -2704,7 +2704,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // tall, mostly-empty box.
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(16)),
           border: Border.all(
               color:
                   interfaceColor(context, Colors.white).withValues(alpha: 0.18),
@@ -2779,7 +2779,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   .colorScheme
                   .surfaceContainerHighest
                   .withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(16)),
               border: Border.all(
                   color: interfaceColor(context, Colors.white)
                       .withValues(alpha: 0.18),
@@ -3566,7 +3566,7 @@ class _PlaylistDividerRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: scheme.primary.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(2)),
         ),
         child: Text(
           name.isEmpty ? tr('Playlist') : name,
@@ -5889,7 +5889,7 @@ class _TimelineKeyboardKeyState extends State<_TimelineKeyboardKey> {
                     ? scheme.primary.withValues(alpha: 0.18)
                     : interfaceColor(context, Colors.white)
                         .withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(2)),
             // HoldToActivate, not a plain InkWell's own keyboard activation —
             // see _TimelineFilterButton's identical doc comment for why: a
             // plain InkWell doesn't reliably respond to every "Select"-
@@ -5909,7 +5909,7 @@ class _TimelineKeyboardKeyState extends State<_TimelineKeyboardKey> {
                   widget.focusNode.requestFocus();
                   widget.onPressed();
                 },
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(2)),
                 child: Center(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,

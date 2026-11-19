@@ -7,6 +7,7 @@ import '../services/playback_health.dart';
 import '../utils/playback_error_message.dart';
 import 'player_chrome.dart';
 import 'player_stream_info.dart';
+import '../utils/tv_theme.dart';
 
 /// Compact feedback over the existing surface. No layout movement or live probes.
 class PlayerConnectionStatus extends StatelessWidget {
@@ -95,7 +96,7 @@ class PlayerStatusCard extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: const Color(0xDE141B23),
                         border: Border.all(color: const Color(0x80394755)),
-                        borderRadius: BorderRadius.circular(5)),
+                        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(5))),
                     child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,

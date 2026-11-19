@@ -504,7 +504,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           SizedBox(
             width: 280 * s,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(2)),
               child: LinearProgressIndicator(
                 value: fraction,
                 minHeight: 4 * s,

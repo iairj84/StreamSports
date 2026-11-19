@@ -1,6 +1,7 @@
 import '../utils/interface_colors.dart';
 import 'package:flutter/material.dart';
 import 'live_navigation_body.dart';
+import '../utils/tv_theme.dart';
 
 /// Preserve provider pictograms; generated folders use the same visual language.
 /// These are local font glyphs, with no network requests or decoded logo cache.
@@ -148,7 +149,7 @@ class LiveCategoryIcon extends StatelessWidget {
               height: extent,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(3)),
                   border: Border.all(color: ink.withValues(alpha: .45)),
                   color: ink.withValues(alpha: .05)),
               child: Text(badge,

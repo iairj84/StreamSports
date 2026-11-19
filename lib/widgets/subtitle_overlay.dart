@@ -6,6 +6,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import '../services/playback_service.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
+import '../utils/tv_theme.dart';
 
 /// Draws the current subtitle over the fullscreen video (Android): the
 /// selected embedded track's cues, or a downloaded add-on file (the
@@ -81,7 +82,7 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(6)),
         ),
         child: Text(
           text,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/image_urls.dart';
 import 'hd_network_image.dart';
+import '../utils/tv_theme.dart';
 
 /// Shared pieces of the series and movie detail pages
 /// (`SeriesDetailScreen`, `MovieDetailScreen`): the pill buttons, metadata
@@ -265,7 +266,7 @@ class DetailPoster extends StatelessWidget {
       height: width * 1.5,
       decoration: BoxDecoration(
         color: Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(10)),
         border: Border.all(color: Colors.white24),
       ),
       clipBehavior: Clip.antiAlias,

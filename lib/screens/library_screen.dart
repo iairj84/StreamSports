@@ -897,7 +897,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                     ? scheme.surfaceContainerHighest
                                     : Colors.transparent),
                         shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(4)),
                             side: BorderSide(
                                 color: _shelf == shelf
                                     ? scheme.primary.withValues(alpha: .4)
@@ -1418,7 +1418,7 @@ class _LibraryCardState extends State<_LibraryCard>
                       color: _focused
                           ? scheme.primaryContainer
                           : scheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(4)),
                       border: Border.all(
                           width: 2,
                           color: _focused

@@ -152,6 +152,66 @@ void main() {
     expect(live.style?.fontWeight, FontWeight.w600);
   });
 
+  test('every legacy radius maps into the look, never touching Classic or Modern',
+      () {
+    const legacy = <double>[1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20];
+    for (final style in [SurfaceStyle.classic, SurfaceStyle.modern]) {
+      final tokens = SurfaceTokens.forStyle(style);
+      for (final value in legacy) {
+        expect(tokens.shapeFor(value), value,
+            reason: '${style.name} must keep its literal $value');
+      }
+    }
+    final stadium = SurfaceTokens.forStyle(SurfaceStyle.stadium);
+    // Micro surfaces (category icons, picker chips, guides) take the look's
+    // pill scale; none of them keep a square 2-6px corner.
+    for (final value in <double>[2, 3, 4, 5, 6]) {
+      expect(stadium.shapeFor(value), greaterThanOrEqualTo(8),
+          reason: 'micro radius $value must round into the look');
+    }
+    expect(stadium.shapeFor(1), 2, reason: 'accent bars stay bars');
+    expect(stadium.shapeFor(8), 16, reason: 'quality badge');
+    expect(stadium.shapeFor(12), 22, reason: 'dialogs already converted');
+  });
+
+  testWidgets('a micro surface reads the look through lookTokens',
+      (tester) async {
+    for (final (style, expected) in [
+      (SurfaceStyle.classic, 8.0),
+      (SurfaceStyle.modern, 8.0),
+      (SurfaceStyle.stadium, 16.0),
+    ]) {
+      SharedPreferences.setMockInitialValues({});
+      final storage = StorageService();
+      await storage.init();
+      await storage.setSurfaceStyleId(style.name);
+      final prefs = AppPreferences(storage);
+      await prefs.init();
+      await tester.pumpWidget(MultiProvider(
+          providers: [
+            Provider<StorageService>.value(value: storage),
+            ChangeNotifierProvider<AppPreferences>.value(value: prefs),
+          ],
+          child: MaterialApp(
+              theme: buildAppTheme(prefs.palette, surfaceStyle: prefs.surfaceStyle),
+              home: Builder(builder: (context) {
+                final tokens = lookTokens(context);
+                return Container(
+                    key: const ValueKey('micro-surface'),
+                    decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(tokens.shapeFor(8))));
+              }))));
+      await tester.pumpAndSettle();
+      final box = tester.widget<Container>(
+          find.byKey(const ValueKey('micro-surface')));
+      final radius = (box.decoration as BoxDecoration).borderRadius as BorderRadius;
+      expect(radius.topLeft.x, expected,
+          reason: '${style.name} micro surface radius');
+      prefs.dispose();
+    }
+  });
+
   test('prefs default to Classic and persist the choice', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = StorageService();

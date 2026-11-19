@@ -17,7 +17,7 @@ class IptvBottomBar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final tokens = SurfaceTokens.forStyle(
         prefs?.surfaceStyle ?? SurfaceStyle.classic);
-    final radius = BorderRadius.circular(tokens.rounded ? tokens.blockRadius : 3);
+    final radius = BorderRadius.circular(tokens.shapeFor(3));
     return SafeArea(
       top: false,
       child: Padding(

@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'hold_to_activate.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
+import '../utils/tv_theme.dart';
 
 class CompactChoice {
   const CompactChoice(
@@ -415,7 +416,7 @@ class CompactChoiceListState extends State<CompactChoiceList> {
                   final selected = choice.id == widget.selected;
                   final tile = Material(
                       borderRadius:
-                          widget.polished ? BorderRadius.circular(3) : null,
+                          widget.polished ? BorderRadius.circular(lookTokens(context).shapeFor(3)) : null,
                       color: node.hasFocus
                           ? widget.polished
                               ? scheme.primary.withValues(alpha: .15)
@@ -428,7 +429,7 @@ class CompactChoiceListState extends State<CompactChoiceList> {
                       child: InkWell(
                         key: ValueKey(choice.id),
                         borderRadius:
-                            widget.polished ? BorderRadius.circular(3) : null,
+                            widget.polished ? BorderRadius.circular(lookTokens(context).shapeFor(3)) : null,
                         focusNode: node,
                         onFocusChange: (focused) {
                           if (focused) _rememberIndex(row.index);
@@ -439,7 +440,7 @@ class CompactChoiceListState extends State<CompactChoiceList> {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                               borderRadius: widget.polished
-                                  ? BorderRadius.circular(3)
+                                  ? BorderRadius.circular(lookTokens(context).shapeFor(3))
                                   : null,
                               border: Border.all(
                                   color: node.hasFocus

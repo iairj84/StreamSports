@@ -12,6 +12,7 @@ import 'compact_choice_list.dart';
 import 'tv_text_field_gate.dart';
 import '../models/sports.dart';
 import '../utils/sports_presentation.dart';
+import '../utils/tv_theme.dart';
 
 typedef SportsFilterCounts = Map<String, ({int live, int upcoming})>;
 
@@ -357,7 +358,7 @@ class SportsCounts extends StatelessWidget {
                   color: count > 0
                       ? accent.withValues(alpha: .10)
                       : interfaceColor(context, const Color(0xFF202832)),
-                  borderRadius: BorderRadius.circular(2)),
+                  borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(2))),
               child: compact
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
@@ -651,10 +652,10 @@ class _FilterPickerState extends State<_FilterPicker> {
                             fillColor: interfaceColor(
                                 context, const Color(0xFF111923)),
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(3),
+                                borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(3)),
                                 borderSide: BorderSide.none),
                             enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(3),
+                                borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(3)),
                                 borderSide: BorderSide.none),
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(

@@ -192,8 +192,7 @@ class PlayerSettingRow extends StatelessWidget {
                       ? const Color(0xFF30485E)
                       : const Color(0x801E2935)),
               shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                      tokens.rounded ? tokens.blockRadius : 4))),
+                  borderRadius: BorderRadius.circular(tokens.shapeFor(4)))),
               side: WidgetStateProperty.resolveWith((s) => BorderSide(
                   color: s.contains(WidgetState.focused)
                       ? Theme.of(context).colorScheme.primary

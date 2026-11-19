@@ -779,8 +779,8 @@ Future<void> showPlayerSettings(
                     Container(
                         decoration: BoxDecoration(
                             color: const Color(0x801E2935),
-                            borderRadius: BorderRadius.circular(
-                                look.rounded ? look.blockRadius : 4)),
+                            borderRadius:
+                                BorderRadius.circular(look.shapeFor(4))),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 4, vertical: 2),
                         child: PlayerVolume(

@@ -25,6 +25,7 @@ import 'sports_filter_picker.dart';
 import 'sports_refresh_control.dart';
 import 'sports_activity_status.dart';
 import 'tv_text_field_gate.dart';
+import '../utils/tv_theme.dart';
 
 class SportsReplaysPanel extends StatefulWidget {
   const SportsReplaysPanel(
@@ -1358,7 +1359,7 @@ class SportsReplaysPanelState extends State<SportsReplaysPanel> {
                           fillColor:
                               interfaceColor(context, const Color(0xFF252B33)),
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(3),
+                              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(3)),
                               borderSide: BorderSide.none)),
                     ))),
       Expanded(
@@ -1984,7 +1985,7 @@ class _ReplayContent extends StatelessWidget {
             LinearProgressIndicator(
                 value: progress,
                 minHeight: 2,
-                borderRadius: BorderRadius.circular(1),
+                borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(1)),
                 backgroundColor: interfaceColor(context, Colors.white)
                     .withValues(alpha: .07),
                 color: playing

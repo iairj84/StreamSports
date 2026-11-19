@@ -750,7 +750,7 @@ class _LiveRowState extends State<_LiveRow> {
         onHold: widget.onHold,
         child: InkWell(
           focusNode: widget.focusNode,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(12)),
           onTap: widget.onTap,
           onLongPress: widget.onHold,
           onFocusChange: (f) {
@@ -766,7 +766,7 @@ class _LiveRowState extends State<_LiveRow> {
             decoration: BoxDecoration(
               color: _focused ? null : Colors.white.withValues(alpha: 0.06),
               gradient: _focused ? sportsFocusSheen(scheme) : null,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(12)),
               border: Border.all(
                 color: _focused ? scheme.primary : Colors.transparent,
                 width: _focused ? 2.5 : 1,

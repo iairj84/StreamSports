@@ -413,7 +413,7 @@ class _CodeCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(12))),
         child: Column(children: [
           Text(tr('Code for {peer}', {'peer': peer}),
               style: Theme.of(context).textTheme.bodySmall),
@@ -463,7 +463,7 @@ class _ResultCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(12))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Icon(Icons.check_circle_outline,

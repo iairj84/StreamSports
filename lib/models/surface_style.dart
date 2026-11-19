@@ -104,6 +104,33 @@ class SurfaceTokens {
   /// than the legacy square corners.
   bool get rounded => this != classic;
 
+  /// The look's answer for a surface that used to hardcode [legacy].
+  ///
+  /// Classic and Modern return [legacy] unchanged by construction, so their
+  /// rendering can never drift; Stadium Night maps the legacy corner size onto
+  /// its pill scale. Keeping the mapping here means widgets carry no
+  /// style conditionals — they read one token-layer function.
+  double shapeFor(double legacy) {
+    // Modern is rounded too, so `rounded` cannot be the gate: its own radii
+    // live in the theme tokens, and every surface below the theme must keep
+    // the exact pixels it had. Only the pill look rewords legacy corners.
+    if (!focusRingOnly) return legacy;
+    return switch (legacy) {
+      1 => 2,
+      2 => 8,
+      3 => 12,
+      4 => 12,
+      5 => 12,
+      6 => 16,
+      8 => 16,
+      10 => 16,
+      12 => 22,
+      16 => 24,
+      20 => 24,
+      _ => legacy,
+    };
+  }
+
   /// Retained for call sites that predate [rounded].
   bool get isModern => this == modern;
 

@@ -6,6 +6,7 @@ import '../services/app_preferences.dart';
 import '../services/sports_standings_service.dart';
 import '../utils/guarded_dialog.dart';
 import 'sports_widgets.dart';
+import '../utils/tv_theme.dart';
 
 class StandingsColumn {
   const StandingsColumn(this.key, this.label, this.description, this.priority);
@@ -338,7 +339,7 @@ class _StandingsTeamTileState extends State<StandingsTeamTile> {
                                           color: colors.onSurface
                                               .withValues(alpha: .055),
                                           borderRadius:
-                                              BorderRadius.circular(4)),
+                                              BorderRadius.circular(lookTokens(context).shapeFor(4))),
                                       child: SportsLogo(
                                           url: row.team.logoUrl,
                                           size: geometry.logo,

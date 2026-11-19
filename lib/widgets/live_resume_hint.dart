@@ -9,6 +9,7 @@ import '../models/channel.dart';
 import '../screens/player_screen.dart';
 import '../services/playback_service.dart';
 import '../l10n/l10n.dart';
+import '../utils/tv_theme.dart';
 
 /// Text-only reminder and hold-Right shortcut for the active live channel or
 /// pending startup-resume channel. Reuse the shared playback session without
@@ -212,7 +213,7 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.black87,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(20)),
                   border: Border.all(
                       color: Theme.of(context).colorScheme.primary, width: 1.5),
                 ),

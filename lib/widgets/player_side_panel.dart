@@ -16,6 +16,7 @@ import '../services/remote_controls.dart';
 import 'player_chrome.dart';
 import 'cached_channel_logo.dart';
 import 'tv_text_field_gate.dart';
+import '../utils/tv_theme.dart';
 
 /// Fullscreen channel and sports picker with in-place playback and optional game
 /// details. Dispatch tabs and row selection from one focus node rather than building a
@@ -377,14 +378,14 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
                                         })
                                     : null,
                                 enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(5),
+                                    borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(5)),
                                     borderSide: const BorderSide(
                                         color: Color(0xFF303D4B))),
                                 focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(5),
+                                    borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(5)),
                                     borderSide: BorderSide(color: accent)),
                                 border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(4)),
                                     borderSide: const BorderSide(
                                         color: Color(0xFF344150)))),
                           ))),

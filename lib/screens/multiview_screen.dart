@@ -17,6 +17,7 @@ import '../widgets/hold_to_activate.dart';
 import '../widgets/multiview_channel_picker.dart';
 import '../widgets/player_dialog.dart';
 import '../widgets/tv_menu_tile.dart';
+import '../utils/tv_theme.dart';
 
 enum _MultiviewLayout {
   automatic,
@@ -742,7 +743,7 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                                         decoration: BoxDecoration(
                                             color: const Color(0xE6111820),
                                             borderRadius:
-                                                BorderRadius.circular(4)),
+                                                BorderRadius.circular(lookTokens(context).shapeFor(4))),
                                         child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
@@ -999,7 +1000,7 @@ class _MultiviewScreenState extends State<MultiviewScreen>
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(
                         color: const Color(0xFF263644),
-                        borderRadius: BorderRadius.circular(3)),
+                        borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(3))),
                     child: Text(_fullscreen == null ? 'OK' : 'BACK',
                         style: const TextStyle(
                             fontSize: 10, fontWeight: FontWeight.w700))),

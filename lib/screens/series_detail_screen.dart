@@ -1194,7 +1194,7 @@ class _ThumbOverlays extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.all(3 * s),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(2)),
                   child: LinearProgressIndicator(
                     value: info.progress,
                     minHeight: 4 * s,
@@ -1539,7 +1539,7 @@ class _EpisodeListRow extends StatelessWidget {
                   height: thumbW * 9 / 16,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade900,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(8)),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: _Thumb(
