@@ -155,7 +155,7 @@ asserts the attributes; `SECURITY.md` states where credentials live.
 
 **Effort:** M (S for step 1 alone)  
 **Depends on:** —  
-**Status:** [ ] open
+**Status:** [x] fixed in `1d35069`
 
 ---
 
@@ -215,7 +215,7 @@ host but neither `supersecret` nor `password=`; `flutter analyze` clean.
 
 **Effort:** S  
 **Depends on:** —  
-**Status:** [ ] open
+**Status:** [x] fixed in `1d35069`
 
 ---
 
@@ -277,7 +277,7 @@ carrying `nox_active_viewer_id` leaves that key unchanged; the existing
 
 **Effort:** M  
 **Depends on:** —  
-**Status:** [ ] open
+**Status:** [x] fixed in `1d35069`
 
 ---
 
