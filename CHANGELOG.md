@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.75 — 19 November 2026
+
+- Startup Retry now recovers instead of failing again with a late-initialization error.
+- Promoting a beta to stable labels the build from its version tag, so stable devices are offered the promoted APK even when promotion runs from an older checkout.
+- CI now analyzes and tests pushes to beta, and the settings navigation test no longer assumes the Multiview row is above the fold.
+
 ## 0.2.74 — 19 November 2026
 
 - New Gold Rush appearance theme: true black surfaces with 49ers gold focus and a lifted scarlet for badges, swatches and the phone page's error tone.
