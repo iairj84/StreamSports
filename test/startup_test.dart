@@ -94,6 +94,33 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('startup Retry re-runs bootstrap after a failed attempt',
+      (tester) async {
+    // Same font-width caveat as the fresh-install test above.
+    tester.platformDispatcher.textScaleFactorTestValue = 0.8;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    // A wrong-typed preference makes StorageService.init throw on the first
+    // attempt. Retry used to reassign `late final` service fields and fail
+    // with LateInitializationError; repairing the store must recover.
+    SharedPreferences.setMockInitialValues({
+      AppConstants.keyActiveViewerId: 123,
+    });
+    await tester.pumpWidget(const NoxIptvApp());
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.textContaining('Startup failed'), findsOneWidget);
+
+    SharedPreferences.setMockInitialValues({});
+    await tester.tap(find.text('Retry'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.textContaining('LateInitializationError'), findsNothing);
+    expect(find.byType(WelcomeAddPlaylistScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('non-responding Android device probes use bounded fallbacks',
       (tester) async {
     messenger.setMockMethodCallHandler(

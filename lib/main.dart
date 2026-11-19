@@ -85,13 +85,26 @@ class NoxIptvApp extends StatefulWidget {
 }
 
 class _NoxIptvAppState extends State<NoxIptvApp> {
-  late final StorageService _storage;
-  late final CatalogDatabase _catalogDb;
-  late final AppPreferences _preferences;
-  late final PlaylistManager _playlistManager;
-  late final EpgService _epgService;
-  late final PlaybackService _playbackService;
+  // Nullable rather than `late final`: the startup error screen's Retry has to
+  // run bootstrap a second time, and a late final can only be assigned once
+  // (a retry used to fail with LateInitializationError instead of recovering).
+  StorageService? _storageInstance;
+  CatalogDatabase? _catalogDbInstance;
+  AppPreferences? _preferencesInstance;
+  PlaylistManager? _playlistManagerInstance;
+  EpgService? _epgServiceInstance;
+  PlaybackService? _playbackServiceInstance;
+  AppUpdateService? _appUpdateServiceInstance;
 
+  StorageService get _storage => _storageInstance!;
+  CatalogDatabase get _catalogDb => _catalogDbInstance!;
+  AppPreferences get _preferences => _preferencesInstance!;
+  PlaylistManager get _playlistManager => _playlistManagerInstance!;
+  EpgService get _epgService => _epgServiceInstance!;
+  PlaybackService get _playbackService => _playbackServiceInstance!;
+  AppUpdateService get _appUpdateService => _appUpdateServiceInstance!;
+
+  bool _bootstrapping = false;
   bool _ready = false;
 
   /// True while waiting on [WelcomeAddPlaylistScreen]'s answer — shown once,
@@ -137,8 +150,6 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
   /// ancestors.
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
-  late final AppUpdateService _appUpdateService;
-
   String _splashStatus = tr('Starting...');
   String? _bootstrapError;
 
@@ -149,9 +160,20 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
   }
 
   Future<void> _bootstrap() async {
-    setState(() => _bootstrapError = null);
+    if (_bootstrapping) return;
+    _bootstrapping = true;
+    _disposeServices();
+    if (mounted) {
+      setState(() {
+        _bootstrapError = null;
+        _ready = false;
+        _newUserPromptPending = false;
+        _pendingWelcomeChoice = null;
+        _splashStatus = tr('Starting...');
+      });
+    }
     try {
-      _storage = StorageService();
+      _storageInstance = StorageService();
       await _storage.init();
       // Applied before the first player exists; Settings re-applies it.
       applyPlaybackBufferPreset(_storage.getPlaybackBuffer());
@@ -159,16 +181,16 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
       if (mounted) setState(() => _splashStatus = tr('Loading settings...'));
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 
-      _preferences = AppPreferences(_storage);
+      _preferencesInstance = AppPreferences(_storage);
       await _preferences.init();
       // Asked once per launch, before anything decides a layout — see
       // DeviceTypeService for why screen width couldn't answer this.
       _preferences.isTelevision = await DeviceTypeService.isTelevision();
 
-      _catalogDb = CatalogDatabase();
+      _catalogDbInstance = CatalogDatabase();
 
-      _playlistManager = PlaylistManager(_storage, _catalogDb);
-      _epgService = EpgService(_storage);
+      _playlistManagerInstance = PlaylistManager(_storage, _catalogDb);
+      _epgServiceInstance = EpgService(_storage);
       _epgService.portalSources = _playlistManager.portalGuideSources;
       _epgService.supplementarySources =
           () => _playlistManager.supplementaryGuideSources(_epgService);
@@ -189,8 +211,8 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
       // Not awaited — the splash never waits on it; the post-splash chain
       // below awaits the same future.
       unawaited(_epgService.init());
-      _playbackService = PlaybackService(_storage, _playlistManager);
-      _appUpdateService = AppUpdateService(_storage);
+      _playbackServiceInstance = PlaybackService(_storage, _playlistManager);
+      _appUpdateServiceInstance = AppUpdateService(_storage);
 
       // Restore local settings first. The Live TV/Sports layout remains usable
       // while a missing cache is recovered; it never needs the movie/series
@@ -250,7 +272,44 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
       // Surfaces any unexpected startup failure as a retryable screen
       // instead of leaving the app stuck on the splash spinner forever.
       if (mounted) setState(() => _bootstrapError = e.toString());
+    } finally {
+      _bootstrapping = false;
     }
+  }
+
+  /// Drops the previous service graph before a retry, so a failed attempt's
+  /// timers, database work and decoder do not survive into the next one.
+  /// Everything is best-effort: a teardown failure must never block Retry.
+  void _disposeServices() {
+    final epg = _epgServiceInstance;
+    final playback = _playbackServiceInstance;
+    final manager = _playlistManagerInstance;
+    final preferences = _preferencesInstance;
+    _epgServiceInstance = null;
+    _playbackServiceInstance = null;
+    _playlistManagerInstance = null;
+    _preferencesInstance = null;
+    _storageInstance = null;
+    _catalogDbInstance = null;
+    _appUpdateServiceInstance = null;
+    try {
+      playback?.dispose();
+    } catch (_) {}
+    try {
+      epg?.dispose();
+    } catch (_) {}
+    try {
+      manager?.dispose();
+    } catch (_) {}
+    try {
+      preferences?.dispose();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _disposeServices();
+    super.dispose();
   }
 
   /// Offers a newer published build at launch — at most once per

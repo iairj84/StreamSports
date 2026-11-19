@@ -72,21 +72,32 @@ Create a version tag from the reviewed source and prepare a draft release. Attac
 - `android-native-sources.zip`: the pinned decoder build project, Media3 and FFmpeg source trees, licences and build instructions.
 - `SHA256SUMS.txt`: SHA-256 checksums of the three files above.
 
-Verify the draft assets before publishing. Keep betas marked as prereleases, which GitHub excludes from `latest`, and publish the stable address from a second, rolling release:
+Verify the draft assets before publishing. Keep betas marked as prereleases, which GitHub excludes from `latest`.
+
+A cut refreshes the early-channel mirror automatically; to do it by hand:
 
 ```sh
 python3 tools/publish_beta_mirror.py build/app/outputs/flutter-apk/app-release.apk
 ```
 
-That creates or refreshes a non-prerelease release tagged `beta-latest` holding one fixed-name asset, `StreamSports-beta.apk`, and marks it as GitHub's latest release. Run it after every build: the previous asset is replaced, so this address never changes and is safe to shorten for Downloader or Projectivy.
+That creates or refreshes `beta-latest` holding one fixed-name asset, `StreamSports-early.apk`. It is deliberately not GitHub's latest release. Testers fetch it from:
+
+`https://github.com/iairj84/StreamSports/releases/download/beta-latest/StreamSports-early.apk`
+
+Stable moves only by promotion, never by rebuilding. Promote the versioned beta tag, which republishes those exact bytes to `stable-latest` as `StreamSports-beta.apk` and marks it GitHub latest:
+
+```sh
+python3 tools/promote_stable.py --tag v<version>-<build>
+git fetch origin beta && git push origin origin/beta:main
+```
+
+The stable address and the Downloader code `1976156` resolve to that release:
 
 `https://github.com/iairj84/StreamSports/releases/latest/download/StreamSports-beta.apk`
 
-The Downloader code `1976156` resolves to that address and is what the installation guide uses. A code cannot be repointed once created, so keep the asset name and the `beta-latest` release in place and refresh it with the tool rather than publishing under a new name.
+A code cannot be repointed once created, so keep the asset name and the `stable-latest` release in place and refresh it with the tool rather than publishing under a new name. Promotion writes the version and build named by the versioned tag, not the promoting checkout's `pubspec.yaml`, so it is safe to run from an older `main` before the fast-forward.
 
-The tag carries no version number on purpose. The app's updater ranks releases by the build number in the tag, so `beta-latest` is never offered as an update; keep it digit-free and keep the asset name fixed. The tool republishes the exact bytes it was given and then downloads the address again to compare checksums. It does not audit or sign the APK, so run `tools/audit_apk.py` and the signature checks first, and do not point the rolling release at bytes different from the versioned release's `app-release.apk`. A normal release with `app-release.apk` keeps resolving at `.../releases/latest/download/app-release.apk`. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
-
-Every build currently ships as a beta. Promoting a tested beta into a stable channel, with an in-app opt-in for early builds, is planned in [the roadmap](ROADMAP.md); until then keep publishing prereleases and refreshing `beta-latest` as described here.
+Rolling tags carry no version number on purpose: the in-app updater resolves both channels by tag and reads the build from the mirror body, so `beta-latest` is never mistaken for an installable build. `publish_beta_mirror.py` republishes the exact bytes it was given and, for stable, downloads the address again to compare checksums. Neither tool audits or signs the APK, so run `tools/audit_apk.py` and the signature checks first. A normal release with `app-release.apk` keeps resolving at `.../releases/latest/download/app-release.apk`. The [installation guide](install.md) describes phone/TV installation and optional Downloader codes.
 
 ## Distribution
 

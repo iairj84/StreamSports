@@ -72,6 +72,19 @@ def parse_pubspec_version(text):
     return version.strip(), int(build.strip() or 0)
 
 
+def parse_versioned_tag(tag):
+    """`v0.2.74-2567` -> `('0.2.74', 2567)`.
+
+    Promotion publishes one already-built beta, so its version and build must
+    come from the tag that names those bytes, never from whichever commit the
+    promoting checkout happens to have.
+    """
+    match = re.fullmatch(r'v(\d+\.\d+\.\d+)-(\d+)', tag.strip())
+    if match is None:
+        raise ValueError(f'Expected a versioned beta tag like v0.2.61-2554, got {tag!r}.')
+    return match.group(1), int(match.group(2))
+
+
 def latest_download_url(repository, asset=STABLE_ASSET):
     return f'https://github.com/{repository}/releases/latest/download/{asset}'
 
@@ -192,8 +205,14 @@ def read_apk(apk):
     return data
 
 
-def publish_mirror(root, apk, repository, token, channel='beta', verify=True):
-    """Create or refresh one rolling mirror release for `channel`."""
+def publish_mirror(root, apk, repository, token, channel='beta', verify=True,
+                   version_build=None):
+    """Create or refresh one rolling mirror release for `channel`.
+
+    `version_build` names the build inside `apk`. Promotion passes the tag's
+    own version/build so an older checkout cannot stamp the mirror with the
+    wrong build number; beta cuts leave it None and use the checkout pubspec.
+    """
     if channel not in ('beta', 'stable'):
         raise ValueError("channel must be 'beta' or 'stable'")
     tag = BETA_TAG if channel == 'beta' else STABLE_TAG
@@ -204,7 +223,8 @@ def publish_mirror(root, apk, repository, token, channel='beta', verify=True):
     make_latest = 'false' if channel == 'beta' else 'true'
     data = read_apk(apk)
     digest = hashlib.sha256(data).hexdigest()
-    version, build = parse_pubspec_version((root / 'pubspec.yaml').read_text())
+    version, build = (version_build if version_build is not None
+                      else parse_pubspec_version((root / 'pubspec.yaml').read_text()))
     body = mirror_body(repository, version, build, len(data), digest, channel=channel)
     payload = {'name': release_name, 'body': body, 'draft': False,
                'prerelease': False, 'make_latest': make_latest}

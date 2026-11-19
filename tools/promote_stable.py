@@ -22,8 +22,8 @@ from pathlib import Path
 import urllib.request
 
 from publish_beta_mirror import (API, STABLE_ASSET, STABLE_TAG, call, failure,
-                                 github_token, latest_download_url, mirror_body,
-                                 parse_pubspec_version, publish_mirror, read_apk,
+                                 github_token, latest_download_url,
+                                 parse_versioned_tag, publish_mirror, read_apk,
                                  repository_slug)
 
 
@@ -60,8 +60,10 @@ def download_versioned_apk(token, repository, tag, dest):
 
 
 def promote(root, repository, token, tag, local_file=None, verify=True):
-    if not tag.startswith('v') or '-' not in tag:
-        raise ValueError(f'Expected a versioned beta tag like v0.2.61-2554, got {tag!r}.')
+    # The tag names the bytes being promoted, so it is also the only safe
+    # source of the mirror body's version/build. Reading the checkout pubspec
+    # used to stamp an older build when promotion ran from a stale main.
+    version_build = parse_versioned_tag(tag)
     if local_file is not None:
         data = read_apk(Path(local_file))
         info = {'size': len(data), 'sha256': hashlib.sha256(data).hexdigest(), 'local': True}
@@ -69,7 +71,8 @@ def promote(root, repository, token, tag, local_file=None, verify=True):
             staged = Path(tmp) / STABLE_ASSET
             staged.write_bytes(data)
             result = publish_mirror(root, staged, repository, token,
-                                    channel='stable', verify=False)
+                                    channel='stable', verify=False,
+                                    version_build=version_build)
         result.update({'tag': tag, 'bytes': info['size'], 'sha256': info['sha256']})
         return result
     with tempfile.TemporaryDirectory() as tmp:
@@ -78,7 +81,8 @@ def promote(root, repository, token, tag, local_file=None, verify=True):
         # Guard: the staged file must be a real APK before it can move stable.
         read_apk(dest)
         result = publish_mirror(root, dest, repository, token,
-                                channel='stable', verify=verify)
+                                channel='stable', verify=verify,
+                                version_build=version_build)
         result.update({'promoted_tag': tag,
                        'promoted_asset': info['asset'].get('name'),
                        'bytes': info['size'], 'sha256': info['sha256']})
@@ -112,11 +116,8 @@ def main(argv=None):
         print(f'Would promote {args.tag} to {STABLE_TAG} as {STABLE_ASSET}.')
         print(f'Stable address: {latest_download_url(repository)}')
         print('Then fast-forward main: git fetch origin beta && git push origin origin/beta:main')
-        try:
-            version = parse_pubspec_version((root / 'pubspec.yaml').read_text())
-            print(f'Checkout pubspec: {version[0]} ({version[1]})')
-        except ValueError:
-            pass
+        version, build = parse_versioned_tag(args.tag)
+        print(f'Tag build: {version} ({build})')
         return 0
     try:
         token = github_token(root)

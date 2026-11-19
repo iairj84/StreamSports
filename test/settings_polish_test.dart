@@ -279,8 +279,10 @@ void main() {
   });
   testWidgets('settings keeps navigation and exposes the moved tools',
       (tester) async {
+    // Tall enough for every settings section plus the phone bottom bar, so
+    // the lazy list keeps both Playlists & guide and Viewing tools built.
     await open(tester, const SettingsMenuScreen(includeTools: true),
-        const Size(390, 844));
+        const Size(390, 1600));
     expect(find.byKey(const ValueKey('bottom-settings')), findsOneWidget);
     expect(find.byKey(const ValueKey('bottom-more')), findsNothing);
     expect(tester.widget<IptvBottomBar>(find.byType(IptvBottomBar)).selected,

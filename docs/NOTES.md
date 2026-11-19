@@ -1,5 +1,35 @@
 # Design notes
 
+## Retry rebuilds the service graph
+
+The startup error screen's Retry re-ran `_bootstrap`, but every service field was
+`late final`; the second assignment threw `LateInitializationError`, so a failed
+launch could never recover without killing the app. The fields are now nullable
+with ordinary getters, `_disposeServices` tears down the previous EPG, playback,
+playlist and preference objects, and a `_bootstrapping` guard ignores double
+taps. Re-keying the whole root widget was considered, but that leaves the first
+attempt's timers and database work alive and makes every test recreate the tree;
+teardown at the one retry boundary is smaller and testable. `startup_test.dart`
+fails the first bootstrap with a wrong-typed preference, repairs the store, taps
+Retry and expects the welcome screen instead of `LateInitializationError`.
+
+## Promotions stamp the tag, not the checkout
+
+`promote_stable.py` used `publish_mirror`, which read `pubspec.yaml` from the
+current checkout. The documented order promotes before fast-forwarding `main`,
+so promoting 0.2.74 from a 0.2.64 `main` wrote `Build: 0.2.64 (2557)` into
+`stable-latest` while serving the 0.2.74 APK; the updater trusts that line and
+stable clients were never offered the build. Promotion now parses the version
+and build from `--tag` and passes them through, and a unit test promotes from a
+deliberately stale checkout to pin the behavior. Requiring an up-to-date
+checkout was rejected: the tool should be safe regardless of operator order.
+
+The CI gate now also runs on pushes to `beta`, because releases are cut there
+and a PR-only or `main`-only trigger never sees the branch being shipped. That
+gate immediately caught a settings test still assuming the Multiview row was
+built above a 390x844 fold; it now uses a viewport tall enough for every lazily
+built section instead of scrolling the list back and forth.
+
 ## The phone page wears the app's clothes
 
 `pair.html` used to be a web form that happened to talk to a TV: its own grey
