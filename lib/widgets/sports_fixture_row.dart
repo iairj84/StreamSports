@@ -80,18 +80,29 @@ class SportsFixtureRow extends StatelessWidget {
                         child: Icon(Icons.circle,
                             size: 7, color: colors.primary)))),
           const SizedBox(width: 8),
-          Text(
-              showScore
-                  ? side.score ?? '–'
-                  : hideScores
-                      ? ''
-                      : side.record ?? '',
-              style: TextStyle(
-                  fontSize: showScore ? tokens.scoreSize : 10,
-                  fontWeight: showScore ? FontWeight.w600 : FontWeight.w400,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color:
-                      showScore ? colors.onSurface : colors.onSurfaceVariant)),
+          // scaleDown, not ellipsis: a 19px score or a long record shrinks to
+          // fit the card instead of clipping or truncating at the tightest
+          // layout size.
+          Flexible(
+            child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                    showScore
+                        ? side.score ?? '–'
+                        : hideScores
+                            ? ''
+                            : side.record ?? '',
+                    maxLines: 1,
+                    style: TextStyle(
+                        fontSize: showScore ? tokens.scoreSize : 10,
+                        fontWeight:
+                            showScore ? FontWeight.w600 : FontWeight.w400,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: showScore
+                            ? colors.onSurface
+                            : colors.onSurfaceVariant))),
+          ),
         ]);
     final oddsLine = showOdds ? sportsOddsLine(game.odds) : null;
     final status = game.isLive ? 'LIVE' : sportsFixtureStatus(game);

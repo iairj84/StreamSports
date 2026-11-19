@@ -1930,7 +1930,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             (_tab == 'TV' || _tab == 'Sports'),
         onFullscreen: _goFullscreenIfPlaying,
         child: Theme(
-          data: buildAppTheme(prefs.palette),
+          data: buildAppTheme(prefs.palette, surfaceStyle: prefs.surfaceStyle),
           // Back walks out one column at a time — content -> groups -> tabs —
           // and only exits the app from the tabs column (it used to exit
           // straight from anywhere, including deep inside the guide).

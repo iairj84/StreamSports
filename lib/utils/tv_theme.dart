@@ -4,21 +4,31 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/cyberpunk_palette.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import 'constants.dart';
 
 /// Shared surfaces, typography and remote focus for the guide, Sports and settings.
 CyberpunkPalette? _lastPalette;
+SurfaceStyle? _lastStyle;
 ThemeData? _lastTheme;
 ThemeData? _lastInstantTheme;
 
+/// [surfaceStyle] carries the look's geometry and focus language, so dialogs,
+/// menus, inputs and buttons follow Stadium Night without each screen
+/// knowing about it. Defaults to Classic, which is what every existing
+/// caller and test expects.
 ThemeData buildAppTheme(CyberpunkPalette palette,
-    {bool instantPageTransitions = false}) {
+    {bool instantPageTransitions = false,
+    SurfaceStyle surfaceStyle = SurfaceStyle.classic}) {
   // Palette values are immutable. Keep one theme, avoiding both construction
   // and deep theme comparisons on every guide/remote focus transition.
-  if (!identical(palette, _lastPalette) || _lastTheme == null) {
+  if (!identical(palette, _lastPalette) ||
+      surfaceStyle != _lastStyle ||
+      _lastTheme == null) {
     _lastPalette = palette;
-    _lastTheme = _createAppTheme(palette);
+    _lastStyle = surfaceStyle;
+    _lastTheme = _createAppTheme(palette, SurfaceTokens.forStyle(surfaceStyle));
     _lastInstantTheme = null;
   }
   if (!instantPageTransitions) return _lastTheme!;
@@ -50,8 +60,14 @@ class _InstantPageTransitionsBuilder extends PageTransitionsBuilder {
       child;
 }
 
-ThemeData _createAppTheme(CyberpunkPalette palette) {
+/// The look tokens for [context]'s saved surface style. Screens read shape,
+/// focus and type from here instead of hardcoding radii per widget.
+SurfaceTokens lookTokens(BuildContext context) => SurfaceTokens.forStyle(
+    context.watch<AppPreferences?>()?.surfaceStyle ?? SurfaceStyle.classic);
+
+ThemeData _createAppTheme(CyberpunkPalette palette, SurfaceTokens tokens) {
   final scheme = buildPaletteColorScheme(palette, Brightness.dark);
+  BorderRadius radius(double r) => BorderRadius.circular(r);
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
@@ -65,14 +81,26 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
       elevation: 0,
       scrolledUnderElevation: 0,
       titleTextStyle: TextStyle(
-          fontSize: 20, fontWeight: FontWeight.w500, color: scheme.onSurface),
+          fontSize: 20,
+          fontWeight: tokens.focusRingOnly ? FontWeight.w700 : FontWeight.w500,
+          letterSpacing: tokens.focusRingOnly ? -0.2 : 0,
+          color: scheme.onSurface),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: scheme.surface,
       elevation: 12,
       shadowColor: Colors.black,
+      // Only Stadium Night restates the title; Classic and Modern keep the
+      // Material default they have always rendered with.
+      titleTextStyle: tokens.focusRingOnly
+          ? TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
+              color: scheme.onSurface)
+          : null,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: radius(tokens.dialogRadius),
           side: BorderSide(color: scheme.outlineVariant)),
     ),
     snackBarTheme: SnackBarThemeData(
@@ -82,7 +110,8 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
       closeIconColor: scheme.onSurfaceVariant,
       elevation: 0,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius:
+              radius(tokens.focusRingOnly ? tokens.menuRadius : 8),
           side: BorderSide(color: scheme.outlineVariant)),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -90,21 +119,26 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
       fillColor: scheme.surfaceContainerHighest,
       hintStyle: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: radius(tokens.inputRadius),
           borderSide: BorderSide(color: scheme.outline)),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: radius(tokens.inputRadius),
           borderSide: BorderSide(color: scheme.outlineVariant)),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: scheme.primary, width: 1.5)),
+          borderRadius: radius(tokens.inputRadius),
+          borderSide: BorderSide(
+              color: scheme.primary,
+              width: tokens.focusRingOnly ? 2 : 1.5)),
     ),
     cardTheme: CardThemeData(
       color: scheme.surfaceContainerHighest,
       elevation: 0,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: scheme.outlineVariant)),
+          borderRadius: radius(tokens.cardRadius),
+          side: BorderSide(
+              color: tokens.focusRingOnly
+                  ? Colors.transparent
+                  : scheme.outlineVariant)),
     ),
     listTileTheme: ListTileThemeData(
         iconColor: scheme.onSurfaceVariant, textColor: scheme.onSurface),
@@ -116,7 +150,8 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
         side: BorderSide(color: scheme.outlineVariant),
         labelStyle: TextStyle(fontSize: 12, color: scheme.onSurface),
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8))),
+            borderRadius:
+                radius(tokens.focusRingOnly ? tokens.menuRadius : 8))),
     progressIndicatorTheme: ProgressIndicatorThemeData(
         color: scheme.primary,
         linearTrackColor: scheme.surfaceContainerHighest,
@@ -126,7 +161,8 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
       textStyle: TextStyle(fontSize: 12, color: scheme.onSurface),
       decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius:
+              radius(tokens.focusRingOnly ? tokens.menuRadius : 6),
           border: Border.all(color: scheme.outlineVariant)),
     ),
     scrollbarTheme: ScrollbarThemeData(
@@ -138,13 +174,15 @@ ThemeData _createAppTheme(CyberpunkPalette palette) {
       color: scheme.surfaceContainerHighest,
       elevation: 12,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius:
+              radius(tokens.focusRingOnly ? tokens.menuRadius : 10),
           side: BorderSide(color: scheme.outlineVariant)),
     ),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: _tvButtonStyle(scheme)),
-    filledButtonTheme: FilledButtonThemeData(style: _tvButtonStyle(scheme)),
-    textButtonTheme: TextButtonThemeData(style: _tvButtonStyle(scheme)),
-    iconButtonTheme: IconButtonThemeData(style: _tvButtonStyle(scheme)),
+    outlinedButtonTheme:
+        OutlinedButtonThemeData(style: _tvButtonStyle(scheme, tokens)),
+    filledButtonTheme: FilledButtonThemeData(style: _tvButtonStyle(scheme, tokens)),
+    textButtonTheme: TextButtonThemeData(style: _tvButtonStyle(scheme, tokens)),
+    iconButtonTheme: IconButtonThemeData(style: _tvButtonStyle(scheme, tokens)),
   );
 }
 
@@ -350,21 +388,29 @@ Widget withTvThemeIfNeeded(BuildContext context, WidgetBuilder builder,
   return Theme(
     // The fullscreen native video surface must survive a TV/tablet window
     // shrinking into PiP. Keep the same wrapper even across layout thresholds.
-    data: isTv ? buildAppTheme(prefs.palette) : Theme.of(context),
+    data: isTv
+        ? buildAppTheme(prefs.palette, surfaceStyle: prefs.surfaceStyle)
+        : Theme.of(context),
     child: Builder(builder: builder),
   );
 }
 
 /// A solid focus fill with white text, distinct from a selected outline.
-ButtonStyle _tvButtonStyle(ColorScheme scheme) {
+ButtonStyle _tvButtonStyle(ColorScheme scheme, SurfaceTokens tokens) {
   final focusFill = scheme.primaryContainer;
   final focusForeground = scheme.onPrimaryContainer;
   final focusBorder = scheme.primary;
+  // Ring-only looks never paint the accent slab: the resting button keeps
+  // its own fill and focus is the ring alone.
+  final ringOnly = tokens.focusRingOnly;
   return ButtonStyle(
-    shape: WidgetStateProperty.all(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+    shape: WidgetStateProperty.all(RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(ringOnly ? tokens.buttonRadius : 8))),
     backgroundColor: WidgetStateProperty.resolveWith((states) {
-      if (states.contains(WidgetState.focused)) return focusFill;
+      if (states.contains(WidgetState.focused) && !ringOnly) {
+        return focusFill;
+      }
       return null;
     }),
     foregroundColor: WidgetStateProperty.resolveWith((states) {

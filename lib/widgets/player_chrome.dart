@@ -52,7 +52,7 @@ class PlayerAction extends StatelessWidget {
         padding: const WidgetStatePropertyAll(EdgeInsets.all(8)),
         shape: WidgetStatePropertyAll(RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(
-                tokens.isModern ? 8 : 5))),
+                tokens.rounded ? tokens.buttonRadius : 5))),
         foregroundColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.disabled)
                 ? Colors.white24
@@ -62,7 +62,7 @@ class PlayerAction extends StatelessWidget {
                         ? const Color(0xFFF1F4F8)
                         : Colors.white.withValues(alpha: .88)),
         backgroundColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.focused)
+            s.contains(WidgetState.focused) && !tokens.focusRingOnly
                 ? const Color(0xFF36516A)
                 : Colors.transparent),
         side: WidgetStateProperty.resolveWith((s) => BorderSide(

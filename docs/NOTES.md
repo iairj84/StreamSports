@@ -25,6 +25,31 @@ The palette label had to change from "Stadium Night" to "Lime black" once the
 look took that name — two entries with identical labels made the row
 ambiguous on screen and in tests.
 
+### The look reaches every screen through the theme, not per-widget edits
+
+The first pass only converted the Sports hub and settings, so dialogs, the
+player sheet, chips, inputs and menus kept their own baked-in radii and
+rendered as a hybrid. The fix is at the top: `buildAppTheme` now takes the
+`SurfaceStyle` and builds dialog, card, chip, popup-menu, tooltip, snackbar,
+input and button shapes from the tokens, and `withTvThemeIfNeeded`, the root
+`MaterialApp`, the TV home shell and the library shell pass the saved style
+through. A screen that never mentions tokens still follows the look.
+
+Everything below the theme that owned a surface was then converted with
+`lookTokens(context)`: settings tiles and section cards, the bottom bar, mode
+buttons, player dialogs/rows/actions, search headings and empty state,
+transfer error cards, poster cards and sports detail cards. Each conversion
+uses `rounded ? token : legacyNumber`, so Classic and Modern keep the exact
+pixels they had — asserted in `test/surface_style_test.dart`, which checks
+Classic dialog 12 / card 10 / chip 8 and no dialog title style, alongside
+Stadium's 22 / 16 / 18 and its w800 title.
+
+Scores and records are wrapped in `Flexible` + `FittedBox(scaleDown)`: the
+19px score, or a long record, shrinks to the card instead of clipping. The
+same test renders the card at 320px — the tightest of the four layout sizes —
+with three-digit scores and asserts no overflow plus the w800 title and 19px
+score, so the look cannot regress into a palette swap.
+
 ## RadioGroup traps a TV remote
 
 The update channel picker shipped as `RadioGroup` + `RadioListTile` and had

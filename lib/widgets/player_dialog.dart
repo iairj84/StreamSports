@@ -73,8 +73,7 @@ class _PlayerDialogState extends State<PlayerDialog> {
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           shape: RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(tokens.isModern ? 12 : 8),
+              borderRadius: BorderRadius.circular(tokens.sheetRadius),
               side: const BorderSide(color: Color(0xFF303C49))),
           child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -129,14 +128,22 @@ class PlayerSection extends StatelessWidget {
   const PlayerSection(this.title, {super.key});
   final String title;
   @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.fromLTRB(4, 13, 4, 6),
-      child: Text(tr(title).toUpperCase(),
-          style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: .8,
-              color: playerMuted)));
+  Widget build(BuildContext context) {
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(4, 13, 4, 6),
+        child: Text(tr(title).toUpperCase(),
+            style: TextStyle(
+                fontSize: 10,
+                fontWeight:
+                    tokens.uppercaseLabels ? FontWeight.w800 : FontWeight.w600,
+                letterSpacing: tokens.uppercaseLabels
+                    ? tokens.labelLetterSpacing + .3
+                    : .8,
+                color: playerMuted)));
+  }
 }
 
 class PlayerSettingRow extends StatelessWidget {
@@ -181,12 +188,12 @@ class PlayerSettingRow extends StatelessWidget {
               minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
               foregroundColor: const WidgetStatePropertyAll(Colors.white),
               backgroundColor: WidgetStateProperty.resolveWith((s) =>
-                  s.contains(WidgetState.focused)
+                  s.contains(WidgetState.focused) && !tokens.focusRingOnly
                       ? const Color(0xFF30485E)
                       : const Color(0x801E2935)),
               shape: WidgetStatePropertyAll(RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
-                      tokens.isModern ? tokens.blockRadius : 4))),
+                      tokens.rounded ? tokens.blockRadius : 4))),
               side: WidgetStateProperty.resolveWith((s) => BorderSide(
                   color: s.contains(WidgetState.focused)
                       ? Theme.of(context).colorScheme.primary

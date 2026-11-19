@@ -6,6 +6,9 @@ import 'package:nox_iptv/models/surface_style.dart';
 import 'package:nox_iptv/screens/settings/theme_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/storage_service.dart';
+import 'package:nox_iptv/models/sports.dart';
+import 'package:nox_iptv/widgets/sports_fixture_row.dart';
+import 'package:nox_iptv/utils/constants.dart';
 import 'package:nox_iptv/utils/tv_theme.dart';
 
 void main() {
@@ -50,6 +53,103 @@ void main() {
     expect(classic.uppercasesStatus, isFalse);
     expect(stadium.uppercaseLabels && stadium.focusRingOnly &&
         stadium.uppercasesStatus, isTrue, reason: 'tokens combine into one look');
+  });
+
+  test('theme-level surfaces follow the look, Classic and Modern do not', () {
+    final palette = AppConstants.cyberpunkPalettes.first;
+    double radiusOf(ShapeBorder? shape) =>
+        ((shape as RoundedRectangleBorder).borderRadius as BorderRadius)
+            .topLeft
+            .x;
+    final classic = buildAppTheme(palette);
+    final modern = buildAppTheme(palette, surfaceStyle: SurfaceStyle.modern);
+    final stadium =
+        buildAppTheme(palette, surfaceStyle: SurfaceStyle.stadium);
+    // Everything that used to be hardcoded keeps its exact number.
+    expect(radiusOf(classic.dialogTheme.shape), 12);
+    expect(radiusOf(classic.cardTheme.shape), 10);
+    expect(radiusOf(classic.chipTheme.shape), 8);
+    expect(radiusOf(modern.dialogTheme.shape), 12);
+    expect(radiusOf(modern.chipTheme.shape), 8);
+    expect(classic.dialogTheme.titleTextStyle, isNull);
+    expect(modern.dialogTheme.titleTextStyle, isNull);
+    // Stadium Night reaches dialogs, cards, chips, menus and inputs from the
+    // token layer alone, so no screen has to re-style itself.
+    expect(radiusOf(stadium.dialogTheme.shape), 22);
+    expect(radiusOf(stadium.cardTheme.shape), 16);
+    expect(radiusOf(stadium.chipTheme.shape), 18);
+    expect(radiusOf(stadium.popupMenuTheme.shape), 18);
+    expect(stadium.dialogTheme.titleTextStyle?.fontWeight, FontWeight.w800);
+    final input = stadium.inputDecorationTheme.enabledBorder;
+    expect((input as OutlineInputBorder).borderRadius.topLeft.x, 14);
+  });
+
+  testWidgets('Stadium Night titles and scores survive the tightest layout',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    await storage.setSurfaceStyleId(SurfaceStyle.stadium.name);
+    final prefs = AppPreferences(storage);
+    await prefs.init();
+    addTearDown(prefs.dispose);
+    expect(prefs.surfaceStyle, SurfaceStyle.stadium);
+    // The tightest of the four layout sizes: 320 logical px wide.
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final game = SportsGame(
+        id: 'nfl-game',
+        league: sportsLeagueById('nfl')!,
+        start: DateTime(2026, 11, 10, 19),
+        state: GameState.live,
+        statusText: '3rd 04:12',
+        home: const SportsTeam(
+            id: 'ne',
+            name: 'New England Patriots',
+            shortName: 'Patriots',
+            abbreviation: 'NE',
+            score: '114'),
+        away: const SportsTeam(
+            id: 'buf',
+            name: 'Buffalo Bills',
+            shortName: 'Bills',
+            abbreviation: 'BUF',
+            score: '110'),
+        situation: const SportsSituation(
+            text: '2nd & 7 at NE 32', possessionTeamId: 'ne'));
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider<StorageService>.value(value: storage),
+          ChangeNotifierProvider<AppPreferences>.value(value: prefs),
+        ],
+        child: MaterialApp(
+            theme: buildAppTheme(prefs.palette,
+                surfaceStyle: prefs.surfaceStyle),
+            home: Scaffold(
+                body: Center(
+                    child: SizedBox(
+                        width: 312,
+                        height: 76,
+                        child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: SportsFixtureRow(
+                                game: game,
+                                time: '8:15 PM',
+                                hideScores: false,
+                                use24h: false))))))));
+    await tester.pump();
+    expect(tester.takeException(), isNull,
+        reason: 'a heavier title or 19px score must not overflow the card');
+    // The row really is wearing the look, not just the palette.
+    final teamText = tester.widget<Text>(find.text('New England Patriots'));
+    expect(teamText.style?.fontWeight, FontWeight.w800);
+    final scoreText = tester.widget<Text>(find.text('114'));
+    expect(scoreText.style?.fontSize, 19);
+    // Status words take the same tracked-caps treatment as headings.
+    final live = tester.widget<Text>(find.text('LIVE'));
+    expect(live.style?.letterSpacing, .7);
+    expect(live.style?.fontWeight, FontWeight.w600);
   });
 
   test('prefs default to Classic and persist the choice', () async {

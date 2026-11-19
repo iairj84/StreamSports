@@ -463,7 +463,8 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
           // The selected app palette controls appearance independently of system light/dark
           // mode.
           theme: buildAppTheme(prefs.palette,
-              instantPageTransitions: prefs.isTelevision),
+              instantPageTransitions: prefs.isTelevision,
+              surfaceStyle: prefs.surfaceStyle),
           themeAnimationDuration: Duration.zero,
           home: Builder(
             builder: (context) {

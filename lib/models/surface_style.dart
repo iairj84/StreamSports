@@ -33,7 +33,31 @@ class SurfaceTokens {
     required this.titleWeight,
     required this.scoreSize,
     required this.uppercasesStatus,
+    required this.cardRadius,
+    required this.dialogRadius,
+    required this.menuRadius,
+    required this.inputRadius,
+    required this.buttonRadius,
+    required this.sheetRadius,
   });
+
+  /// Corner radius of a player sheet or compact dialog.
+  final double sheetRadius;
+
+  /// Corner radius for cards and panels.
+  final double cardRadius;
+
+  /// Corner radius for dialogs and player sheets.
+  final double dialogRadius;
+
+  /// Corner radius for popup menus, tooltips, snackbars and chips.
+  final double menuRadius;
+
+  /// Corner radius for text fields.
+  final double inputRadius;
+
+  /// Corner radius for buttons.
+  final double buttonRadius;
 
   /// Outer corner radius for list rows and small cards.
   final double rowRadius;
@@ -95,7 +119,13 @@ class SurfaceTokens {
       labelLetterSpacing: 0,
       titleWeight: FontWeight.w600,
       scoreSize: 13,
-      uppercasesStatus: false);
+      uppercasesStatus: false,
+      cardRadius: 10,
+      dialogRadius: 12,
+      menuRadius: 10,
+      inputRadius: 8,
+      buttonRadius: 8,
+      sheetRadius: 8);
 
   static const modern = SurfaceTokens(
       rowRadius: 10,
@@ -109,7 +139,13 @@ class SurfaceTokens {
       labelLetterSpacing: 0,
       titleWeight: FontWeight.w600,
       scoreSize: 13,
-      uppercasesStatus: false);
+      uppercasesStatus: false,
+      cardRadius: 10,
+      dialogRadius: 12,
+      menuRadius: 10,
+      inputRadius: 8,
+      buttonRadius: 8,
+      sheetRadius: 12);
 
   /// Direction B: pill shapes, ring-only focus, heavy titles and small
   /// tracked caps for every label that used to be a sentence-case whisper.
@@ -125,7 +161,13 @@ class SurfaceTokens {
       labelLetterSpacing: 1.1,
       titleWeight: FontWeight.w800,
       scoreSize: 19,
-      uppercasesStatus: true);
+      uppercasesStatus: true,
+      cardRadius: 16,
+      dialogRadius: 22,
+      menuRadius: 18,
+      inputRadius: 14,
+      buttonRadius: 12,
+      sheetRadius: 22);
 
   static SurfaceTokens forStyle(SurfaceStyle style) => switch (style) {
         SurfaceStyle.classic => classic,

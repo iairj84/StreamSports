@@ -35,7 +35,7 @@ class SportsDetailSurface extends StatelessWidget {
               color: (accent ? colors.primary : colors.outlineVariant)
                   .withValues(alpha: accent ? .2 : .3)),
           borderRadius: BorderRadius.circular(
-              tokens.isModern ? tokens.rowRadius : 5),
+              tokens.rounded ? tokens.cardRadius : 5),
         ),
         child: child);
   }

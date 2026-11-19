@@ -1,5 +1,6 @@
 import '../utils/interface_colors.dart';
 import 'package:provider/provider.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +15,9 @@ class IptvBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final prefs = context.watch<AppPreferences?>();
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        prefs?.surfaceStyle ?? SurfaceStyle.classic);
+    final radius = BorderRadius.circular(tokens.rounded ? tokens.blockRadius : 3);
     return SafeArea(
       top: false,
       child: Padding(
@@ -21,7 +25,7 @@ class IptvBottomBar extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: radius,
             border: Border.all(color: interfaceColor(context, Colors.white24)),
             boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
           ),
@@ -52,7 +56,7 @@ class IptvBottomBar extends StatelessWidget {
                           ? interfaceColor(context, Colors.white)
                               .withValues(alpha: .14)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: radius,
                       border: Border.all(
                           color: selected == item.$1
                               ? interfaceColor(context, Colors.white24)

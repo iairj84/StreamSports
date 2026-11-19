@@ -1,6 +1,9 @@
 import 'settings_section.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/tv_theme.dart';
 
 /// One focusable target per option with normal document-order traversal. Distinguish actual
@@ -31,6 +34,10 @@ class _ModeButtonState extends State<ModeButton> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
+    final radius = BorderRadius.circular(tokens.rounded ? tokens.blockRadius : 3);
     // Flat focus fill; selection keeps a quieter accent outline.
     final focusForeground = scheme.onPrimaryContainer;
     final borderSide = _focused
@@ -45,9 +52,9 @@ class _ModeButtonState extends State<ModeButton> {
       // between builds corrupts its FocusNode on real hardware; the same
       // rule applies here, one level up.
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: radius,
         // Flat focus fill; selection keeps a quieter accent outline.
-        gradient: _focused
+        gradient: _focused && !tokens.focusRingOnly
             ? LinearGradient(
                 colors: [scheme.primaryContainer, scheme.primaryContainer])
             : null,
@@ -56,16 +63,16 @@ class _ModeButtonState extends State<ModeButton> {
       // Flat focus fill; selection keeps a quieter accent outline.
       child: MinimalGlassFocus(
         active: false,
-        borderRadius: 3,
+        borderRadius: tokens.rounded ? tokens.blockRadius : 3,
         child: Material(
           color: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: radius,
             side: borderSide,
           ),
           child: InkWell(
             focusNode: widget.focusNode,
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: radius,
             onTap: widget.onTap,
             onFocusChange: (f) => setState(() => _focused = f),
             child: Padding(

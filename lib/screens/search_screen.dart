@@ -648,6 +648,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResultRows(List<_ResultRow> rows) {
+    final tokens = lookTokens(context);
     if (rows.isEmpty) {
       return Center(
         child: Padding(
@@ -658,7 +659,10 @@ class _SearchScreenState extends State<SearchScreen> {
               Icon(Icons.search_off,
                   size: 48, color: Theme.of(context).disabledColor),
               const SizedBox(height: 12),
-              Text(tr('Nothing found')),
+              Text(tr('Nothing found'),
+                  style: TextStyle(
+                      fontWeight:
+                          tokens.uppercaseLabels ? FontWeight.w700 : null)),
             ],
           ),
         ),
@@ -677,11 +681,14 @@ class _SearchScreenState extends State<SearchScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(row.label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
+                child: Text(
+                    tokens.uppercaseLabels
+                        ? row.label.toUpperCase()
+                        : row.label,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: tokens.uppercaseLabels ? 11 : null,
+                        letterSpacing: tokens.labelLetterSpacing)),
               ),
               const SizedBox(height: 8),
               SizedBox(

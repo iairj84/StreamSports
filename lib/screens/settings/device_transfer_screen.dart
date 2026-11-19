@@ -8,6 +8,7 @@ import '../../services/device_transfer_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/settings_bundle.dart';
 import '../../services/storage_service.dart';
+import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/settings_section.dart';
 
@@ -433,7 +434,10 @@ class _ReplaceWarning extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.errorContainer,
-            borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(
+                lookTokens(context).focusRingOnly
+                    ? lookTokens(context).cardRadius
+                    : 12)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.warning_amber_rounded,
               color: Theme.of(context).colorScheme.onErrorContainer),
@@ -490,7 +494,10 @@ class _ErrorCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.errorContainer,
-            borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(
+                lookTokens(context).focusRingOnly
+                    ? lookTokens(context).cardRadius
+                    : 12)),
         child: Text(message,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onErrorContainer)),

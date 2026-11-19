@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/image_urls.dart';
+import '../utils/tv_theme.dart';
 import 'hd_network_image.dart';
 import 'hold_to_activate.dart';
 
@@ -131,7 +132,9 @@ class _PosterCardState extends State<PosterCard> {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: InkWell(
         focusNode: _effectiveFocusNode,
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(lookTokens(context).rounded
+            ? lookTokens(context).blockRadius
+            : 5),
         // Desktop: a single click focuses the poster and updates the hero; double-click opens
         // details. Explicit focus avoids relying on a disabled tap handler. Remote and touch
         // activation remain separate.
@@ -162,9 +165,14 @@ class _PosterCardState extends State<PosterCard> {
                   height: widget.cardPosterHeight,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade900,
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius: BorderRadius.circular(lookTokens(context).rounded
+                        ? lookTokens(context).blockRadius
+                        : 5),
                     border: _focused
-                        ? Border.all(color: scheme.primary, width: 3)
+                        ? Border.all(
+                            color: scheme.primary,
+                            width:
+                                lookTokens(context).focusRingOnly ? 2 : 3)
                         : null,
                     // Was two layered shadows (primary + secondary at
                     // different blur/spread) for a duo-tone glow — on this

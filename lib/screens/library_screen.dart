@@ -1292,7 +1292,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ])),
     ]);
     return Theme(
-        data: buildAppTheme(prefs.palette),
+        data: buildAppTheme(prefs.palette, surfaceStyle: prefs.surfaceStyle),
         child: PopScope(
             canPop: !_tv || _exitReady || _navigationDepth == 0,
             onPopInvokedWithResult: (didPop, _) {
