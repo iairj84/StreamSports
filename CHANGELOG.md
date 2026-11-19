@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.73 — 19 November 2026
+
+- The "Set up from phone" page no longer demands a playlist for a settings change: with every playlist field left blank it sends the theme, surface, clock, scores and update choices alone, and the TV applies them straight away.
+- Typing anything in a playlist field still means a playlist, so the full login validation runs and a half-filled provider cannot be silently dropped.
+- Either QR code can now change a setting; only a typed playlist adds one.
+
 ## 0.2.72 — 19 November 2026
 
 - Settings from phone is its own page: Settings > Settings from phone opens a code that changes the TV's settings and nothing else, so a clock or buffer change no longer asks for a playlist.
