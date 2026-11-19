@@ -55,11 +55,32 @@ python3 tools/cut_release.py --notes-file release-notes.txt  # bump, changelog, 
   `git checkout -- pubspec.yaml CHANGELOG.md` before retrying so the
   version does not bump twice.
 
+## Release definitions (binding)
+
+These are the meanings used in this repository; do not reinterpret them as a
+local-only Git action.
+
+- **"Commit" / "commit to" / "cut and release"** = full delivery, not just
+  `git commit`: commit the change, bump the patch version and build number, add
+  the CHANGELOG entry, build the release APK, run `tools/audit_apk.py`, commit
+  the release, tag it, push `beta`, publish the versioned prerelease and refresh
+  the `beta-latest` mirror. Finish only when the APK is published.
+- **"Push beta to main"** = fast-forward `main` to `beta`; it does not publish
+  the stable channel.
+- **"Promote" / "commit to stable" / "release to stable"** = run
+  `tools/promote_stable.py --tag <tag>` to republish the tested APK into
+  `stable-latest`, then fast-forward `main`. There is no stable branch commit.
+- A narrower request must say so explicitly: **"commit only"**, **"no
+  release"**, **"local commit"**, or **"push only"**.
+
+If publishing is blocked by the environment, report the blocker instead of
+calling the task complete; the change is not delivered until the APK is out.
+
 ## Working rules
 
 - Small focused changes, one concern per commit.
-- "Commit" means commit and release: a change on main that no APK carries is
-  not delivered. Finish with a release unless the request says otherwise.
+- "Commit" means commit and release as defined above. A change that no APK
+  carries is not delivered.
 - Run analyze and the relevant tests (or a build) before saying done.
 - Ask before deleting files or changing dependencies (pubspec.yaml/lock).
 - Never commit secrets, keystores, .env, private datasets or build output; scan with Gitleaks before releases.
