@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.76 — 19 November 2026
+
+- Add docs/ARCHITECTURE.md: one map of the service graph, storage layers, data flow, build/test commands and beta/stable release flow, linked from the README.
+
 ## 0.2.75 — 19 November 2026
 
 - Startup Retry now recovers instead of failing again with a late-initialization error.
