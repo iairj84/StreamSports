@@ -111,6 +111,19 @@
     --accent:#C8F04A; --accent-ink:#1A1203;
     --select:#C8F04A; --select-ink:#1A1203;
   }
+  /* Gold Rush: the same true black, gold for focus and scarlet for the one
+     error tone, so the page carries both team colours without a red field
+     that would read as a failed submission. */
+  body[data-palette="gold_rush"] {
+    --surface:#000; --tint:rgba(227,180,72,.07);
+    --panel:#0C0A07; --field:#181410;
+    --ink:#fff; --muted:rgba(255,255,255,.62);
+    --hairline:rgba(255,255,255,.08); --field-line:rgba(255,255,255,.13);
+    --track:rgba(255,255,255,.24);
+    --accent:#E3B448; --accent-ink:#1A1203;
+    --select:#E3B448; --select-ink:#1A1203;
+    --err:#E03A45;
+  }
   /* Modern and Stadium Night are the app's rounded surfaces; only the pill
      look changes the type treatment and selection, as SurfaceTokens does. */
   body[data-surface="modern"] {
@@ -342,7 +355,7 @@
 // back to the shipped defaults so a stale link can never leave a blank page.
 (function () {
   "use strict";
-  var palettes = ["classic_tv", "oled", "light", "midnight", "ember", "forest", "stadium_night"];
+  var palettes = ["classic_tv", "oled", "light", "midnight", "ember", "forest", "stadium_night", "gold_rush"];
   var surfaces = ["classic", "modern", "stadium"];
   var query = {}, raw = (location.search || "").replace(/^\?/, "").split("&");
   raw.forEach(function (pair) {
@@ -483,6 +496,7 @@
                 <option value="ember">Ember</option>
                 <option value="forest">Forest</option>
                 <option value="stadium_night">Lime black</option>
+                <option value="gold_rush">Gold Rush</option>
               </select>
             </div>
           </div>
@@ -537,6 +551,7 @@
               <option value="ember">Ember</option>
               <option value="forest">Forest</option>
               <option value="stadium_night">Lime black</option>
+              <option value="gold_rush">Gold Rush</option>
             </select>
           </div>
         </div>

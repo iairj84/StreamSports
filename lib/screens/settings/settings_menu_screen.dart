@@ -135,7 +135,7 @@ class SettingsMenuScreen extends StatelessWidget {
                       link(
                           Icons.display_settings_outlined,
                           'Themes',
-                          'Six palettes · true black to light',
+                          'Eight palettes · true black to light',
                           const ThemeScreen()),
                       link(
                           Icons.settings_remote,

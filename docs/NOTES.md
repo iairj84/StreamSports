@@ -161,6 +161,20 @@ a channel change goes through `setChannelLocally` rather than the updater's
 confirmation screen — with a slow network the phone could sit on "Sending…"
 until the session expired.
 
+## Gold Rush: black first, gold for focus, scarlet for everything else
+
+The 49ers palette (`gold_rush`) is a true-black palette like Lime black and
+OLED, but its two accents are not interchangeable. Gold carries the focus
+ring, the focused text and the selection, because that is the one accent a
+viewer has to read from ten feet and the team's scarlet does not survive it:
+`#AA0000` on pure black is under 2.5:1, so a focus border in it disappears.
+Scarlet is therefore lifted to `#E03A45` (4.9:1 on black) and kept to badges,
+the swatch's second bar and secondary gradient stops, where it reads as the
+team colour without competing with focus. The scheme is explicit rather than
+seeded — `trueBlack` already bypasses HCT — so the phone page's CSS carries
+the same values, and scarlet doubles as that page's error tone rather than a
+third red being invented for it.
+
 ## Stadium Night is a look, not a palette
 
 Direction B first shipped as a colour palette and read as "different colours,

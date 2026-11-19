@@ -403,6 +403,19 @@ class AppConstants {
       description: 'True black surfaces · electric lime LIVE and focus',
       trueBlack: true,
     ),
+    // The 49ers look: black first, then gold and scarlet. Gold is the focus
+    // accent rather than the red on purpose — the team's #AA0000 sits too
+    // close to pure black to carry a focus border or a text label at ten
+    // feet, so the scarlet is lifted just far enough to stay legible (4.8:1)
+    // and kept to badges, swatches and the second gradient stop.
+    CyberpunkPalette(
+      id: 'gold_rush',
+      label: 'Gold Rush',
+      primary: Color(0xFFE3B448),
+      secondary: Color(0xFFE03A45),
+      description: 'True black surfaces · 49ers gold focus and scarlet accents',
+      trueBlack: true,
+    ),
   ];
 
   // On-disk cache file names (under the OS temp/cache directory — safe to
