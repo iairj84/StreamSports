@@ -12,7 +12,7 @@ The same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7
 
 ## Get started
 
-1. On a new install, **Set up on my phone** shows a QR code: scan it, add your playlist and choose the theme, surface, clock and update channel there, and the device applies all of it at once. Later, **Settings → Playlists & guide → Add Playlist** takes another playlist, and **Pair with TV** can send one to another device on the same Wi-Fi.
+1. On a new install, **Set up on my phone** shows a QR code: scan it, add your playlist and choose the theme, surface, clock and update channel there, and the device applies all of it at once. Later, **Settings → Playlists & guide → Add Playlist** takes another playlist, **Settings → Your TV → Set up from phone** scans the same code again for a second playlist or a later look change, and **Pair with TV** can send one to another device on the same Wi-Fi.
 2. Choose **Organise with StreamSports** or **Keep provider categories**. For Xtream playlists, enable Movies and Series under **Content from this playlist** if wanted.
 3. To copy an existing setup to a second device, use **Settings → Devices & app → Transfer to another device**. Both devices must be on the same Wi-Fi; the receiving device is replaced with a copy of the sender's playlists, settings, sports picks, favorites and channel links.
 

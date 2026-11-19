@@ -38,6 +38,29 @@ never meant to touch. Unknown palette or surface ids are ignored at apply
 time instead of being rejected, so a newer phone page that offers a theme
 this build does not know cannot break the whole setup.
 
+### Setup is not a one-time screen
+
+The same screen opened from Settings > Your TV > Set up from phone, because a
+second playlist or a later look change is the same job as the first one. It is
+the identical route and payload handling, not a copy: the tile pushes
+`SetupFromPhoneScreen`, and the success path pops to the first route, which
+from Settings means back to the app rather than to an empty welcome page.
+
+The apply path is covered by `test/phone_setup_test.dart`, which follows the
+fake-manager pattern the Add Playlist tests use and drives the panel's own
+`onResult` callback rather than a test-only door into the screen. It asserts
+all five settings land in storage and in the live preference objects, that the
+playlist is saved with the phone's credentials and its guide starts, that an
+unsupported key writes nothing, that a failed first load removes the profile
+and leaves the QR panel showing a New code button, and that the two session
+kinds refuse each other's payloads. `PhonePairingSession.acceptsResult` exists
+for that last assertion: opening a real socket to prove a refusal rule would
+test the server, not the rule.
+
+The panel keeps a waiting spinner while it is on screen, so its tests pump
+frames instead of settling; `pumpAndSettle` only returns once the success path
+has popped the screen, which is exactly why the failure case needs the former.
+
 What stayed out: league and team picks, the language, and playback
 buffer choices. They need live catalogue data or a restart to take effect,
 and the point of this screen is the five-minute path from install to a

@@ -285,6 +285,13 @@ class PhonePairingSession {
         PairingKind.playlist => '',
       };
 
+  /// Whether [r] belongs to this session's kind. Exposed for tests: the
+  /// refusal rules are what keep a stale phone page from writing settings a
+  /// playlist-only session never offered, and opening a real server to prove
+  /// them would test the socket, not the rule.
+  @visibleForTesting
+  bool acceptsResult(PairingResult r) => _accepts(r);
+
   bool _accepts(PairingResult r) => switch (kind) {
         PairingKind.link => r.mode == 'link',
         PairingKind.names => r.mode == 'names',

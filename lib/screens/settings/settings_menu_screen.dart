@@ -10,6 +10,7 @@ import '../../widgets/settings_section.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../l10n/l10n.dart';
 
+import '../setup_from_phone_screen.dart';
 import 'general_settings_screen.dart';
 import 'remote_control_screen.dart';
 import 'app_update_screen.dart';
@@ -96,6 +97,13 @@ class SettingsMenuScreen extends StatelessWidget {
                           'Playlists & guide',
                           'Channels, categories and program listings',
                           const PlaylistManagerScreen()),
+                      // The same QR/page first run uses, so a second playlist or
+                      // a later look change never needs the welcome flow.
+                      link(
+                          Icons.qr_code_2,
+                          'Set up from phone',
+                          'Scan a code to add a playlist, theme and updates',
+                          const SetupFromPhoneScreen()),
                       link(
                           Icons.drive_file_rename_outline,
                           'Channel names',
