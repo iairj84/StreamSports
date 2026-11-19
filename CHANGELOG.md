@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.69 — 18 November 2026
+
+- Set up from phone is now in Settings > Your TV, so a second playlist, a Stalker portal or a later theme change is one scan away without reinstalling.
+- The phone setup page also offers the Live/Movies/Series choice per playlist, and a failed setup leaves the code screen up so the details can be corrected and scanned again instead of starting over.
+
 ## 0.2.68 — 18 November 2026
 
 - A new install can now be set up entirely from a phone: one QR code carries the playlist plus the theme, surface, clock, spoiler setting and update channel, and the device applies all of it at once and opens ready to watch.
