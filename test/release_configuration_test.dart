@@ -59,6 +59,28 @@ void main() {
       }
     }, _LocalHttpOverrides());
   });
+  test('the phone page is told this device\'s palette and surface', () async {
+    // The page is a screen of this app, so it adopts the look of the TV that
+    // showed the code instead of falling back to its own grey theme.
+    await HttpOverrides.runWithHttpOverrides(() async {
+      final session =
+          PhonePairingSession(palette: 'stadium_night', surface: 'stadium');
+      try {
+        await session.start();
+        final local = session.lanUrl;
+        if (local == null) {
+          // Headless CI may have no private IPv4 interface.
+          expect(session.isExpired, isFalse);
+          return;
+        }
+        expect(Uri.parse(local).queryParameters,
+            {'p': 'stadium_night', 's': 'stadium'});
+      } finally {
+        await session.stop();
+      }
+    }, _LocalHttpOverrides());
+  });
+
   // Synthetic interface addresses; no device configuration is used.
   test('pairing prefers LAN and never advertises a known VPN tunnel', () {
     String address(List<int> octets) =>

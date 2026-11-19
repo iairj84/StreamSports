@@ -1,5 +1,40 @@
 # Design notes
 
+## The phone page wears the app's clothes
+
+`pair.html` used to be a web form that happened to talk to a TV: its own grey
+palette, its own square buttons, and the pre-rename project name in every
+heading. That page is where a viewer is asked for provider logins, so looking
+like an unrelated website undermines the one moment the app has to look
+trustworthy on a second screen. It now reads as another screen of StreamSports.
+
+Nothing here is a second design system. The page carries the same tokens the
+app does, expressed as CSS variables:
+
+The palette blocks mirror `tv_theme.dart`'s swatches (surface, container,
+outline, on-surface, variant and the duo-tone accent). They are approximations,
+not the exact output of Material's HCT seeding — reproducing that in CSS would
+mean shipping the colour-science code to a phone for a page whose job is one
+form. Approximating the hue, the panel lift and the accent is enough for the
+page to read as the same product, and the default block is Classic TV's exact
+`#171D25`/`#252E39`/`#90CAF9`.
+
+The surface tokens copy `SurfaceTokens`' three-way split rather than one general
+"rounded" flag: Classic keeps flat fills and 8px corners, Modern adds its glow,
+and Stadium Night brings 22px panels, pill buttons, tracked uppercase labels and
+ring-only selection (`box-shadow: inset 0 0 0 2px` instead of an accent fill) —
+the same `focusRingOnly` distinction the widgets make. A selected tab therefore
+fills with accent in Classic and keeps its surface in Stadium Night, which is
+exactly how a focused row behaves on the TV.
+
+The look reaches the phone through the query string (`?p=<palette>&s=<surface>`,
+next to the existing `b=restore`), not through the payload: it changes nothing
+about what the TV accepts, the fragment still carries the relay key, and both
+the relay and the LAN server route on the path alone. On the setup form the
+selects start on that same look, so sending never resets a theme the viewer
+already chose, and changing either one repaints the page — the choice previews
+itself while the thumb is still on the screen.
+
 ## First run sets up on the phone, not the remote
 
 A new install used to ask "add a playlist?" and then hand over a form built

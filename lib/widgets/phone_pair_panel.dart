@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../services/app_preferences.dart';
 import '../services/phone_pairing_service.dart';
 import 'live_resume_hint.dart';
 import '../l10n/l10n.dart';
@@ -66,6 +68,11 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
   }
 
   Future<void> _start() async {
+    // Captured before the awaits below, and the only thing this panel needs a
+    // BuildContext for: the phone page is painted in this device's own look,
+    // so the form reads as part of the app rather than as a website that
+    // happens to talk to it.
+    final look = context.read<AppPreferences?>();
     await _sub?.cancel();
     await _session?.stop();
     final session = PhonePairingSession(
@@ -73,7 +80,9 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         channels: widget.channels,
         backupList: widget.backupList,
         backupBytes: widget.backupBytes,
-        backupRestore: widget.backupRestore);
+        backupRestore: widget.backupRestore,
+        palette: look?.palette.id,
+        surface: look?.surfaceStyle.name);
     _session = session;
     setState(() {
       _starting = true;

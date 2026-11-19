@@ -251,7 +251,9 @@ class PhonePairingSession {
       this.channels,
       this.backupList,
       this.backupBytes,
-      this.backupRestore = false});
+      this.backupRestore = false,
+      this.palette,
+      this.surface});
 
   final Duration lifetime;
 
@@ -275,6 +277,14 @@ class PhonePairingSession {
   /// Opens the phone page on its Restore side instead of Save, which is what a
   /// new device needs.
   final bool backupRestore;
+
+  /// This device's current look (`CyberpunkPalette.id` and
+  /// `SurfaceStyle.name`). The phone page is a screen of this app, so it is
+  /// painted in the same palette and surface style instead of a generic web
+  /// form; null paints the shipped default. Sent in the URL query, which the
+  /// relay and the LAN server both ignore when routing.
+  final String? palette;
+  final String? surface;
 
   /// The URL-fragment suffix pair.html reads (see [PairingKind]).
   String get _kindSuffix => switch (kind) {
@@ -322,7 +332,22 @@ class PhonePairingSession {
   /// IPv4 address (then only the relay path can work).
   String? get lanUrl => _lanUrl;
 
-  String get relayUrl => '$kPairRelayBase/p#$_sessionId.${_b64url(_key)}'
+  /// Query string the phone page reads: this device's look, plus which side
+  /// of the backup screen to open. It stays before the fragment, which
+  /// carries the relay key and the kind suffix and is never sent anywhere.
+  String get _lookQuery {
+    final params = <String>[
+      if (palette != null && palette!.isNotEmpty)
+        'p=${Uri.encodeQueryComponent(palette!)}',
+      if (surface != null && surface!.isNotEmpty)
+        's=${Uri.encodeQueryComponent(surface!)}',
+      if (kind == PairingKind.backup && backupRestore) 'b=restore',
+    ];
+    return params.isEmpty ? '' : '?${params.join('&')}';
+  }
+
+  String get relayUrl =>
+      '$kPairRelayBase/p$_lookQuery#$_sessionId.${_b64url(_key)}'
       '${_kindSuffix.isEmpty ? '' : '.$_kindSuffix'}';
 
   bool get isExpired => _done;
@@ -335,9 +360,7 @@ class PhonePairingSession {
     try {
       final server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
       _server = server;
-      final query =
-          kind == PairingKind.backup && backupRestore ? '?b=restore' : '';
-      _lanUrl = 'http://${ip.address}:${server.port}/p/$_token$query'
+      _lanUrl = 'http://${ip.address}:${server.port}/p/$_token$_lookQuery'
           '${_kindSuffix.isEmpty ? '' : '#$_kindSuffix'}';
       server.listen(_handle, onError: (Object e) {
         debugPrint('PhonePairing: server error ${e.runtimeType}');
