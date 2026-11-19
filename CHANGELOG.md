@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.77 — 19 November 2026
+
+- AUD-001: device transfer now requires the viewer's approval before applying a bundle, consumes that approval once, resets the handshake after refusal/timeout and closes the listener when the transfer ends. Adds regression coverage for unapproved, replayed, declined and timed-out handshakes.
+
 ## 0.2.76 — 19 November 2026
 
 - Add docs/ARCHITECTURE.md: one map of the service graph, storage layers, data flow, build/test commands and beta/stable release flow, linked from the README.
