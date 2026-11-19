@@ -458,6 +458,19 @@ const Map<String, String> kEs = {
   // ── Phone pairing ────────────────────────────────────────────────────
   'Code expired': "Código caducado",
   'Add from your phone': "Añadir desde tu teléfono",
+  'Settings from phone': "Ajustes desde el teléfono",
+  'Settings from your phone': "Ajustes desde tu teléfono",
+  'Change the look, playback and tabs on your phone':
+      "Cambia el aspecto, la reproducción y las pestañas desde tu teléfono",
+  'Scan this code and change the settings on your TV. The form opens on what this TV has now, and nothing here touches your playlists.':
+      "Escanea este código y cambia los ajustes de tu TV. El formulario se abre con lo que la TV tiene ahora y nada de aquí toca tus listas.",
+  'Change the settings you want.': "Cambia los ajustes que quieras.",
+  'Tap Send to TV — they take effect here straight away.':
+      "Toca «Send to TV» y se aplican aquí al momento.",
+  'Settings saved on your TV.': "Ajustes guardados en tu TV.",
+  'The settings could not be saved. Try again.':
+      "No se pudieron guardar los ajustes. Inténtalo de nuevo.",
+  'Saving settings…': "Guardando ajustes…",
   'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.':
       "Escribir una contraseña larga con el control remoto es un fastidio. Escanea este código con la cámara del teléfono y rellena el formulario allí; aparecerá aquí para que lo revises y lo añadas.",
   'Scan with your phone (mobile data is fine).':

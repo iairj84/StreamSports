@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/app_preferences.dart';
 import '../services/phone_pairing_service.dart';
+import '../services/phone_settings.dart';
+import '../services/storage_service.dart';
 import 'live_resume_hint.dart';
 import '../l10n/l10n.dart';
 import '../utils/tv_theme.dart';
@@ -26,6 +28,10 @@ class PhonePairPanel extends StatefulWidget {
 
   /// [PairingKind.link]: the phone shows one link box instead of the
   /// playlist form (Settings > Archive sources).
+  ///
+  /// [PairingKind.settings]: the phone shows this TV's settings and no
+  /// playlist fields at all, so a later preference change never asks for a
+  /// provider login.
   final PairingKind kind;
 
   /// [PairingKind.names]: the channels the phone may rename, served to it over
@@ -73,6 +79,15 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     // so the form reads as part of the app rather than as a website that
     // happens to talk to it.
     final look = context.read<AppPreferences?>();
+    final storage = context.read<StorageService?>();
+    // The setup and settings pages open on this device's current values, so
+    // the phone can change one switch without resetting the others.
+    final current = look != null &&
+            storage != null &&
+            (widget.kind == PairingKind.settings ||
+                widget.kind == PairingKind.setup)
+        ? phoneSettingsSnapshot(prefs: look, storage: storage)
+        : null;
     await _sub?.cancel();
     await _session?.stop();
     final session = PhonePairingSession(
@@ -82,7 +97,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         backupBytes: widget.backupBytes,
         backupRestore: widget.backupRestore,
         palette: look?.palette.id,
-        surface: look?.surfaceStyle.name);
+        surface: look?.surfaceStyle.name,
+        settings: current);
     _session = session;
     setState(() {
       _starting = true;
@@ -141,6 +157,62 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         session == null ? null : (_relay ? session.relayUrl : session.lanUrl);
     final muted = theme.textTheme.bodySmall?.copyWith(color: Colors.white60);
 
+    final isLink = widget.kind == PairingKind.link;
+    final isNames = widget.kind == PairingKind.names;
+    final isBackup = widget.kind == PairingKind.backup;
+    final isSetup = widget.kind == PairingKind.setup;
+    final isSettings = widget.kind == PairingKind.settings;
+    final title = isSettings
+        ? tr('Settings from your phone')
+        : isNames
+            ? tr('Rename channels from your phone')
+            : isBackup
+                ? tr('Move a backup with your phone')
+                : isSetup
+                    ? tr('Set up this device from your phone')
+                    : tr('Add from your phone');
+    final lead = isNames
+        ? tr(
+            'Renaming with a remote is painful. Scan this code with your phone camera, edit the names there and they appear on the TV straight away.')
+        : isBackup
+            ? tr(
+                'Download this device’s backup onto your phone, or pick a backup the phone already has and send it here to set this device up.')
+            : isSetup
+                ? tr(
+                    'Scan this code with your phone camera and set the whole device up there: your playlist, the theme and surface, the clock and the update channel all arrive here at once.')
+                : isSettings
+                    ? tr(
+                        'Scan this code and change the settings on your TV. The form opens on what this TV has now, and nothing here touches your playlists.')
+                    : isLink
+                        ? tr(
+                            'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
+                        : tr(
+                            'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.');
+    final step2 = isNames
+        ? tr('Search your channels and type the new names.')
+        : isBackup
+            ? tr('Choose Save to phone or Restore from phone.')
+            : isSetup
+                ? tr(
+                    'Add your playlist, then choose the theme, surface and update channel.')
+                : isSettings
+                    ? tr('Change the settings you want.')
+                    : isLink
+                        ? tr('Paste the link and tap Send to TV.')
+                        : tr('Fill in the form and tap Send to TV.');
+    final step3 = isNames
+        ? tr('Tap Send to TV — the names change here.')
+        : isBackup
+            ? tr('Confirm on the TV before anything is replaced.')
+            : isSetup
+                ? tr(
+                    'Tap Send to TV — the playlist is added and the settings change here.')
+                : isSettings
+                    ? tr('Tap Send to TV — they take effect here straight away.')
+                    : isLink
+                        ? tr('Check the link here, then press Add.')
+                        : tr('Check the details here, then press Add Playlist.');
+
     Widget code;
     if (!_starting && url == null) {
       code = const SizedBox(
@@ -180,43 +252,15 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
       );
     }
 
-    final isLink = widget.kind == PairingKind.link;
-    final isNames = widget.kind == PairingKind.names;
-    final isBackup = widget.kind == PairingKind.backup;
-    final isSetup = widget.kind == PairingKind.setup;
     // The relay can carry a phone's upload but cannot hand a list or a file
     // back, so these pages only work on the same Wi-Fi.
     final lanOnly = isNames || isBackup;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-            isNames
-                ? tr('Rename channels from your phone')
-                : isBackup
-                    ? tr('Move a backup with your phone')
-                    : isSetup
-                        ? tr('Set up this device from your phone')
-                        : tr('Add from your phone'),
-            style: theme.textTheme.titleLarge),
+        Text(title, style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
-        Text(
-          isNames
-              ? tr(
-                  'Renaming with a remote is painful. Scan this code with your phone camera, edit the names there and they appear on the TV straight away.')
-              : isBackup
-                  ? tr(
-                      'Download this device’s backup onto your phone, or pick a backup the phone already has and send it here to set this device up.')
-                  : isSetup
-                      ? tr(
-                          'Scan this code with your phone camera and set the whole device up there: your playlist, the theme and surface, the clock and the update channel all arrive here at once.')
-                      : isLink
-                      ? tr(
-                          'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
-                      : tr(
-                          'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
-          style: muted,
-        ),
+        Text(lead, style: muted),
         const SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,33 +277,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                           ? tr('Scan with your phone (mobile data is fine).')
                           : tr(
                               'Connect your phone to the same Wi-Fi as this TV, then scan.')),
-                  _Step(
-                      n: 2,
-                      text: isNames
-                          ? tr('Search your channels and type the new names.')
-                          : isBackup
-                              ? tr(
-                                  'Choose Save to phone or Restore from phone.')
-                              : isSetup
-                                  ? tr(
-                                      'Add your playlist, then choose the theme, surface and update channel.')
-                                  : isLink
-                                      ? tr('Paste the link and tap Send to TV.')
-                                      : tr('Fill in the form and tap Send to TV.')),
-                  _Step(
-                      n: 3,
-                      text: isNames
-                          ? tr('Tap Send to TV — the names change here.')
-                          : isBackup
-                              ? tr(
-                                  'Confirm on the TV before anything is replaced.')
-                              : isSetup
-                                  ? tr(
-                                      'Tap Send to TV — the playlist is added and the settings change here.')
-                                  : isLink
-                                      ? tr('Check the link here, then press Add.')
-                                      : tr(
-                                          'Check the details here, then press Add Playlist.')),
+                  _Step(n: 2, text: step2),
+                  _Step(n: 3, text: step3),
                   const SizedBox(height: 12),
                   if (!_starting && !_expired && url != null)
                     Row(

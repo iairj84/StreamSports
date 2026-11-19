@@ -130,12 +130,21 @@ class AppUpdateService extends ChangeNotifier {
   String get rollingTag => includeEarly ? 'beta-latest' : 'stable-latest';
 
   Future<void> setChannel(String next) async {
+    await setChannelLocally(next);
+    await check(manual: true);
+  }
+
+  /// Records the channel and drops any release belonging to the old one,
+  /// without asking the feed. Used when the channel arrives from a phone:
+  /// the viewer is waiting for the TV to accept a form, and a slow network
+  /// must not sit between the phone and its confirmation. The next check
+  /// ([channel] reads storage every time) follows the new value.
+  Future<void> setChannelLocally(String next) async {
     await _storage.setUpdateChannel(next);
     _downloaded = null;
     available = null;
     _checkedThisSession = false;
     notifyListeners();
-    await check(manual: true);
   }
 
   Future<void> load() async {

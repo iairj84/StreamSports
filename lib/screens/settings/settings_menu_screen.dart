@@ -22,6 +22,7 @@ import 'library_settings_screen.dart';
 import 'launcher_icon_screen.dart';
 import 'channel_names_screen.dart';
 import 'backup_screen.dart';
+import 'settings_from_phone_screen.dart';
 
 enum SettingsAction {
   live,
@@ -118,6 +119,14 @@ class SettingsMenuScreen extends StatelessWidget {
                           const LibrarySettingsScreen()),
                     ]),
                     SettingsSection(title: tr('Make it yours'), children: [
+                      // The settings page with no playlist on it: a preference
+                      // change should be a scan, not a walk through the menus
+                      // with a remote.
+                      link(
+                          Icons.phonelink_setup,
+                          'Settings from phone',
+                          'Change the look, playback and tabs on your phone',
+                          const SettingsFromPhoneScreen()),
                       link(
                           Icons.tune,
                           'Playback & preferences',

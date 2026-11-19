@@ -129,6 +129,45 @@ void main() {
     expect(result.portalUsername, 'user');
   });
 
+  test('a settings payload needs no playlist and keeps known keys only', () {
+    final result = PairingResult.fromJson({
+      'mode': 'settings',
+      'settings': {
+        'palette': ' OLED ',
+        'buffer': 'balanced',
+        'livebuffer': '4000',
+        'startup': 'full',
+        'moviestab': 'false',
+        'alien': 'yes',
+      },
+    });
+    expect(result, isNotNull);
+    expect(result!.mode, 'settings');
+    expect(result.fromSetup, isFalse);
+    expect(result.settings, {
+      'palette': 'oled',
+      'buffer': 'balanced',
+      'livebuffer': '4000',
+      'startup': 'full',
+      'moviestab': 'false',
+    });
+    // A settings page never carries playlist fields.
+    expect(result.name, isEmpty);
+    expect(result.server, isEmpty);
+  });
+
+  test('a settings payload with nothing to apply is refused', () {
+    expect(PairingResult.fromJson({'mode': 'settings'}), isNull);
+    expect(
+        PairingResult.fromJson({'mode': 'settings', 'settings': {}}), isNull);
+    expect(
+        PairingResult.fromJson({
+          'mode': 'settings',
+          'settings': {'alien': 'yes'}
+        }),
+        isNull);
+  });
+
   test('a names payload needs a list of renames', () {
     expect(PairingResult.fromJson({'mode': 'names'}), isNull);
     expect(PairingResult.fromJson({'mode': 'names', 'renames': []}), isNull);

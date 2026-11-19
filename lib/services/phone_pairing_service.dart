@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 
+import 'phone_settings.dart';
+
 /// Optional self-hosted relay. LAN pairing works without a relay.
 const String kPairRelayBase = String.fromEnvironment('PAIR_RELAY_BASE');
 
@@ -25,7 +27,11 @@ const int _maxBackupChars = 24 * 1024 * 1024;
 /// restore). pair.html picks its form from a `.link` / `#link`, `.names` /
 /// `#names`, `.backup` / `#backup` or `.setup` / `#setup` suffix on the URL
 /// fragment.
-enum PairingKind { playlist, setup, link, names, backup }
+///
+/// [settings] is the one that never carries a playlist: a preference changed
+/// after first run should not cost a provider login, so Settings > Settings
+/// from phone puts up a page with the device's own settings on it alone.
+enum PairingKind { playlist, setup, settings, link, names, backup }
 
 /// What the phone sent: the same fields Add Playlist has, one [link], or the
 /// channel names it edited.
@@ -53,7 +59,7 @@ class PairingResult {
     this.fromSetup = false,
   });
 
-  /// 'xtream', 'm3u' or 'link'.
+  /// 'xtream', 'm3u', 'stalker', 'link', 'names', 'backup' or 'settings'.
   final String mode;
 
   /// Set when [mode] is 'link'.
@@ -84,22 +90,13 @@ class PairingResult {
   final bool includeMovies;
   final bool includeSeries;
 
-  /// Which settings the phone chose during setup, keyed by
-  /// [setupSettingKeys]. Empty outside a setup session.
+  /// Which settings the phone chose, keyed by [phoneSettingKeys]. Empty for
+  /// every mode except `setup` (playlist plus settings) and `settings`
+  /// (settings alone).
   final Map<String, String> settings;
 
   /// True for a setup payload: [mode] is the playlist kind it carries.
   final bool fromSetup;
-
-  /// The keys a setup page may set. Anything else is dropped on the way in,
-  /// so a stale or hand-edited page cannot write an arbitrary preference.
-  static const List<String> setupSettingKeys = [
-    'palette',
-    'surface',
-    'clock24',
-    'scores',
-    'update',
-  ];
 
   PairingResult copyWith(
           {Map<String, String>? settings, bool? fromSetup}) =>
@@ -126,6 +123,22 @@ class PairingResult {
         fromSetup: fromSetup ?? this.fromSetup,
       );
 
+  /// The subset of [raw] this build may apply: known keys only, trimmed and
+  /// lower-cased, short enough to be a value. A stale or hand-edited page
+  /// cannot write a preference no phone page ever offered.
+  static Map<String, String> _chosenSettings(Object? raw) {
+    final chosen = <String, String>{};
+    if (raw is! Map) return chosen;
+    for (final key in phoneSettingKeys) {
+      final value = raw[key];
+      if (value is! String) continue;
+      final trimmed = value.trim().toLowerCase();
+      if (trimmed.isEmpty || trimmed.length > 40) continue;
+      chosen[key] = trimmed;
+    }
+    return chosen;
+  }
+
   /// Null when the payload isn't something the form could have produced.
   static PairingResult? fromJson(Object? json) {
     if (json is! Map) return null;
@@ -147,18 +160,16 @@ class PairingResult {
           inner.mode != 'stalker') {
         return null;
       }
-      final chosen = <String, String>{};
-      final raw = json['settings'];
-      if (raw is Map) {
-        for (final key in setupSettingKeys) {
-          final value = raw[key];
-          if (value is! String) continue;
-          final trimmed = value.trim().toLowerCase();
-          if (trimmed.isEmpty || trimmed.length > 40) continue;
-          chosen[key] = trimmed;
-        }
-      }
-      return inner.copyWith(settings: chosen, fromSetup: true);
+      return inner.copyWith(
+          settings: _chosenSettings(json['settings']), fromSetup: true);
+    }
+    // Settings alone: no playlist, so the same page can be opened from
+    // Settings years after the first scan. Nothing to apply is not a result.
+    if (mode == 'settings') {
+      final chosen = _chosenSettings(json['settings']);
+      return chosen.isEmpty
+          ? null
+          : PairingResult(mode: 'settings', settings: chosen);
     }
     if (mode == 'names') {
       final raw = json['renames'];
@@ -253,7 +264,8 @@ class PhonePairingSession {
       this.backupBytes,
       this.backupRestore = false,
       this.palette,
-      this.surface});
+      this.surface,
+      this.settings});
 
   final Duration lifetime;
 
@@ -286,12 +298,19 @@ class PhonePairingSession {
   final String? palette;
   final String? surface;
 
+  /// This device's current settings (see [phoneSettingsSnapshot]), sent in the
+  /// URL query so the phone opens on them: every switch and select starts at
+  /// the value the TV actually has, and sending a form never resets a choice
+  /// the viewer did not touch. Null for kinds that carry no settings.
+  final Map<String, String>? settings;
+
   /// The URL-fragment suffix pair.html reads (see [PairingKind]).
   String get _kindSuffix => switch (kind) {
         PairingKind.link => 'link',
         PairingKind.names => 'names',
         PairingKind.backup => 'backup',
         PairingKind.setup => 'setup',
+        PairingKind.settings => 'settings',
         PairingKind.playlist => '',
       };
 
@@ -307,9 +326,13 @@ class PhonePairingSession {
         PairingKind.names => r.mode == 'names',
         PairingKind.backup => r.mode == 'backup',
         PairingKind.setup => r.fromSetup,
+        PairingKind.settings => r.mode == 'settings',
         // A setup payload carries a playlist mode too, but only a setup
-        // session may apply its settings.
+        // session may apply its settings. A settings payload carries no
+        // playlist at all, so a playlist session has nothing to add and the
+        // other direction is refused as well.
         PairingKind.playlist => !r.fromSetup &&
+            r.mode != 'settings' &&
             r.mode != 'link' &&
             r.mode != 'names' &&
             r.mode != 'backup',
@@ -326,7 +349,13 @@ class PhonePairingSession {
   Timer? _relayPoll;
   Timer? _expiry;
   bool _done = false;
-  String? _pageHtml;
+
+  /// The phone page, read once per process and only when a phone actually
+  /// asks for it: opening a code should not wait on a 55 KB asset that may
+  /// never be fetched.
+  static Future<String>? _pageFuture;
+  static Future<String> _page() =>
+      _pageFuture ??= rootBundle.loadString('assets/pair/pair.html');
 
   /// `http://<ip>:<port>/p/<token>`, or null when the TV has no private
   /// IPv4 address (then only the relay path can work).
@@ -342,9 +371,22 @@ class PhonePairingSession {
       if (surface != null && surface!.isNotEmpty)
         's=${Uri.encodeQueryComponent(surface!)}',
       if (kind == PairingKind.backup && backupRestore) 'b=restore',
+      for (final entry in (settings ?? const <String, String>{}).entries)
+        // The look keeps its own p/s keys above; everything else travels
+        // under the name it has in the payload, so the page has one
+        // vocabulary for what it reads and what it sends.
+        if (entry.value.isNotEmpty &&
+            entry.key != 'palette' &&
+            entry.key != 'surface')
+          '${entry.key}=${Uri.encodeQueryComponent(entry.value)}',
     ];
     return params.isEmpty ? '' : '?${params.join('&')}';
   }
+
+  /// [_lookQuery], exposed for tests: opening a real socket to prove what the
+  /// page was told would test the socket, not the page's starting values.
+  @visibleForTesting
+  String get lookQuery => _lookQuery;
 
   String get relayUrl =>
       '$kPairRelayBase/p$_lookQuery#$_sessionId.${_b64url(_key)}'
@@ -354,7 +396,6 @@ class PhonePairingSession {
 
   Future<void> start() async {
     _expiry = Timer(lifetime, stop);
-    _pageHtml = await rootBundle.loadString('assets/pair/pair.html');
     final ip = await _privateIpv4();
     if (ip == null) return;
     try {
@@ -465,7 +506,7 @@ class PhonePairingSession {
       }
       if (req.method == 'GET') {
         res.headers.contentType = ContentType.html;
-        res.write(_pageHtml ?? '');
+        res.write(await _page());
         return;
       }
       if (req.method != 'POST') {

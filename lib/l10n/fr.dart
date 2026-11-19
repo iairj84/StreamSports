@@ -458,6 +458,19 @@ const Map<String, String> kFr = {
   // ── Phone pairing ────────────────────────────────────────────────────
   'Code expired': "Code expiré",
   'Add from your phone': "Ajouter avec votre téléphone",
+  'Settings from phone': "Réglages depuis le téléphone",
+  'Settings from your phone': "Réglages depuis votre téléphone",
+  'Change the look, playback and tabs on your phone':
+      "Changez l'apparence, la lecture et les onglets depuis votre téléphone",
+  'Scan this code and change the settings on your TV. The form opens on what this TV has now, and nothing here touches your playlists.':
+      "Scannez ce code et modifiez les réglages de votre télé. Le formulaire s'ouvre sur ce que la télé a maintenant, et rien ici ne touche à vos listes.",
+  'Change the settings you want.': "Modifiez les réglages que vous voulez.",
+  'Tap Send to TV — they take effect here straight away.':
+      "Touchez « Send to TV » : ils s'appliquent ici tout de suite.",
+  'Settings saved on your TV.': "Réglages enregistrés sur votre télé.",
+  'The settings could not be saved. Try again.':
+      "Impossible d'enregistrer les réglages. Réessayez.",
+  'Saving settings…': "Enregistrement des réglages…",
   'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.':
       "Taper un long mot de passe avec une télécommande, c'est pénible. Scannez ce code avec l'appareil photo de votre téléphone et remplissez le formulaire — il apparaît ici pour vérification et ajout.",
   'Scan with your phone (mobile data is fine).':

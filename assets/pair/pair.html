@@ -21,6 +21,11 @@
   appearance and update choices, plus Stalker and content-type fields, and
   sends {"mode":"setup","playlist":{…},"settings":{…}} so one scan sets the
   whole device up.
+  A trailing ".settings" drops the playlist form entirely and shows this TV's
+  settings, sending {"mode":"settings","settings":{…}} and nothing else: a
+  preference changed after first run never asks for a provider login. The
+  query also carries the device's current values, so the form opens on them
+  instead of on defaults.
   The TV appends ?p=<palette>&s=<surface> (its current look, see
   SurfaceStyle/CyberpunkPalette) so this page is painted in the same palette
   and surface style as the TV it is talking to — the palette blocks below
@@ -350,6 +355,28 @@
   };
   document.body.setAttribute("data-palette", window.pairLook.palette);
   document.body.setAttribute("data-surface", window.pairLook.surface);
+  // The TV's current settings ride in the query beside the look (see
+  // PhonePairingSession._lookQuery). Settings and setup start from them, so a
+  // form that changes one switch cannot quietly reset the rest.
+  var setting = function (key) {
+    var value = query[key];
+    return typeof value === "string" && value !== "" ? value : null;
+  };
+  window.pairSettings = {
+    clock24: setting("clock24"),
+    language: setting("language"),
+    buffer: setting("buffer"),
+    livebuffer: setting("livebuffer"),
+    startup: setting("startup"),
+    updateplaylists: setting("updateplaylists"),
+    pip: setting("pip"),
+    resumepill: setting("resumepill"),
+    moviestab: setting("moviestab"),
+    seriestab: setting("seriestab"),
+    multiview: setting("multiview"),
+    scores: setting("scores"),
+    update: setting("update"),
+  };
 })();
 </script>
 <div class="shell">
@@ -490,6 +517,124 @@
       <div class="msg" id="msg"></div>
     </section>
 
+    <!-- Settings alone: no playlist fields at all. Opened by Settings >
+         Settings from phone, long after first run. -->
+    <section id="settings-view" hidden>
+      <p class="kicker">From your phone</p>
+      <h1>Settings</h1>
+      <p class="lead">Change what you want and leave the rest. The form starts with what your TV has now, and nothing here touches your playlists.</p>
+
+      <div class="card">
+        <p class="section-label">How it should look</p>
+        <div class="field">
+          <label for="set-theme">Theme</label>
+          <div class="select-wrap">
+            <select id="set-theme">
+              <option value="classic_tv">Dark grey</option>
+              <option value="oled">OLED black</option>
+              <option value="light">Light</option>
+              <option value="midnight">Midnight</option>
+              <option value="ember">Ember</option>
+              <option value="forest">Forest</option>
+              <option value="stadium_night">Lime black</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="set-surface">Surface</label>
+          <div class="select-wrap">
+            <select id="set-surface">
+              <option value="classic">Classic</option>
+              <option value="modern">Modern</option>
+              <option value="stadium">Stadium Night</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-label">Clock &amp; language</p>
+        <div class="field">
+          <label for="set-language">Language</label>
+          <div class="select-wrap">
+            <select id="set-language">
+              <option value="auto">Automatic</option>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
+              <option value="it">Italiano</option>
+            </select>
+          </div>
+        </div>
+        <label class="switch"><span>24-hour clock</span><input type="checkbox" id="set-clock"></label>
+      </div>
+
+      <div class="card">
+        <p class="section-label">Playback</p>
+        <div class="field">
+          <label for="set-buffer">Start-up buffering</label>
+          <div class="select-wrap">
+            <select id="set-buffer">
+              <option value="auto">Automatic (recommended)</option>
+              <option value="quick">Quick start</option>
+              <option value="balanced">Balanced</option>
+              <option value="steady">Smoothest</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="set-live">Live buffer</label>
+          <div class="select-wrap">
+            <select id="set-live">
+              <option value="0">Off</option>
+              <option value="-1">Gradual (starts fast, builds up)</option>
+              <option value="1500">Small (1.5 seconds)</option>
+              <option value="4000">4 seconds</option>
+              <option value="8000">8 seconds</option>
+              <option value="12000">12 seconds</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="set-startup">Playback at startup</label>
+          <div class="select-wrap">
+            <select id="set-startup">
+              <option value="off">Do not play automatically</option>
+              <option value="preview">In the preview</option>
+              <option value="full">Full screen</option>
+            </select>
+          </div>
+        </div>
+        <label class="switch"><span>Update playlists at startup</span><input type="checkbox" id="set-update-playlists"></label>
+        <label class="switch"><span>Picture-in-picture when you press Home</span><input type="checkbox" id="set-pip"></label>
+        <label class="switch"><span>Show the &quot;Hold &gt; to resume&quot; reminder</span><input type="checkbox" id="set-resume-pill"></label>
+      </div>
+
+      <div class="card">
+        <p class="section-label">Tabs &amp; multiview</p>
+        <label class="switch"><span>Movies tab</span><input type="checkbox" id="set-movies"></label>
+        <label class="switch"><span>Series tab</span><input type="checkbox" id="set-series"></label>
+        <label class="switch"><span>Multiview</span><input type="checkbox" id="set-multiview"></label>
+      </div>
+
+      <div class="card">
+        <p class="section-label">Sports</p>
+        <label class="switch"><span>Hide scores on sports cards</span><input type="checkbox" id="set-scores"></label>
+      </div>
+
+      <div class="card">
+        <p class="section-label">Updates</p>
+        <div class="tabs" role="group" aria-label="Update channel">
+          <button type="button" id="set-update-stable" aria-pressed="true">Stable</button>
+          <button type="button" id="set-update-early" aria-pressed="false">Early builds</button>
+        </div>
+        <p class="hint" style="margin:0">Early builds are test versions. Stable is the safe choice.</p>
+      </div>
+
+      <button class="send" id="set-send" type="button">Send to TV</button>
+      <div class="msg" id="set-msg"></div>
+    </section>
+
     <section id="link-view" hidden>
       <p class="kicker">From your phone</p>
       <h1>Send a link to your TV</h1>
@@ -575,11 +720,28 @@
   if (linkKind) parts.pop();
   var setupKind = parts[parts.length - 1] === "setup";
   if (setupKind) parts.pop();
+  var settingsKind = parts[parts.length - 1] === "settings";
+  if (settingsKind) parts.pop();
   var relay = !namesKind && !backupKind && parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
 
   // The TV's look arrives in the query (see window.pairLook, set before the
   // first paint). Setup also offers a choice, so painting follows the selects.
   var look = window.pairLook || { palette: "classic_tv", surface: "classic" };
+  // Current values the TV put in the query: the settings and setup forms open
+  // on them, so changing one row cannot reset the others.
+  var current = window.pairSettings || {};
+
+  function seedSelect(id, value) {
+    var el = $(id);
+    if (!el || typeof value !== "string") return;
+    for (var i = 0; i < el.options.length; i++) {
+      if (el.options[i].value === value) { el.selectedIndex = i; return; }
+    }
+  }
+  function seedOn(id, value) {
+    var el = $(id);
+    if (el && (value === "1" || value === "0")) el.checked = value === "1";
+  }
 
   function paint(palette, surface) {
     document.body.setAttribute("data-palette", palette);
@@ -596,6 +758,23 @@
     paint(themeSelect && themeSelect.value ? themeSelect.value : look.palette,
       surfaceSelect && surfaceSelect.value ? surfaceSelect.value : look.surface);
   }
+  function paintFromSettings() {
+    var theme = $("set-theme"), surface = $("set-surface");
+    paint(theme && theme.value ? theme.value : look.palette,
+      surface && surface.value ? surface.value : look.surface);
+  }
+
+  // The settings page's update channel, tracked like the setup form's.
+  var settingsUpdate = "stable";
+  function setUpdate(which) {
+    settingsUpdate = which;
+    $("set-update-stable").setAttribute(
+      "aria-pressed", String(which === "stable"));
+    $("set-update-early").setAttribute(
+      "aria-pressed", String(which === "early"));
+  }
+  $("set-update-stable").onclick = function () { setUpdate("stable"); };
+  $("set-update-early").onclick = function () { setUpdate("early"); };
 
   if (namesKind) {
     // The channel list only exists on the TV itself, so this form is Wi-Fi only.
@@ -628,15 +807,44 @@
     $("form-lead").textContent =
       "Add your playlist and choose how the app looks. It all arrives on your TV at once.";
     document.title = "StreamSports · Set up";
-    setSetupUpdate("stable");
-    // Start on the look this device already has, so sending never resets it.
-    if (themeSelect) themeSelect.value = look.palette;
-    if (surfaceSelect) surfaceSelect.value = look.surface;
+    // Start on what this TV has now, so sending never resets a choice the
+    // viewer did not touch.
+    setSetupUpdate(current.update === "early" ? "early" : "stable");
+    seedSelect("setup-theme", look.palette);
+    seedSelect("setup-surface", look.surface);
+    seedOn("setup-clock", current.clock24);
+    seedOn("setup-scores", current.scores);
     paintFromForm();
     if (themeSelect) themeSelect.addEventListener("change", paintFromForm);
     if (surfaceSelect) surfaceSelect.addEventListener("change", paintFromForm);
     // Reveal the content choices the initial mode would otherwise hide.
     setMode("xtream");
+  }
+  if (settingsKind) {
+    // Settings alone: no playlist fields at all, so a later preference change
+    // costs one scan instead of a provider login.
+    $("form-view").hidden = true;
+    $("settings-view").hidden = false;
+    $("brand-chip").textContent = "Settings";
+    document.title = "StreamSports · Settings";
+    seedSelect("set-theme", look.palette);
+    seedSelect("set-surface", look.surface);
+    seedSelect("set-language", current.language);
+    seedSelect("set-buffer", current.buffer);
+    seedSelect("set-live", current.livebuffer);
+    seedSelect("set-startup", current.startup);
+    seedOn("set-clock", current.clock24);
+    seedOn("set-update-playlists", current.updateplaylists);
+    seedOn("set-pip", current.pip);
+    seedOn("set-resume-pill", current.resumepill);
+    seedOn("set-movies", current.moviestab);
+    seedOn("set-series", current.seriestab);
+    seedOn("set-multiview", current.multiview);
+    seedOn("set-scores", current.scores);
+    setUpdate(current.update === "early" ? "early" : "stable");
+    paintFromSettings();
+    $("set-theme").addEventListener("change", paintFromSettings);
+    $("set-surface").addEventListener("change", paintFromSettings);
   }
 
   function setMode(m) {
@@ -775,6 +983,55 @@
       },
     };
   }
+
+  // ---------------------------------------------------------------- settings
+  function collectSettings() {
+    var on = function (id) { return $(id).checked ? "true" : "false"; };
+    return {
+      v: 1,
+      mode: "settings",
+      settings: {
+        palette: $("set-theme").value,
+        surface: $("set-surface").value,
+        clock24: on("set-clock"),
+        language: $("set-language").value,
+        buffer: $("set-buffer").value,
+        livebuffer: $("set-live").value,
+        startup: $("set-startup").value,
+        updateplaylists: on("set-update-playlists"),
+        pip: on("set-pip"),
+        resumepill: on("set-resume-pill"),
+        moviestab: on("set-movies"),
+        seriestab: on("set-series"),
+        multiview: on("set-multiview"),
+        scores: on("set-scores"),
+        update: settingsUpdate,
+      },
+    };
+  }
+
+  function submitSettings() {
+    var btn = $("set-send");
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    var json = JSON.stringify(collectSettings());
+    (relay ? sendRelay(json) : sendLocal(json)).then(function () {
+      $("settings-view").hidden = true;
+      $("brand-chip").textContent = "Sent";
+      $("done-hint").textContent =
+        "Your TV has the new settings already. You can close this page.";
+      $("done-view").style.display = "block";
+    }).catch(function (err) {
+      var msg = $("set-msg");
+      msg.textContent = err && err.message
+        ? err.message : "Something went wrong. Try again.";
+      msg.className = "msg err";
+      msg.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Send to TV";
+    });
+  }
+  $("set-send").onclick = submitSettings;
 
   async function submit(e) {
     e.preventDefault();

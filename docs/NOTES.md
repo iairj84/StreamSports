@@ -105,11 +105,54 @@ The panel keeps a waiting spinner while it is on screen, so its tests pump
 frames instead of settling; `pumpAndSettle` only returns once the success path
 has popped the screen, which is exactly why the failure case needs the former.
 
-What stayed out: league and team picks, the language, and playback
-buffer choices. They need live catalogue data or a restart to take effect,
-and the point of this screen is the five-minute path from install to a
-picture. Hidden-channel and rename flows keep their own QR codes, because
-they act on a catalogue that does not exist yet at first run.
+What stayed out of the setup form: league and team picks, the language, and
+the playback buffer choices. The point of that screen is the five-minute path
+from install to a picture; every one of them is on the settings page below.
+Hidden-channel and rename flows keep their own QR codes, because they act on
+a catalogue that does not exist yet at first run.
+
+### Settings without a playlist
+
+The QR code under Settings > Your TV is a *setup* code: it carries a playlist
+because that is the job there. Every other preference — clock, language,
+startup buffering, live buffer, playback at startup, the resume pill, the
+Movies / Series / Multiview rows, hidden scores, the update channel — could
+only be changed by scanning that code and writing a provider login into it
+first, which made the phone's settings page unusable as a settings page.
+
+`PairingKind.settings` and a `.settings` view in `pair.html` split them:
+`{"mode":"settings","settings":{…}}` carries no playlist at all, and
+`SettingsFromPhoneScreen` applies it with no `PlaylistManager` in scope. The
+page shows the app-wide preferences a remote makes tedious, grouped the way
+the settings screens group them.
+
+Two rules keep a short visit from doing more than was asked:
+
+- The device's current values travel in the URL query
+  (`phoneSettingsSnapshot`), under the same keys the payload uses; the look
+  keeps its existing `p`/`s`. Both forms open on them, so sending after
+  changing one row leaves the rest alone — and the setup form's clock, scores
+  and update choice no longer start from hardcoded defaults either.
+- `phoneSettingKeys` is the one allow-list for both payload modes and
+  `applyPhoneSettings` the one writer. `PairingKind.playlist` refuses a
+  `settings` payload and `PairingKind.settings` refuses a setup payload, so an
+  old code still on screen can neither add a playlist nor write a preference
+  its page never offered. An unknown value inside a known key (a palette or a
+  buffering preset from a newer build) is ignored rather than fatal.
+
+`test/phone_settings_test.dart` covers it: all fifteen keys land in storage and
+in the live preference objects, a payload of values this build does not know
+changes nothing, the payload parses with no playlist fields, the snapshot
+round-trips through the allow-list, the session kinds refuse each other, and
+the screen renders with no `PlaylistManager` provider at all.
+
+Two pieces of the phone path stopped waiting on work that is not the viewer's
+business. The page is read once per process and only when a phone first asks
+for it, so opening a code no longer loads 55 KB that may never be fetched; and
+a channel change goes through `setChannelLocally` rather than the updater's
+`setChannel`, whose release-feed check used to sit between tapping Send and the
+confirmation screen — with a slow network the phone could sit on "Sending…"
+until the session expired.
 
 ## Stadium Night is a look, not a palette
 

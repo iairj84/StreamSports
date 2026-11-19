@@ -457,6 +457,19 @@ const Map<String, String> kIt = {
   // ── Phone pairing ────────────────────────────────────────────────────
   'Code expired': "Codice scaduto",
   'Add from your phone': "Aggiungi dal telefono",
+  'Settings from phone': "Impostazioni dal telefono",
+  'Settings from your phone': "Impostazioni dal tuo telefono",
+  'Change the look, playback and tabs on your phone':
+      "Cambia aspetto, riproduzione e schede dal telefono",
+  'Scan this code and change the settings on your TV. The form opens on what this TV has now, and nothing here touches your playlists.':
+      "Scansiona questo codice e cambia le impostazioni della TV. Il modulo si apre su ciò che la TV ha ora e nulla qui tocca le tue liste.",
+  'Change the settings you want.': "Cambia le impostazioni che vuoi.",
+  'Tap Send to TV — they take effect here straight away.':
+      "Tocca «Send to TV»: si applicano qui subito.",
+  'Settings saved on your TV.': "Impostazioni salvate sulla TV.",
+  'The settings could not be saved. Try again.':
+      "Impossibile salvare le impostazioni. Riprova.",
+  'Saving settings…': "Salvataggio impostazioni…",
   'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.':
       "Scrivere una password lunga col telecomando è una fatica. Scansiona questo codice con la fotocamera del telefono e compila lì il modulo: comparirà qui per controllarlo e aggiungerlo.",
   'Scan with your phone (mobile data is fine).':

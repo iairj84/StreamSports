@@ -43,6 +43,10 @@ void main() {
         expect(response.body, contains('StreamSports'));
         expect(response.body, contains('data-palette="stadium_night"'));
         expect(response.body, contains('form="form"'));
+        // The settings-only page ships with the same asset: a phone that has
+        // no playlist form to fill in still gets its own view.
+        expect(response.body, contains('id="settings-view"'));
+        expect(response.body, contains('id="set-language"'));
         final missing = await client.get(uri.replace(path: '/invalid'));
         expect(missing.statusCode, 404);
         final result = session.results.first;

@@ -5,15 +5,14 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/playlist_profile.dart';
-import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 import '../services/app_update_service.dart';
 import '../services/epg_service.dart';
 import '../services/phone_pairing_service.dart';
+import '../services/phone_settings.dart';
 import '../services/playlist_manager.dart';
 import '../services/stalker_portal_service.dart';
 import '../services/storage_service.dart';
-import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../utils/xtream.dart';
 import '../widgets/phone_pair_panel.dart';
@@ -71,30 +70,10 @@ class _SetupFromPhoneScreenState extends State<SetupFromPhoneScreen> {
     }
 
     try {
-      final settings = result.settings;
-      final paletteId = settings['palette'];
-      if (paletteId != null) {
-        for (final palette in AppConstants.cyberpunkPalettes) {
-          if (palette.id == paletteId) {
-            await prefs.setPalette(palette);
-            break;
-          }
-        }
-      }
-      if (settings['surface'] != null) {
-        await prefs.setSurfaceStyle(SurfaceTokens.fromId(settings['surface']!));
-      }
-      if (settings['clock24'] != null) {
-        prefs.setUse24h(settings['clock24'] == 'true');
-      }
-      if (settings['scores'] != null) {
-        await storage.setSportsHideScores(settings['scores'] == 'true');
-      }
-      if (settings['update'] != null) {
-        await update.setChannel(settings['update'] == AppConstants.updateChannelEarly
-            ? AppConstants.updateChannelEarly
-            : AppConstants.updateChannelStable);
-      }
+      // The same writer the settings-only page uses: a setup payload is the
+      // playlist plus whichever preferences the phone offered.
+      await applyPhoneSettings(result.settings,
+          prefs: prefs, storage: storage, update: update);
 
       final id = DateTime.now().microsecondsSinceEpoch.toString();
       final enteredEpg = result.epgUrl.trim();
