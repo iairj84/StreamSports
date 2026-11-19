@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.72 — 19 November 2026
+
+- Settings from phone is its own page: Settings > Settings from phone opens a code that changes the TV's settings and nothing else, so a clock or buffer change no longer asks for a playlist.
+- The phone page now covers what a remote makes tedious: theme and surface, clock and language, start-up buffering, live buffer, playback at startup, playlists at startup, picture-in-picture, the resume reminder, the Movies, Series and Multiview rows, hidden scores, and the update channel.
+- Both phone forms open on the values the TV has now, so changing one switch leaves every other setting alone.
+- Codes appear without waiting for the phone page to load, and changing the update channel no longer keeps the phone on Sending while the app checks the release feed.
+
 ## 0.2.71 — 18 November 2026
 
 - The phone page now uses the app's own colours: every palette takes the exact surface, container, outline and accent values the TV's theme builds, and neutrals stay neutral so the accent only marks selection, the primary action and focus.
