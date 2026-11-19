@@ -2,12 +2,55 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nox_iptv/services/device_transfer_service.dart';
 import 'package:nox_iptv/services/settings_bundle.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/utils/constants.dart';
+
+Future<StorageService> _transferStorage() async {
+  SharedPreferences.setMockInitialValues({
+    'sports_coverage_v92': true,
+    AppConstants.keyPlaylists: '[{"id":"source"}]',
+    AppConstants.keySportsLeagues: ['nba'],
+    AppConstants.keyLastChannelId: 'channel-9',
+    AppConstants.keyPaletteId: 'classic_tv',
+  });
+  final storage = StorageService();
+  await storage.init();
+  return storage;
+}
+
+Future<TransferReceiver> _startReceiver(StorageService storage,
+    {Duration approvalWindow = kTransferApprovalWindow}) async {
+  final receiver = TransferReceiver(storage,
+      deviceName: 'TV', approvalWindow: approvalWindow);
+  await receiver.start(
+      bindAddress: InternetAddress.loopbackIPv4, discovery: false);
+  addTearDown(receiver.stop);
+  return receiver;
+}
+
+Uri _transferUri(TransferReceiver receiver, String action) =>
+    Uri.parse('http://127.0.0.1:${receiver.port}/p/${receiver.token}/$action');
+
+Future<http.Response> _postHello(
+        TransferReceiver receiver, List<int> publicKey) =>
+    http
+        .post(_transferUri(receiver, 'hello'),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode(
+                {'name': 'Phone', 'pk': base64Url.encode(publicKey)}))
+        .timeout(const Duration(seconds: 10));
+
+Future<http.Response> _postBundle(TransferReceiver receiver, String sealed) =>
+    http
+        .post(_transferUri(receiver, 'bundle'),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({'payload': sealed}))
+        .timeout(const Duration(seconds: 10));
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +63,11 @@ void main() {
           transferSectionOf('${AppConstants.keySportsLeagues}'
               '${AppConstants.viewerKeySuffix}kid'),
           TransferSection.sports);
-      expect(transferSectionOf(AppConstants.keyFavorites),
-          TransferSection.lists);
-      expect(transferSectionOf('${AppConstants.keyHiddenChannels}'
-          '${AppConstants.viewerKeySuffix}kid'),
+      expect(
+          transferSectionOf(AppConstants.keyFavorites), TransferSection.lists);
+      expect(
+          transferSectionOf('${AppConstants.keyHiddenChannels}'
+              '${AppConstants.viewerKeySuffix}kid'),
           TransferSection.lists);
     });
 
@@ -32,8 +76,8 @@ void main() {
           TransferSection.playlists);
       expect(transferSectionOf(AppConstants.keyXtreamPassword),
           TransferSection.playlists);
-      expect(transferSectionOf(AppConstants.keyM3uUrl),
-          TransferSection.playlists);
+      expect(
+          transferSectionOf(AppConstants.keyM3uUrl), TransferSection.playlists);
     });
 
     test('device state and caches never travel', () {
@@ -83,12 +127,12 @@ void main() {
       await storage.init();
     });
 
-    test('capture leaves device-only keys behind and encodes to JSON', () async {
+    test('capture leaves device-only keys behind and encodes to JSON',
+        () async {
       final bundle = SettingsBundle.capture(storage,
           sections: TransferSection.values.toSet());
       expect(bundle.values.containsKey(AppConstants.keyLastChannelId), isFalse);
-      expect(bundle.values[AppConstants.keySportsLeagues],
-          ['nba', 'eng.1']);
+      expect(bundle.values[AppConstants.keySportsLeagues], ['nba', 'eng.1']);
       expect(bundle.sections, contains(TransferSection.playlists));
 
       final decoded = SettingsBundle.fromJson(jsonDecode(bundle.encode()))!;
@@ -102,7 +146,9 @@ void main() {
       expect(
           SettingsBundle.fromJson({
             'format': 1,
-            'values': {'k': {'nested': 1}},
+            'values': {
+              'k': {'nested': 1}
+            },
           }),
           isNull);
     });
@@ -130,8 +176,8 @@ void main() {
     });
 
     test('a section that was not sent is left alone', () async {
-      final bundle = SettingsBundle.capture(storage,
-          sections: {TransferSection.settings});
+      final bundle =
+          SettingsBundle.capture(storage, sections: {TransferSection.settings});
       await storage.replaceRawPreferences({
         AppConstants.keyPlaylists: '[{"id":"destination"}]',
       }, remove: []);
@@ -181,9 +227,139 @@ void main() {
       final one = List<int>.filled(32, 7);
       final two = List<int>.filled(32, 9);
       expect(transferCode(one, two, 'abc'), transferCode(two, one, 'abc'));
-      expect(transferCode(one, two, 'abc'),
-          isNot(transferCode(one, two, 'abd')));
+      expect(
+          transferCode(one, two, 'abc'), isNot(transferCode(one, two, 'abd')));
       expect(transferCode(one, two, 'abc'), matches(RegExp(r'^\d{3} \d{3}$')));
+    });
+  });
+
+  group('approval gate', () {
+    test('hello without approval cannot deliver a bundle', () async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final storage = await _transferStorage();
+      final receiver = await _startReceiver(storage);
+      final cipher = TransferCipher(sessionId: receiver.sessionId);
+      final key = await cipher.ensureKeyPair();
+      await cipher.derive(receiver.publicKey);
+
+      final hello = _postHello(receiver, key);
+      hello.ignore();
+      await receiver.status
+          .firstWhere((s) => s.phase == TransferPhase.approval)
+          .timeout(const Duration(seconds: 5));
+
+      final before = Map.of(storage.rawPreferences());
+      final bundle = SettingsBundle.capture(storage,
+          sections: TransferSection.values.toSet());
+      final sealed = await cipher.seal(bundle.encode());
+      final response = await _postBundle(receiver, sealed);
+
+      expect(response.statusCode, HttpStatus.forbidden);
+      expect(storage.rawPreferences(), before);
+    });
+
+    test('an approved bundle applies once and a replay is refused', () async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final storage = await _transferStorage();
+      final receiver = await _startReceiver(storage);
+      final cipher = TransferCipher(sessionId: receiver.sessionId);
+      final key = await cipher.ensureKeyPair();
+      await cipher.derive(receiver.publicKey);
+
+      final hello = _postHello(receiver, key);
+      await receiver.status
+          .firstWhere((s) => s.phase == TransferPhase.approval)
+          .timeout(const Duration(seconds: 5));
+      await receiver.approve();
+      final helloResponse = await hello;
+      expect(jsonDecode(helloResponse.body)['approved'], isTrue);
+
+      final bundle = SettingsBundle.capture(storage,
+          sections: TransferSection.values.toSet());
+      await storage.replaceRawPreferences({
+        AppConstants.keyPlaylists: '[{"id":"destination"}]',
+        AppConstants.keyPaletteId: 'light',
+      }, remove: []);
+      final sealed = await cipher.seal(bundle.encode());
+
+      final applied = await _postBundle(receiver, sealed);
+      expect(applied.statusCode, HttpStatus.ok);
+      expect(storage.rawPreferences()[AppConstants.keyPlaylists],
+          '[{"id":"source"}]');
+
+      // The approved key was consumed, and a completed transfer closes the
+      // listener, so the replay is refused either way.
+      Object? replayError;
+      int? replayStatus;
+      try {
+        replayStatus = (await _postBundle(receiver, sealed)).statusCode;
+      } catch (_) {
+        replayError = true;
+      }
+      expect(
+          replayStatus == HttpStatus.forbidden || replayError != null, isTrue);
+      expect(storage.rawPreferences()[AppConstants.keyPlaylists],
+          '[{"id":"source"}]');
+    });
+
+    test('a declined handshake cannot be used afterwards', () async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final storage = await _transferStorage();
+      final receiver = await _startReceiver(storage);
+      final cipher = TransferCipher(sessionId: receiver.sessionId);
+      final key = await cipher.ensureKeyPair();
+      await cipher.derive(receiver.publicKey);
+
+      final hello = _postHello(receiver, key);
+      await receiver.status
+          .firstWhere((s) => s.phase == TransferPhase.approval)
+          .timeout(const Duration(seconds: 5));
+      await receiver.reject();
+      final helloResponse = await hello;
+      expect(jsonDecode(helloResponse.body)['approved'], isFalse);
+
+      final before = Map.of(storage.rawPreferences());
+      final bundle = SettingsBundle.capture(storage,
+          sections: TransferSection.values.toSet());
+      final sealed = await cipher.seal(bundle.encode());
+      final response = await _postBundle(receiver, sealed);
+
+      expect(response.statusCode, HttpStatus.forbidden);
+      expect(storage.rawPreferences(), before);
+    });
+
+    test('a timed-out handshake cannot be used afterwards', () async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final storage = await _transferStorage();
+      final receiver = await _startReceiver(storage,
+          approvalWindow: const Duration(milliseconds: 500));
+      final cipher = TransferCipher(sessionId: receiver.sessionId);
+      final key = await cipher.ensureKeyPair();
+      await cipher.derive(receiver.publicKey);
+
+      final helloResponse = await _postHello(receiver, key);
+      expect(jsonDecode(helloResponse.body)['approved'], isFalse);
+
+      final before = Map.of(storage.rawPreferences());
+      final bundle = SettingsBundle.capture(storage,
+          sections: TransferSection.values.toSet());
+      final sealed = await cipher.seal(bundle.encode());
+      final response = await _postBundle(receiver, sealed);
+
+      expect(response.statusCode, HttpStatus.forbidden);
+      expect(storage.rawPreferences(), before);
     });
   });
 
@@ -229,8 +405,8 @@ void main() {
         sections: TransferSection.values.toSet());
     expect(report, isNotNull);
     expect(report!.values, greaterThan(0));
-    expect(storage.rawPreferences()[AppConstants.keyLastChannelId],
-        'channel-9');
+    expect(
+        storage.rawPreferences()[AppConstants.keyLastChannelId], 'channel-9');
 
     await receiver.stop();
     sender.dispose();

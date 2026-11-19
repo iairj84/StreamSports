@@ -43,7 +43,8 @@ class TransferPeer {
   final String token;
   final List<int> publicKey;
 
-  Uri _endpoint(String path) => Uri.parse('http://$address:$port/p/$token/$path');
+  Uri _endpoint(String path) =>
+      Uri.parse('http://$address:$port/p/$token/$path');
 }
 
 /// The code both devices must show, derived from the exchanged keys and the
@@ -51,9 +52,10 @@ class TransferPeer {
 String transferCode(List<int> peerKeyA, List<int> peerKeyB, String sessionId) {
   final ordered = [base64Url.encode(peerKeyA), base64Url.encode(peerKeyB)]
     ..sort();
-  final digest = crypto.sha256.convert(utf8.encode(
-      '$kTransferMarker|$sessionId|${ordered[0]}|${ordered[1]}'));
-  final value = (digest.bytes[0] << 16) | (digest.bytes[1] << 8) | digest.bytes[2];
+  final digest = crypto.sha256.convert(
+      utf8.encode('$kTransferMarker|$sessionId|${ordered[0]}|${ordered[1]}'));
+  final value =
+      (digest.bytes[0] << 16) | (digest.bytes[1] << 8) | digest.bytes[2];
   final code = (value % 1000000).toString().padLeft(6, '0');
   return '${code.substring(0, 3)} ${code.substring(3)}';
 }
@@ -78,8 +80,7 @@ class TransferCipher {
     final pair = _keyPair ??= await _x25519.newKeyPair();
     final shared = await _x25519.sharedSecretKey(
       keyPair: pair,
-      remotePublicKey:
-          SimplePublicKey(peerPublicKey, type: KeyPairType.x25519),
+      remotePublicKey: SimplePublicKey(peerPublicKey, type: KeyPairType.x25519),
     );
     final hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
     final derived = await hkdf.deriveKey(
@@ -112,8 +113,7 @@ class TransferCipher {
       if (ct.length < 16) return null;
       final box = SecretBox(ct.sublist(0, ct.length - 16),
           nonce: iv, mac: Mac(ct.sublist(ct.length - 16)));
-      final clear =
-          await AesGcm.with256bits().decrypt(box, secretKey: key);
+      final clear = await AesGcm.with256bits().decrypt(box, secretKey: key);
       return utf8.decode(clear);
     } catch (e) {
       debugPrint('Transfer: payload rejected: ${e.runtimeType}');
@@ -125,10 +125,13 @@ class TransferCipher {
 /// The receiving side: broadcasts itself, listens for a sender, shows the code,
 /// waits for local approval, then replaces this device's configuration.
 class TransferReceiver {
-  TransferReceiver(this._storage, {this.deviceName = 'This device'});
+  TransferReceiver(this._storage,
+      {this.deviceName = 'This device',
+      this.approvalWindow = kTransferApprovalWindow});
 
   final StorageService _storage;
   final String deviceName;
+  final Duration approvalWindow;
 
   RawDatagramSocket? _udp;
   HttpServer? _http;
@@ -152,7 +155,11 @@ class TransferReceiver {
 
   Completer<bool>? _approval;
   String? _code;
-
+  List<int>? _pendingPeerKey;
+  List<int>? _approvedPeerKey;
+  List<int>? _derivedPeerKey;
+  int _handshakeEpoch = 0;
+  bool _closeAfterResponse = false;
 
   void _emit(ReceiverStatus status) {
     _current = status;
@@ -185,9 +192,9 @@ class TransferReceiver {
 
   Future<void> _openDiscovery(InternetAddress host) async {
     try {
-      final socket =
-          await RawDatagramSocket.bind(InternetAddress.anyIPv4, kTransferDiscoveryPort,
-              reuseAddress: true, reusePort: false);
+      final socket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4, kTransferDiscoveryPort,
+          reuseAddress: true, reusePort: false);
       _udp = socket;
       socket.broadcastEnabled = true;
       socket.listen((event) {
@@ -217,12 +224,19 @@ class TransferReceiver {
   /// Accept the sender's request: replaces this device's configuration.
   Future<void> approve() async {
     final approval = _approval;
-    if (approval != null && !approval.isCompleted) approval.complete(true);
+    final pending = _pendingPeerKey;
+    if (approval != null && !approval.isCompleted && pending != null) {
+      // The approval is bound to the peer that asked for this handshake and
+      // is recorded only once the viewer has actually accepted it.
+      _approvedPeerKey = pending;
+      approval.complete(true);
+    }
   }
 
   Future<void> reject() async {
     final approval = _approval;
-    if (approval != null && !approval.isCompleted) approval.complete(false);
+    if (approval == null || approval.isCompleted) return;
+    await _restartHandshake();
     _emit(const ReceiverStatus(phase: TransferPhase.waiting));
   }
 
@@ -230,12 +244,34 @@ class TransferReceiver {
     final approval = _approval;
     if (approval != null && !approval.isCompleted) approval.complete(false);
     _approval = null;
-    await _http?.close(force: true);
-    _http = null;
-    _udp?.close();
-    _udp = null;
+    await _closeListener();
     _emit(const ReceiverStatus(phase: TransferPhase.idle));
     await _status.close();
+  }
+
+  /// Drop every key derived for the previous hello, including an approval, and
+  /// start again with a fresh ephemeral key pair.
+  Future<void> _restartHandshake() async {
+    final epoch = ++_handshakeEpoch;
+    final approval = _approval;
+    _approval = null;
+    if (approval != null && !approval.isCompleted) approval.complete(false);
+    _pendingPeerKey = null;
+    _approvedPeerKey = null;
+    _derivedPeerKey = null;
+    _code = null;
+    final next = _cipher = TransferCipher(sessionId: _sessionId);
+    final key = await next.ensureKeyPair();
+    if (epoch == _handshakeEpoch) _publicKey = key;
+  }
+
+  Future<void> _closeListener() async {
+    final http = _http;
+    _http = null;
+    final udp = _udp;
+    _udp = null;
+    udp?.close();
+    await http?.close(force: true);
   }
 
   Future<void> _handle(HttpRequest request) async {
@@ -254,8 +290,7 @@ class TransferReceiver {
         response.statusCode = HttpStatus.methodNotAllowed;
         return;
       }
-      final body =
-          await _readLimited(request, SettingsBundle.maxBytes + 65536);
+      final body = await _readLimited(request, SettingsBundle.maxBytes + 65536);
       if (body == null) {
         response.statusCode = HttpStatus.requestEntityTooLarge;
         return;
@@ -272,6 +307,7 @@ class TransferReceiver {
       debugPrint('Transfer: request failed: ${e.runtimeType} $e');
       response.statusCode = HttpStatus.internalServerError;
       if (_current.phase != TransferPhase.done) {
+        _closeAfterResponse = true;
         _emit(ReceiverStatus(
             phase: TransferPhase.failed,
             address: _address,
@@ -279,6 +315,10 @@ class TransferReceiver {
       }
     } finally {
       await response.close();
+      if (_closeAfterResponse) {
+        _closeAfterResponse = false;
+        await _closeListener();
+      }
     }
   }
 
@@ -295,13 +335,25 @@ class TransferReceiver {
       response.statusCode = HttpStatus.badRequest;
       return;
     }
+    // A second hello replaces whatever the previous one derived. The first
+    // request still gets an answer, but it can no longer approve a bundle.
+    if (_pendingPeerKey != null || _approvedPeerKey != null || _code != null) {
+      await _restartHandshake();
+    }
+    final epoch = _handshakeEpoch;
     final cipher = _cipher;
     if (cipher == null) {
       response.statusCode = HttpStatus.conflict;
       return;
     }
+    _pendingPeerKey = peerKey;
     _code = transferCode(_publicKey, peerKey, _sessionId);
     await cipher.derive(peerKey);
+    if (epoch != _handshakeEpoch) {
+      response.statusCode = HttpStatus.conflict;
+      return;
+    }
+    _derivedPeerKey = peerKey;
     final approval = _approval = Completer<bool>();
     _emit(ReceiverStatus(
       phase: TransferPhase.approval,
@@ -309,26 +361,49 @@ class TransferReceiver {
       code: _code,
       peerName: name,
     ));
-    final approved = await approval.future
-        .timeout(kTransferApprovalWindow, onTimeout: () => false);
+    final approved =
+        await approval.future.timeout(approvalWindow, onTimeout: () => false);
+    if (epoch != _handshakeEpoch) {
+      // reject(), a timeout in a superseded handshake, or a newer hello has
+      // already replaced this session. Deny without touching the new one.
+      response.headers.contentType = ContentType.json;
+      response.write(jsonEncode({
+        'approved': false,
+        'code': _code ?? '',
+        'pk': base64Url.encode(_publicKey),
+      }));
+      return;
+    }
     _approval = null;
+    final code = _code ?? '';
+    if (approved) {
+      _pendingPeerKey = null;
+    } else {
+      await _restartHandshake();
+      _emit(const ReceiverStatus(phase: TransferPhase.waiting));
+    }
     response.headers.contentType = ContentType.json;
     response.write(jsonEncode({
       'approved': approved,
-      'code': _code,
+      'code': code,
       'pk': base64Url.encode(_publicKey),
     }));
-    if (!approved) {
-      _emit(const ReceiverStatus(phase: TransferPhase.waiting));
-    }
   }
 
   Future<void> _receiveBundle(String body, HttpResponse response) async {
     final cipher = _cipher;
-    if (cipher == null) {
+    final approvedKey = _approvedPeerKey;
+    final derivedKey = _derivedPeerKey;
+    if (cipher == null ||
+        approvedKey == null ||
+        derivedKey == null ||
+        !listEquals(approvedKey, derivedKey)) {
       response.statusCode = HttpStatus.forbidden;
       return;
     }
+    // Consume before the first await: one approval applies exactly one bundle,
+    // even if two requests arrive together.
+    _approvedPeerKey = null;
     final json = _decode(body);
     final sealed = json?['payload'];
     if (sealed is! String) {
@@ -338,6 +413,7 @@ class TransferReceiver {
     final clear = await cipher.open(sealed);
     if (clear == null) {
       response.statusCode = HttpStatus.badRequest;
+      _closeAfterResponse = true;
       _emit(ReceiverStatus(
           phase: TransferPhase.failed,
           address: _address,
@@ -347,6 +423,7 @@ class TransferReceiver {
     final bundle = SettingsBundle.fromJson(jsonDecode(clear));
     if (bundle == null) {
       response.statusCode = HttpStatus.badRequest;
+      _closeAfterResponse = true;
       _emit(ReceiverStatus(
           phase: TransferPhase.failed,
           address: _address,
@@ -361,6 +438,7 @@ class TransferReceiver {
     } catch (e) {
       debugPrint('Transfer: apply failed: $e');
       response.statusCode = HttpStatus.internalServerError;
+      _closeAfterResponse = true;
       _emit(ReceiverStatus(
           phase: TransferPhase.failed,
           address: _address,
@@ -368,6 +446,7 @@ class TransferReceiver {
       return;
     }
     debugPrint('Transfer: applied ${report.values} settings');
+    _closeAfterResponse = true;
     _emit(ReceiverStatus(
         phase: TransferPhase.done, address: _address, report: report));
     response.headers.contentType = ContentType.json;
@@ -425,9 +504,11 @@ class TransferSender {
       if (!_devices.isClosed) _devices.add(_found.values.toList());
     });
     final probe = utf8.encode(jsonEncode({'m': kTransferMarker, 't': 'probe'}));
-    socket.send(probe, InternetAddress('255.255.255.255'), kTransferDiscoveryPort);
+    socket.send(
+        probe, InternetAddress('255.255.255.255'), kTransferDiscoveryPort);
     await Future<void>.delayed(window);
-    socket.send(probe, InternetAddress('255.255.255.255'), kTransferDiscoveryPort);
+    socket.send(
+        probe, InternetAddress('255.255.255.255'), kTransferDiscoveryPort);
     await Future<void>.delayed(const Duration(seconds: 2));
   }
 
@@ -438,15 +519,16 @@ class TransferSender {
     final response = await http
         .post(peer._endpoint('hello'),
             headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode(
-                {'name': deviceName, 'pk': base64Url.encode(myKey)}))
+            body:
+                jsonEncode({'name': deviceName, 'pk': base64Url.encode(myKey)}))
         .timeout(kTransferApprovalWindow + const Duration(seconds: 10));
     final json = _decode(response.body);
     if (response.statusCode != 200 || json == null) {
       throw StateError('The other device did not answer.');
     }
     if (json['approved'] != true) {
-      return SenderHandshake(approved: false, code: '${json['code'] ?? ''}', cipher: senderCipher);
+      return SenderHandshake(
+          approved: false, code: '${json['code'] ?? ''}', cipher: senderCipher);
     }
     await senderCipher.derive(peer.publicKey);
     final code = '${json['code'] ?? ''}';
@@ -456,8 +538,7 @@ class TransferSender {
   }
 
   /// Send the chosen sections. The receiver applies them and reports back.
-  Future<TransferReport?> send(
-      TransferPeer peer, SenderHandshake handshake,
+  Future<TransferReport?> send(TransferPeer peer, SenderHandshake handshake,
       {required Set<TransferSection> sections}) async {
     if (!handshake.approved) return null;
     final bundle = SettingsBundle.capture(_storage, sections: sections);
@@ -506,7 +587,12 @@ enum TransferPhase { idle, waiting, approval, receiving, done, failed }
 
 class ReceiverStatus {
   const ReceiverStatus(
-      {required this.phase, this.address, this.code, this.peerName, this.report, this.message});
+      {required this.phase,
+      this.address,
+      this.code,
+      this.peerName,
+      this.report,
+      this.message});
   final TransferPhase phase;
   final String? address;
   final String? code;
