@@ -1216,4 +1216,12 @@ const Map<String, String> kIt = {
   // Extras: watched history + recent searches
   'Recently watched': 'Visti di recente',
   'Clear recent searches': 'Cancella ricerche recenti',
+  // ── Provider request failures (fetch_error_text.dart) ───────────────
+  'The server did not respond in time.': 'Il server non ha risposto in tempo.',
+  'The server refused the connection.': 'Il server ha rifiutato la connessione.',
+  'The server address could not be found.':
+      "Impossibile trovare l'indirizzo del server.",
+  'The server could not be reached.': 'Impossibile raggiungere il server.',
+  'The request failed.': 'La richiesta non è riuscita.',
+  'The request to {host} failed.': 'La richiesta a {host} non è riuscita.',
 };

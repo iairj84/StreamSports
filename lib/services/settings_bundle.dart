@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import 'storage_service.dart';
 
@@ -153,6 +154,12 @@ class SettingsBundle {
   int get byteLength => utf8.encode(encode()).length;
 
   /// Null when [json] is not a bundle this build understands.
+  ///
+  /// Two things beyond shape are checked here, because a bundle is applied to
+  /// working preferences before anyone can inspect it: keys this device must
+  /// never inherit are dropped, and a playlist section that no build could read
+  /// back is rejected outright rather than written and left to break the next
+  /// launch.
   static SettingsBundle? fromJson(Object? json) {
     if (json is! Map) return null;
     if (json['format'] != format) return null;
@@ -162,6 +169,8 @@ class SettingsBundle {
     for (final entry in raw.entries) {
       final key = entry.key;
       if (key is! String || key.isEmpty || key.length > 200) return null;
+      // Not this bundle's business: resume positions, update checks, caches.
+      if (transferSectionOf(key) == null) continue;
       final value = entry.value;
       final valid = value is String ||
           value is bool ||
@@ -171,12 +180,38 @@ class SettingsBundle {
       if (!valid) return null;
       values[key] = value;
     }
+    if (values.containsKey(AppConstants.keyPlaylists) &&
+        !_playlistsReadable(values[AppConstants.keyPlaylists])) {
+      return null;
+    }
     return SettingsBundle(
       values: values,
       createdAt:
           DateTime.tryParse('${json['createdAt'] ?? ''}') ?? DateTime.now(),
       appVersion: '${json['app'] ?? ''}',
     );
+  }
+
+  /// Whether the playlist section of a bundle decodes into profiles this build
+  /// can construct. Anything else is a payload from a future format, a
+  /// truncated transfer or a corrupt backup — none of which may replace a
+  /// working configuration.
+  static bool _playlistsReadable(Object? value) {
+    if (value == null) return true;
+    if (value is! String) return false;
+    if (value.trim().isEmpty) return true;
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! List) return false;
+      for (final entry in decoded) {
+        if (entry is! Map) return false;
+        PlaylistProfile.fromJson(
+            entry.map((key, value) => MapEntry('$key', value)));
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Everything this device would send, limited to [sections].
@@ -198,9 +233,17 @@ class SettingsBundle {
     );
   }
 
+  /// Everything this bundle may write on this device: values whose key the
+  /// transfer contract assigns to a section. A hand-built or hostile bundle
+  /// cannot reach device-only state even if it names such a key directly.
+  Map<String, Object?> get writableValues => {
+        for (final entry in values.entries)
+          if (transferSectionOf(entry.key) != null) entry.key: entry.value,
+      };
+
   Set<TransferSection> get sections {
     final result = <TransferSection>{};
-    for (final key in values.keys) {
+    for (final key in writableValues.keys) {
       final section = transferSectionOf(key);
       if (section != null) result.add(section);
     }
@@ -211,6 +254,7 @@ class SettingsBundle {
   /// every section this bundle did not carry are left exactly as they are.
   Future<TransferReport> applyTo(StorageService storage) async {
     final touched = <TransferSection>{};
+    final incoming = writableValues;
     final remove = <String>[];
     for (final key in storage.rawPreferences().keys) {
       final section = transferSectionOf(key);
@@ -218,9 +262,9 @@ class SettingsBundle {
       remove.add(key);
       touched.add(section);
     }
-    await storage.replaceRawPreferences(values, remove: remove);
+    await storage.replaceRawPreferences(incoming, remove: remove);
     return TransferReport(
-      values: values.length,
+      values: incoming.length,
       removed: remove.length,
       sections: touched,
     );

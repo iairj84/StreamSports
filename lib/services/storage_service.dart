@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
@@ -218,13 +219,42 @@ class StorageService {
     }
   }
 
+  /// The saved profiles, or as many of them as this build can read.
+  ///
+  /// A corrupt entry must never make the app unlaunchable: restore, device
+  /// transfer and a plain storage fault all write here, and `PlaylistManager`
+  /// rebuilding from the result has no recovery path of its own. Unreadable
+  /// entries are skipped (the rest of the configuration still loads) and
+  /// reported only to the log, because the alternative is a startup screen that
+  /// Retry cannot fix.
   List<PlaylistProfile> getPlaylists() {
     final raw = _prefs.getString(AppConstants.keyPlaylists);
     if (raw == null || raw.isEmpty) return [];
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded
-        .map((e) => PlaylistProfile.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (e) {
+      debugPrint('StorageService: playlists are not valid JSON '
+          '(${e.runtimeType}); starting without them.');
+      return [];
+    }
+    if (decoded is! List) {
+      debugPrint('StorageService: playlists are not a list; starting without '
+          'them.');
+      return [];
+    }
+    final profiles = <PlaylistProfile>[];
+    for (final entry in decoded) {
+      if (entry is! Map) continue;
+      try {
+        profiles.add(PlaylistProfile.fromJson(
+            entry.map((key, value) => MapEntry('$key', value))));
+      } catch (e) {
+        debugPrint('StorageService: skipping an unreadable playlist entry '
+            '(${e.runtimeType}).');
+      }
+    }
+    return profiles;
   }
 
   Future<void> setPlaylists(List<PlaylistProfile> playlists) =>

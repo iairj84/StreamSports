@@ -22,6 +22,13 @@
          support. Both are inert on phones and TVs. Video is still an
          early-access category on Android Auto, so listing there is not
          guaranteed. -->
+    <!-- No OS backup: shared preferences carry the viewer's provider logins,
+         and auto-backup would copy them to Google's transport and into
+         device-to-device migration without the viewer opting in. Moving a
+         configuration between devices is the app's own encrypted transfer
+         (Settings → Backups & transfer). allowBackup is the switch that
+         matters; the two rule files keep the exclusion explicit for ROMs that
+         ignore it. See res/xml/backup_rules.xml. -->
     <application
         android:label="StreamSports"
         android:name="${applicationName}"
@@ -30,7 +37,10 @@
         android:banner="@drawable/streamsports_banner"
         android:usesCleartextTraffic="true"
         android:largeHeap="true"
-        android:appCategory="video">
+        android:appCategory="video"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules">
         <!-- Impeller (Vulkan) crashes on startup on several budget Amlogic/Mali
              GPU drivers found in Firesticks and Android STBs — those devices
              have no Dart-level stack trace to catch since the crash happens

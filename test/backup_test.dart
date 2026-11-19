@@ -12,7 +12,7 @@ const String _renameKey = '${AppConstants.keyChannelNames}_source';
 
 Future<StorageService> _seededStorage() async {
   SharedPreferences.setMockInitialValues({
-    AppConstants.keyPlaylists: '[{"id":"source"}]',
+    AppConstants.keyPlaylists: '[{"id":"source","name":"Source","mode":"m3u"}]',
     _renameKey: '{"espn":"ESPN2"}',
     AppConstants.keyFavorites: ['espn'],
     AppConstants.keyPaletteId: 'classic_tv',
@@ -78,7 +78,7 @@ void main() {
       final backup = await BackupService.create(storage, directory: temp);
 
       await storage.replaceRawPreferences({
-        AppConstants.keyPlaylists: '[{"id":"destination"}]',
+        AppConstants.keyPlaylists: '[{"id":"destination","name":"Destination","mode":"m3u"}]',
         _renameKey: '{}',
       }, remove: [
         AppConstants.keyFavorites,
@@ -89,7 +89,7 @@ void main() {
 
       expect(storage.getChannelNames('source'), {'espn': 'ESPN2'});
       expect(storage.rawPreferences()[AppConstants.keyPlaylists],
-          '[{"id":"source"}]');
+          '[{"id":"source","name":"Source","mode":"m3u"}]');
       expect(storage.rawPreferences()[AppConstants.keyFavorites], ['espn']);
       expect(report.sections, contains(TransferSection.lists));
       // Belongs to this device, so a restore leaves it alone.

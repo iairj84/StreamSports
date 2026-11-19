@@ -1325,4 +1325,12 @@ const Map<String, String> kFr = {
       "Connexion, mémoire tampon, vidéo et audio",
   "Retry the current channel": "Relancer la chaîne actuelle",
   "Info": "Infos",
+  // ── Provider request failures (fetch_error_text.dart) ───────────────
+  'The server did not respond in time.': "Le serveur n'a pas répondu à temps.",
+  'The server refused the connection.': 'Le serveur a refusé la connexion.',
+  'The server address could not be found.':
+      "L'adresse du serveur est introuvable.",
+  'The server could not be reached.': 'Le serveur est injoignable.',
+  'The request failed.': 'La requête a échoué.',
+  'The request to {host} failed.': 'La requête vers {host} a échoué.',
 };

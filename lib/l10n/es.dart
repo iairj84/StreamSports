@@ -1212,4 +1212,12 @@ const Map<String, String> kEs = {
   // Extras: watched history + recent searches
   'Recently watched': 'Vistos recientemente',
   'Clear recent searches': 'Borrar búsquedas recientes',
+  // ── Provider request failures (fetch_error_text.dart) ───────────────
+  'The server did not respond in time.': 'El servidor no respondió a tiempo.',
+  'The server refused the connection.': 'El servidor rechazó la conexión.',
+  'The server address could not be found.':
+      'No se encontró la dirección del servidor.',
+  'The server could not be reached.': 'No se pudo contactar con el servidor.',
+  'The request failed.': 'La solicitud falló.',
+  'The request to {host} failed.': 'La solicitud a {host} falló.',
 };

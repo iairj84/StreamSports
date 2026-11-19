@@ -1,5 +1,53 @@
 # Design notes
 
+## No OS backup, and three ways a bad payload is refused
+
+Three audit findings shared one property: the configuration plane could leave
+the device or replace itself without validation. AUD-002, AUD-003 and AUD-004.
+
+**Android backup is off.** Xtream and Stalker logins are ordinary shared
+preferences, with no backup policy in the manifest, so auto-backup could copy
+provider passwords to Google's transport and into device-to-device migration
+without the viewer opting in. `allowBackup="false"` is the switch that matters;
+`backup_rules.xml` (API 23-30) and `data_extraction_rules.xml` (31+) keep the
+exclusion explicit for vendor ROMs that ignore it, and exclude the whole data
+set rather than just preferences because the app's own backup files are
+unencrypted by design. The long-term alternative - moving secrets into
+Keystore-backed storage - was rejected for now: it adds a native dependency and
+a migration for every existing install, and it solves nothing that backup-off
+does not, because the app already offers its own encrypted transfer as the way
+to move a configuration between devices. `test/backup_policy_test.dart` reads
+the shipped manifest and both rule files, so re-enabling backup fails a test
+instead of shipping.
+
+**Fetch errors are rebuilt from the origin.** `http.ClientException`,
+`SocketException` and `TimeoutException` put the request URI in their text, and
+an Xtream guide URL carries `username=` and `password=` in the query. The guide
+and playlist paths assigned `e.toString()` straight to the user-visible `error`
+field, so a failure published the viewer's login in Settings and in any
+screenshot of it. `safeFetchError` reduces every address to `scheme://host:port`,
+redacts credential pairs that arrive outside a URL, and keeps classified
+failures ("connection refused") as one sentence plus `host:port` - the port
+matters, because one panel host usually serves several subscriptions. It is
+deliberately not `safePlaybackError`: playback hides the address entirely, while
+a guide failure is only actionable with the host. Provider messages with no
+address in them (`Invalid Xtream username/password`) pass through untouched, so
+account rejection still reads as itself.
+
+**An unreadable configuration can no longer brick startup.** `getPlaylists`
+decoded the preference with hard casts and no guard, so one corrupt entry made
+every launch fail, and Retry re-ran the same parse. It now skips unreadable
+entries (the rest of the configuration still loads) and logs the failure; a
+silent fallback to `[]` was rejected because losing one playlist beats losing the
+app, and a partially readable list is the common case after a transfer.
+`SettingsBundle.fromJson` therefore had to tighten too, or a corrupt payload
+would simply be written and tolerated later: it drops keys the transfer contract
+calls device-only (so a hand-built bundle cannot write `nox_active_viewer_id`),
+and refuses outright a playlist section that does not decode into
+`PlaylistProfile`s - the payload was never valid, and refusing it before the
+write is clearer than accepting three of four playlists. `applyTo` re-filters
+independently, because `SettingsBundle` can be constructed without `fromJson`.
+
 ## Retry rebuilds the service graph
 
 The startup error screen's Retry re-ran `_bootstrap`, but every service field was

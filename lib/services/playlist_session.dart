@@ -14,6 +14,7 @@ import '../models/vod_details.dart';
 import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
 import '../utils/constants.dart';
+import '../utils/fetch_error_text.dart';
 import 'catalog_database.dart';
 import 'm3u_parser.dart';
 import 'storage_service.dart';
@@ -505,7 +506,7 @@ class PlaylistSession {
       loadingPhase = tr('Playlist added');
       onNotify();
     } catch (e) {
-      error = e.toString();
+      error = safeFetchError(e, url: url);
       debugPrint('PlaylistSession error: ${e.runtimeType}');
     } finally {
       isLoading = false;
@@ -847,7 +848,7 @@ class PlaylistSession {
       loadingPhase = tr('Playlist added');
       onNotify();
     } catch (e) {
-      error = e.toString();
+      error = safeFetchError(e);
       debugPrint('PlaylistSession error: ${e.runtimeType}');
     } finally {
       isLoading = false;
@@ -1045,7 +1046,7 @@ class PlaylistSession {
         seriesCategoryTotalCount[categoryName] = items.length;
       }
     } catch (e) {
-      error = e.toString();
+      error = safeFetchError(e);
       debugPrint('PlaylistSession category load failed: ${e.runtimeType}');
       categoryFailureCounts[key] = (categoryFailureCounts[key] ?? 0) + 1;
     } finally {

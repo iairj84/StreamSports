@@ -13,7 +13,7 @@ import 'package:nox_iptv/utils/constants.dart';
 Future<StorageService> _transferStorage() async {
   SharedPreferences.setMockInitialValues({
     'sports_coverage_v92': true,
-    AppConstants.keyPlaylists: '[{"id":"source"}]',
+    AppConstants.keyPlaylists: '[{"id":"source","name":"Source","mode":"m3u"}]',
     AppConstants.keySportsLeagues: ['nba'],
     AppConstants.keyLastChannelId: 'channel-9',
     AppConstants.keyPaletteId: 'classic_tv',
@@ -116,7 +116,7 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({
-        AppConstants.keyPlaylists: '[{"id":"source"}]',
+        AppConstants.keyPlaylists: '[{"id":"source","name":"Source","mode":"m3u"}]',
         AppConstants.keySportsLeagues: ['nba', 'eng.1'],
         AppConstants.keyLastChannelId: 'channel-9',
         AppConstants.keyPaletteId: 'classic_tv',
@@ -136,7 +136,7 @@ void main() {
       expect(bundle.sections, contains(TransferSection.playlists));
 
       final decoded = SettingsBundle.fromJson(jsonDecode(bundle.encode()))!;
-      expect(decoded.values[AppConstants.keyPlaylists], '[{"id":"source"}]');
+      expect(decoded.values[AppConstants.keyPlaylists], '[{"id":"source","name":"Source","mode":"m3u"}]');
       expect(decoded.sections, bundle.sections);
     });
 
@@ -157,7 +157,7 @@ void main() {
       final bundle = SettingsBundle.capture(storage,
           sections: TransferSection.values.toSet());
       await storage.replaceRawPreferences({
-        AppConstants.keyPlaylists: '[{"id":"destination"}]',
+        AppConstants.keyPlaylists: '[{"id":"destination","name":"Destination","mode":"m3u"}]',
         AppConstants.keyPaletteId: 'light',
         'vesper_hide_archive': true,
       }, remove: []);
@@ -165,7 +165,7 @@ void main() {
       final report = await bundle.applyTo(storage);
       final after = storage.rawPreferences();
 
-      expect(after[AppConstants.keyPlaylists], '[{"id":"source"}]');
+      expect(after[AppConstants.keyPlaylists], '[{"id":"source","name":"Source","mode":"m3u"}]');
       expect(after[AppConstants.keyPaletteId], 'classic_tv');
       // Only on the destination, so the replacement clears it.
       expect(after.containsKey('vesper_hide_archive'), isFalse);
@@ -175,15 +175,66 @@ void main() {
       expect(report.sections, contains(TransferSection.playlists));
     });
 
+    test('a bundle cannot write keys the contract calls device-only', () async {
+      // A hand-built or tampered payload naming device state directly: the key
+      // is dropped on the way in, so applying it changes nothing there.
+      final bundle = SettingsBundle.fromJson({
+        'format': 1,
+        'values': {
+          AppConstants.keyLastChannelId: 'hijacked',
+          AppConstants.keyPinFailCount: 9,
+          AppConstants.keyPaletteId: 'light',
+        },
+      })!;
+      expect(bundle.values.containsKey(AppConstants.keyLastChannelId), isFalse);
+      expect(bundle.values.containsKey(AppConstants.keyPinFailCount), isFalse);
+
+      await bundle.applyTo(storage);
+      final after = storage.rawPreferences();
+      expect(after[AppConstants.keyLastChannelId], 'channel-9');
+      expect(after[AppConstants.keyPinFailCount], isNull);
+      expect(after[AppConstants.keyPaletteId], 'light');
+    });
+
+    test('a bundle whose playlist section cannot be read is refused', () async {
+      // AUD-004: whatever the payload says, only a profile list this build can
+      // read back may replace the working one.
+      for (final corrupt in [
+        '{not json',
+        '[] trailing',
+        '{"id":"source"}',
+        '[{"name":"No id","mode":"m3u"}]',
+        '[{"id":"x","name":"No mode"}]',
+        '[42]',
+      ]) {
+        expect(
+            SettingsBundle.fromJson({
+              'format': 1,
+              'values': {AppConstants.keyPlaylists: corrupt},
+            }),
+            isNull,
+            reason: 'accepted an unreadable playlist payload: $corrupt');
+      }
+      // An unreadable value cannot reach storage through applyTo either.
+      final bundle = SettingsBundle.fromJson({
+        'format': 1,
+        'values': {
+          AppConstants.keyPlaylists:
+              '[{"id":"source","name":"Source","mode":"m3u"}]',
+        },
+      })!;
+      expect(bundle.values[AppConstants.keyPlaylists], isNotNull);
+    });
+
     test('a section that was not sent is left alone', () async {
       final bundle =
           SettingsBundle.capture(storage, sections: {TransferSection.settings});
       await storage.replaceRawPreferences({
-        AppConstants.keyPlaylists: '[{"id":"destination"}]',
+        AppConstants.keyPlaylists: '[{"id":"destination","name":"Destination","mode":"m3u"}]',
       }, remove: []);
       await bundle.applyTo(storage);
       expect(storage.rawPreferences()[AppConstants.keyPlaylists],
-          '[{"id":"destination"}]');
+          '[{"id":"destination","name":"Destination","mode":"m3u"}]');
     });
   });
 
@@ -283,7 +334,7 @@ void main() {
       final bundle = SettingsBundle.capture(storage,
           sections: TransferSection.values.toSet());
       await storage.replaceRawPreferences({
-        AppConstants.keyPlaylists: '[{"id":"destination"}]',
+        AppConstants.keyPlaylists: '[{"id":"destination","name":"Destination","mode":"m3u"}]',
         AppConstants.keyPaletteId: 'light',
       }, remove: []);
       final sealed = await cipher.seal(bundle.encode());
@@ -291,7 +342,7 @@ void main() {
       final applied = await _postBundle(receiver, sealed);
       expect(applied.statusCode, HttpStatus.ok);
       expect(storage.rawPreferences()[AppConstants.keyPlaylists],
-          '[{"id":"source"}]');
+          '[{"id":"source","name":"Source","mode":"m3u"}]');
 
       // The approved key was consumed, and a completed transfer closes the
       // listener, so the replay is refused either way.
@@ -305,7 +356,7 @@ void main() {
       expect(
           replayStatus == HttpStatus.forbidden || replayError != null, isTrue);
       expect(storage.rawPreferences()[AppConstants.keyPlaylists],
-          '[{"id":"source"}]');
+          '[{"id":"source","name":"Source","mode":"m3u"}]');
     });
 
     test('a declined handshake cannot be used afterwards', () async {
@@ -371,7 +422,7 @@ void main() {
     addTearDown(() => HttpOverrides.global = previousOverrides);
     SharedPreferences.setMockInitialValues({
       'sports_coverage_v92': true,
-      AppConstants.keyPlaylists: '[{"id":"source"}]',
+      AppConstants.keyPlaylists: '[{"id":"source","name":"Source","mode":"m3u"}]',
       AppConstants.keySportsLeagues: ['nba'],
       AppConstants.keyLastChannelId: 'channel-9',
     });

@@ -27,6 +27,7 @@ import 'services/storage_service.dart';
 import 'utils/playback_buffer.dart';
 
 import 'utils/constants.dart';
+import 'utils/fetch_error_text.dart';
 import 'utils/route_observer.dart';
 import 'utils/splash_greeting.dart';
 import 'utils/tv_theme.dart';
@@ -271,7 +272,9 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
     } catch (e) {
       // Surfaces any unexpected startup failure as a retryable screen
       // instead of leaving the app stuck on the splash spinner forever.
-      if (mounted) setState(() => _bootstrapError = e.toString());
+      // Scrubbed like any other provider failure: a startup error can quote a
+      // playlist address, and this text is shown (and screenshotted).
+      if (mounted) setState(() => _bootstrapError = safeFetchError(e));
     } finally {
       _bootstrapping = false;
     }

@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/epg_program.dart';
 import '../utils/constants.dart';
+import '../utils/fetch_error_text.dart';
 import 'epg_database.dart';
 import 'xmltv_parser.dart';
 import 'sports_match_inputs.dart';
@@ -678,7 +679,8 @@ class EpgService extends ChangeNotifier implements SportsMatchGuide {
       return result.stored;
     } catch (e) {
       _sourceStatuses[url] = (stored: null, finishedAt: DateTime.now());
-      error = e.toString();
+      // Never the raw text: an Xtream guide URL carries the login in its query.
+      error = safeFetchError(e, url: url);
       debugPrint('EpgService error: ${e.runtimeType}');
       return null;
     } finally {
