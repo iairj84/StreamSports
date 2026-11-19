@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.70 — 18 November 2026
+
+- The phone page is now a StreamSports screen instead of a generic web form: it carries the app's name and mark, its Dark grey, OLED, Light, Midnight, Ember, Forest and Lime black palettes, and the Classic, Modern and Stadium Night surfaces, so it matches the TV that showed the code.
+- The phone page also picks up the TV's current theme and surface automatically, and choosing a theme or surface in the setup form repaints the page so the choice previews itself before it is sent.
+- The playlist form, link box, channel renames and backup transfer were rebuilt on that same set of controls: app-style section labels, settings switches, a pill Send button and a proper sent state.
+
 ## 0.2.69 — 18 November 2026
 
 - Set up from phone is now in Settings > Your TV, so a second playlist, a Stalker portal or a later theme change is one scan away without reinstalling.
