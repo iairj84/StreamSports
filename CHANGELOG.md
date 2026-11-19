@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.79 — 19 November 2026
+
+- Adding a scoreboard league is one entry in a feed catalogue instead of edits in six switches. lib/services/scoreboard_feeds.dart now declares each provider's request, POST body, size cap, decoding, cache window, schedule strategy and parser; the ESPN parser moved to its own library so sports_service is about fetching and caching only.
+- No behaviour change for any league: same feeds, same cache keys, same expiry rules, same parsers. An unknown or newer-build league source still reports as unsupported instead of requesting a path this build cannot score.
+
 ## 0.2.78 — 19 November 2026
 
 - AUD-002: the app no longer participates in Android backup, so a provider login cannot be copied to Google's backup transport or a device-to-device migration. Both rule files exclude the whole data set, and SECURITY.md now explains where credentials live and how a configuration moves between devices.
