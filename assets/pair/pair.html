@@ -16,6 +16,10 @@
   A trailing ".link" in the fragment (Wi-Fi: "#link") swaps the playlist form
   for one long-link box (Settings > Archive sources: paste a manifest URL);
   it sends {"mode":"link","link":…} the same two ways.
+  A trailing ".setup" (first-run setup) keeps the playlist form but adds
+  appearance and update choices, plus Stalker and content-type fields, and
+  sends {"mode":"setup","playlist":{…},"settings":{…}} so one scan sets the
+  whole device up.
   Keep it dependency-free: no CDN, no fonts, nothing that phones home.
 -->
 <style>
@@ -34,6 +38,10 @@
   textarea:focus { outline:2px solid var(--accent); border-color:transparent; }
   input { width:100%; padding:13px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; }
   input:focus { outline:2px solid var(--accent); border-color:transparent; }
+  select { width:100%; padding:13px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; }
+  select:focus { outline:2px solid var(--accent); border-color:transparent; }
+  label.check { display:flex; gap:10px; align-items:center; margin:14px 0 0; font-size:16px; color:var(--text); }
+  label.check input { width:22px; height:22px; flex:0 0 auto; padding:0; }
   .hint { font-size:13px; color:var(--muted); margin-top:6px; }
   button.send { width:100%; margin-top:24px; padding:15px; border:0; border-radius:4px; background:var(--accent); color:#101820; font:inherit; font-weight:700; font-size:17px; }
   button.send:disabled { opacity:.6; }
@@ -52,12 +60,13 @@
 <body>
 <main>
   <section id="form-view">
-    <h1>Add a playlist to <span>iptv-app</span></h1>
-    <p class="lead">Type your details here and they'll appear on your TV.</p>
+    <h1 id="form-title">Add a playlist to <span>iptv-app</span></h1>
+    <p class="lead" id="form-lead">Type your details here and they'll appear on your TV.</p>
 
     <div class="tabs" role="group" aria-label="Playlist type">
       <button type="button" id="tab-xtream" aria-pressed="true">Xtream Codes</button>
       <button type="button" id="tab-m3u" aria-pressed="false">M3U URL</button>
+      <button type="button" id="tab-stalker" aria-pressed="false" hidden>Stalker / MAC</button>
     </div>
 
     <form id="form" autocomplete="off" novalidate>
@@ -78,9 +87,57 @@
         <input id="m3u" name="m3u" inputmode="url" autocapitalize="off" spellcheck="false" maxlength="2000" placeholder="http://…/get.php?…">
       </div>
 
+      <div id="stalker-fields" hidden>
+        <label for="portal-url">Portal URL</label>
+        <input id="portal-url" inputmode="url" autocapitalize="off" spellcheck="false" maxlength="500" placeholder="http://portal.example.com/c/">
+        <label for="portal-mac">Registered MAC address</label>
+        <input id="portal-mac" autocapitalize="off" spellcheck="false" maxlength="64" placeholder="00:1A:79:…">
+        <label for="portal-username">Portal username <span style="opacity:.7">— optional</span></label>
+        <input id="portal-username" autocapitalize="off" spellcheck="false" maxlength="200">
+        <label for="portal-password">Portal password <span style="opacity:.7">— optional</span></label>
+        <input id="portal-password" type="password" autocapitalize="off" spellcheck="false" maxlength="200">
+        <div class="hint">Use the address and MAC registered with your provider.</div>
+      </div>
+
+      <div id="content-extras" hidden>
+        <label>Content from this playlist</label>
+        <label class="check"><input type="checkbox" id="content-live" checked> Live TV</label>
+        <label class="check"><input type="checkbox" id="content-movies" checked> Movies</label>
+        <label class="check"><input type="checkbox" id="content-series" checked> Series</label>
+      </div>
+
       <label for="epg">EPG (XMLTV) URL <span style="opacity:.7">— optional</span></label>
       <input id="epg" name="epg" inputmode="url" autocapitalize="off" spellcheck="false" maxlength="2000">
       <div class="hint">Leave blank unless your provider gave you a separate guide link.</div>
+
+      <section id="setup-extras" hidden>
+        <h2 class="sub">How it should look</h2>
+        <label for="setup-theme">Theme</label>
+        <select id="setup-theme">
+          <option value="classic_tv">Dark grey</option>
+          <option value="oled">OLED black</option>
+          <option value="light">Light</option>
+          <option value="midnight">Midnight</option>
+          <option value="ember">Ember</option>
+          <option value="forest">Forest</option>
+          <option value="stadium_night">Lime black</option>
+        </select>
+        <label for="setup-surface">Surface</label>
+        <select id="setup-surface">
+          <option value="classic">Classic — flat, square corners</option>
+          <option value="modern">Modern — rounded with a soft focus glow</option>
+          <option value="stadium">Stadium Night — pills and a focus ring</option>
+        </select>
+        <label class="check"><input type="checkbox" id="setup-clock"> 24-hour clock</label>
+        <label class="check"><input type="checkbox" id="setup-scores"> Hide scores on sports cards</label>
+
+        <h2 class="sub">Updates</h2>
+        <div class="tabs" role="group" aria-label="Update channel">
+          <button type="button" id="setup-update-stable" aria-pressed="true">Stable</button>
+          <button type="button" id="setup-update-early" aria-pressed="false">Early builds</button>
+        </div>
+        <div class="hint">Early builds are test versions. Stable is the safe choice.</div>
+      </section>
 
       <button class="send" id="send" type="submit">Send to TV</button>
       <div class="msg" id="msg"></div>
@@ -152,6 +209,8 @@
   if (namesKind) parts.pop();
   var linkKind = parts[parts.length - 1] === "link";
   if (linkKind) parts.pop();
+  var setupKind = parts[parts.length - 1] === "setup";
+  if (setupKind) parts.pop();
   var relay = !namesKind && !backupKind && parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
   if (namesKind) {
     // The channel list only exists on the TV itself, so this form is Wi-Fi only.
@@ -171,19 +230,48 @@
     $("link-view").hidden = false;
     document.title = "iptv-app · Send a link";
   }
+  var setupUpdate = "stable";
+  if (setupKind) {
+    // One scan sets the whole device up: playlist, look and update channel.
+    $("tab-stalker").hidden = false;
+    $("setup-extras").hidden = false;
+    $("form-title").innerHTML = "Set up <span>iptv-app</span>";
+    $("form-lead").textContent =
+      "Add your playlist and choose how the app looks. It all arrives on your TV at once.";
+    document.title = "iptv-app · Set up";
+    setSetupUpdate("stable");
+    // Reveal the content choices the initial mode would otherwise hide.
+    setMode("xtream");
+  }
 
   function setMode(m) {
     mode = m;
     $("tab-xtream").setAttribute("aria-pressed", String(m === "xtream"));
     $("tab-m3u").setAttribute("aria-pressed", String(m === "m3u"));
+    $("tab-stalker").setAttribute("aria-pressed", String(m === "stalker"));
     $("xtream-fields").hidden = m !== "xtream";
     $("m3u-fields").hidden = m !== "m3u";
+    $("stalker-fields").hidden = m !== "stalker";
+    // Content choices only exist where the provider splits its catalogue.
+    $("content-extras").hidden = !setupKind || m === "m3u";
   }
   $("tab-xtream").onclick = function () { setMode("xtream"); };
   $("tab-m3u").onclick = function () { setMode("m3u"); };
+  $("tab-stalker").onclick = function () { setMode("stalker"); };
+
+  function setSetupUpdate(which) {
+    setupUpdate = which;
+    $("setup-update-stable").setAttribute(
+      "aria-pressed", String(which === "stable"));
+    $("setup-update-early").setAttribute(
+      "aria-pressed", String(which === "early"));
+  }
+  $("setup-update-stable").onclick = function () { setSetupUpdate("stable"); };
+  $("setup-update-early").onclick = function () { setSetupUpdate("early"); };
 
   function show(text, kind) {
-    var el = $(linkKind ? "link-msg" : namesKind ? "names-msg" : backupKind ? "backup-msg" : "msg");
+    var el = $(linkKind ? "link-msg" : namesKind ? "names-msg" :
+      backupKind ? "backup-msg" : "msg");
     el.textContent = text;
     el.className = "msg " + (kind || "");
     el.style.display = "block";
@@ -246,9 +334,56 @@
     return { v: 1, mode: "link", link: link };
   }
 
+  // The setup form: the same playlist fields, plus what the phone chose for
+  // the look and updates. The TV applies both in one pass.
+  function collectSetup() {
+    var v = function (id) { return $(id).value.trim(); };
+    var playlist = { v: 1, mode: mode, name: v("name"), epg: v("epg") };
+    if (mode === "xtream") {
+      playlist.server = v("server");
+      playlist.username = v("username");
+      playlist.password = v("password");
+      if (!playlist.server || !playlist.username || !playlist.password) {
+        return "Fill in the server, username and password.";
+      }
+    } else if (mode === "m3u") {
+      playlist.m3u = v("m3u");
+      if (!playlist.m3u) return "Fill in the M3U URL.";
+    } else {
+      playlist.portalUrl = v("portal-url");
+      playlist.portalMac = v("portal-mac");
+      playlist.portalUsername = v("portal-username");
+      playlist.portalPassword = v("portal-password");
+      if (!playlist.portalUrl || !playlist.portalMac) {
+        return "Fill in the portal URL and the registered MAC address.";
+      }
+    }
+    if (!playlist.name) return "Give the playlist a name.";
+    if (mode !== "m3u") {
+      playlist.live = $("content-live").checked ? "true" : "false";
+      playlist.movies = $("content-movies").checked ? "true" : "false";
+      playlist.series = $("content-series").checked ? "true" : "false";
+      if (!playlist.live && !playlist.movies && !playlist.series) {
+        return "Choose at least one kind of content.";
+      }
+    }
+    return {
+      v: 1,
+      mode: "setup",
+      playlist: playlist,
+      settings: {
+        palette: $("setup-theme").value,
+        surface: $("setup-surface").value,
+        clock24: $("setup-clock").checked ? "true" : "false",
+        scores: $("setup-scores").checked ? "true" : "false",
+        update: setupUpdate,
+      },
+    };
+  }
+
   async function submit(e) {
     e.preventDefault();
-    var data = linkKind ? collectLink() : collect();
+    var data = setupKind ? collectSetup() : linkKind ? collectLink() : collect();
     if (typeof data === "string") { show(data, "err"); return; }
     var btn = $(linkKind ? "link-send" : "send");
     btn.disabled = true; btn.textContent = "Sending…";
@@ -257,6 +392,7 @@
       if (relay) await sendRelay(json); else await sendLocal(json);
       $("form-view").hidden = true;
       $("link-view").hidden = true;
+      if (setupKind) $("done-hint").textContent = "Your TV is adding the playlist and applying the settings now. You can close this page.";
       if (linkKind) $("done-hint").textContent = "Check it there, then press Add. You can close this page.";
       $("done-view").style.display = "block";
     } catch (err) {

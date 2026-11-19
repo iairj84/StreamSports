@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../services/phone_pairing_service.dart';
 import 'live_resume_hint.dart';
 import '../l10n/l10n.dart';
+import '../utils/tv_theme.dart';
 
 /// The middle pane of Add Playlist > "From my phone": a QR code to scan,
 /// what to do, and a switch to the relay code for a phone that isn't on the
@@ -157,7 +158,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(lookTokens(context).shapeFor(16)),
         ),
         child: QrImageView(
           data: url!,
@@ -173,6 +174,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     final isLink = widget.kind == PairingKind.link;
     final isNames = widget.kind == PairingKind.names;
     final isBackup = widget.kind == PairingKind.backup;
+    final isSetup = widget.kind == PairingKind.setup;
     // The relay can carry a phone's upload but cannot hand a list or a file
     // back, so these pages only work on the same Wi-Fi.
     final lanOnly = isNames || isBackup;
@@ -184,7 +186,9 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                 ? tr('Rename channels from your phone')
                 : isBackup
                     ? tr('Move a backup with your phone')
-                    : tr('Add from your phone'),
+                    : isSetup
+                        ? tr('Set up this device from your phone')
+                        : tr('Add from your phone'),
             style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
@@ -194,7 +198,10 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
               : isBackup
                   ? tr(
                       'Download this device’s backup onto your phone, or pick a backup the phone already has and send it here to set this device up.')
-                  : isLink
+                  : isSetup
+                      ? tr(
+                          'Scan this code with your phone camera and set the whole device up there: your playlist, the theme and surface, the clock and the update channel all arrive here at once.')
+                      : isLink
                       ? tr(
                           'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
                       : tr(
@@ -224,9 +231,12 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                           : isBackup
                               ? tr(
                                   'Choose Save to phone or Restore from phone.')
-                              : isLink
-                                  ? tr('Paste the link and tap Send to TV.')
-                                  : tr('Fill in the form and tap Send to TV.')),
+                              : isSetup
+                                  ? tr(
+                                      'Add your playlist, then choose the theme, surface and update channel.')
+                                  : isLink
+                                      ? tr('Paste the link and tap Send to TV.')
+                                      : tr('Fill in the form and tap Send to TV.')),
                   _Step(
                       n: 3,
                       text: isNames
@@ -234,10 +244,13 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                           : isBackup
                               ? tr(
                                   'Confirm on the TV before anything is replaced.')
-                              : isLink
-                                  ? tr('Check the link here, then press Add.')
-                                  : tr(
-                                      'Check the details here, then press Add Playlist.')),
+                              : isSetup
+                                  ? tr(
+                                      'Tap Send to TV — the playlist is added and the settings change here.')
+                                  : isLink
+                                      ? tr('Check the link here, then press Add.')
+                                      : tr(
+                                          'Check the details here, then press Add Playlist.')),
                   const SizedBox(height: 12),
                   if (!_starting && !_expired && url != null)
                     Row(

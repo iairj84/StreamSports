@@ -1,5 +1,49 @@
 # Design notes
 
+## First run sets up on the phone, not the remote
+
+A new install used to ask "add a playlist?" and then hand over a form built
+for a remote: provider login, then a second trip through Settings for the
+look, the clock and the update channel. Each of those already had a phone
+path — but as five separate QR codes, each knowingly limited to one thing.
+
+So `PairingKind.setup` is one payload with two halves:
+
+```json
+{"mode":"setup",
+ "playlist":{"mode":"xtream","name":"…","server":"…","username":"…","password":"…"},
+ "settings":{"palette":"oled","surface":"stadium","clock24":"true",
+             "scores":"false","update":"stable"}}
+```
+
+The phone page reuses the Add Playlist form rather than growing a second
+one, so Xtream, M3U and Stalker share the same fields, validation and
+"Send to TV" button as the existing flow; `.setup` only unhides the Stalker
+tab, the content-type choices and an appearance section. That keeps a fix to
+the playlist form from having to land twice.
+
+On the TV side the settings are applied *before* the playlist is added. The
+add starts its own guide refresh and catalogue load, and those paint the
+first guide rows; applying the theme afterwards would show the old colours
+for a second and then switch. Playlist failures roll back the empty profile
+and leave the screen up — the phone page has already stopped its session, so
+`PhonePairPanel` shows "Code expired" with a New code button and the viewer
+rescans after fixing the details.
+
+`PairingResult.fromJson` only accepts the keys in `setupSettingKeys`, and
+`PairingKind.playlist` refuses a setup payload even though it carries a
+valid playlist mode. Between them, a stale page, a hand-edited one, or an
+old QR code still on screen cannot write a preference the phone page was
+never meant to touch. Unknown palette or surface ids are ignored at apply
+time instead of being rejected, so a newer phone page that offers a theme
+this build does not know cannot break the whole setup.
+
+What stayed out: league and team picks, the language, and playback
+buffer choices. They need live catalogue data or a restart to take effect,
+and the point of this screen is the five-minute path from install to a
+picture. Hidden-channel and rename flows keep their own QR codes, because
+they act on a catalogue that does not exist yet at first run.
+
 ## Stadium Night is a look, not a palette
 
 Direction B first shipped as a colour palette and read as "different colours,

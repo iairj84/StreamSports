@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/player_screen.dart';
+import 'screens/setup_from_phone_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
@@ -99,25 +100,25 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
   /// content lives behind Settings > Playlist Manager rather than just
   /// showing up on its own.
   bool _newUserPromptPending = false;
-  Completer<bool>? _newUserPromptCompleter;
+  Completer<WelcomeChoice>? _newUserPromptCompleter;
 
   /// Set from [WelcomeAddPlaylistScreen]'s answer, consumed once `_ready`
   /// flips true (see `_buildReadyContent`'s `build` doc comment below) —
-  /// can't just push [AddPlaylistScreen] directly from the prompt itself,
-  /// since the real `MaterialApp`/`Navigator` this screen's bootstrap gate
-  /// runs ahead of doesn't exist yet at that point.
-  bool _pendingAutoOpenAddPlaylist = false;
+  /// can't just push [AddPlaylistScreen] or [SetupFromPhoneScreen] directly
+  /// from the prompt itself, since the real `MaterialApp`/`Navigator` this
+  /// screen's bootstrap gate runs ahead of doesn't exist yet at that point.
+  WelcomeChoice? _pendingWelcomeChoice;
 
-  Future<bool> _confirmNewUserWantsPlaylist() {
-    final completer = Completer<bool>();
+  Future<WelcomeChoice> _confirmNewUserWantsPlaylist() {
+    final completer = Completer<WelcomeChoice>();
     _newUserPromptCompleter = completer;
     if (mounted) setState(() => _newUserPromptPending = true);
     return completer.future;
   }
 
-  void _respondToNewUserPrompt(bool wantsToAddPlaylist) {
+  void _respondToNewUserPrompt(WelcomeChoice choice) {
     if (mounted) setState(() => _newUserPromptPending = false);
-    _newUserPromptCompleter?.complete(wantsToAddPlaylist);
+    _newUserPromptCompleter?.complete(choice);
     _newUserPromptCompleter = null;
   }
 
@@ -199,7 +200,7 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
       // category names and the selected category only when opened.
       await _playlistManager.init(restoreInBackground: true);
       if (_playlistManager.profiles.isEmpty) {
-        _pendingAutoOpenAddPlaylist = await _confirmNewUserWantsPlaylist();
+        _pendingWelcomeChoice = await _confirmNewUserWantsPlaylist();
       }
       if (mounted) setState(() => _ready = true);
       // The dictionary's first build scans the whole programme table in one
@@ -208,13 +209,16 @@ class _NoxIptvAppState extends State<NoxIptvApp> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _epgService.warmSportsSearchSoon(delay: Duration.zero);
       });
-      if (_pendingAutoOpenAddPlaylist) {
+      final welcomeChoice = _pendingWelcomeChoice;
+      _pendingWelcomeChoice = null;
+      if (welcomeChoice != null && welcomeChoice != WelcomeChoice.skip) {
         // Same reasoning as the toast above — the real Navigator this
         // pushes onto doesn't exist until this build lands.
-        _pendingAutoOpenAddPlaylist = false;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _navigatorKey.currentState?.push(
-              MaterialPageRoute(builder: (_) => const AddPlaylistScreen()));
+          _navigatorKey.currentState?.push(MaterialPageRoute(
+              builder: (_) => welcomeChoice == WelcomeChoice.phoneSetup
+                  ? const SetupFromPhoneScreen()
+                  : const AddPlaylistScreen()));
         });
       }
       // `_epgService.init()` was started during the splash (see above);

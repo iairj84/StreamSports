@@ -18,12 +18,14 @@ const Map<String, String> kRelayAppHeaders = {'X-VesperTV-App': '1'};
 /// is not a backup file this app wrote.
 const int _maxBackupChars = 24 * 1024 * 1024;
 
-/// What a pairing session asks the phone for: the Add Playlist form, one
-/// long link (Settings > Archive sources' manifest URL), a batch of channel
-/// names (Settings > Channel names), or moving a backup file (Settings >
-/// Backup & restore). pair.html picks its form from a `.link` / `#link`,
-/// `.names` / `#names` or `.backup` / `#backup` suffix on the URL fragment.
-enum PairingKind { playlist, link, names, backup }
+/// What a pairing session asks the phone for: the Add Playlist form, a whole
+/// first-run setup (playlist plus appearance and update choices), one long
+/// link (Settings > Archive sources' manifest URL), a batch of channel names
+/// (Settings > Channel names), or moving a backup file (Settings > Backup &
+/// restore). pair.html picks its form from a `.link` / `#link`, `.names` /
+/// `#names`, `.backup` / `#backup` or `.setup` / `#setup` suffix on the URL
+/// fragment.
+enum PairingKind { playlist, setup, link, names, backup }
 
 /// What the phone sent: the same fields Add Playlist has, one [link], or the
 /// channel names it edited.
@@ -40,6 +42,15 @@ class PairingResult {
     this.renames = const [],
     this.backupName = '',
     this.backupData = '',
+    this.portalUrl = '',
+    this.portalMac = '',
+    this.portalUsername = '',
+    this.portalPassword = '',
+    this.includeLive = true,
+    this.includeMovies = true,
+    this.includeSeries = true,
+    this.settings = const {},
+    this.fromSetup = false,
   });
 
   /// 'xtream', 'm3u' or 'link'.
@@ -61,6 +72,60 @@ class PairingResult {
   final String backupName;
   final String backupData;
 
+  /// Set when [mode] is 'stalker'.
+  final String portalUrl;
+  final String portalMac;
+  final String portalUsername;
+  final String portalPassword;
+
+  /// Content choices for Xtream and Stalker; true for M3U, which has no
+  /// separate movie or series lists.
+  final bool includeLive;
+  final bool includeMovies;
+  final bool includeSeries;
+
+  /// Which settings the phone chose during setup, keyed by
+  /// [setupSettingKeys]. Empty outside a setup session.
+  final Map<String, String> settings;
+
+  /// True for a setup payload: [mode] is the playlist kind it carries.
+  final bool fromSetup;
+
+  /// The keys a setup page may set. Anything else is dropped on the way in,
+  /// so a stale or hand-edited page cannot write an arbitrary preference.
+  static const List<String> setupSettingKeys = [
+    'palette',
+    'surface',
+    'clock24',
+    'scores',
+    'update',
+  ];
+
+  PairingResult copyWith(
+          {Map<String, String>? settings, bool? fromSetup}) =>
+      PairingResult(
+        mode: mode,
+        link: link,
+        name: name,
+        server: server,
+        username: username,
+        password: password,
+        m3uUrl: m3uUrl,
+        epgUrl: epgUrl,
+        renames: renames,
+        backupName: backupName,
+        backupData: backupData,
+        portalUrl: portalUrl,
+        portalMac: portalMac,
+        portalUsername: portalUsername,
+        portalPassword: portalPassword,
+        includeLive: includeLive,
+        includeMovies: includeMovies,
+        includeSeries: includeSeries,
+        settings: settings ?? this.settings,
+        fromSetup: fromSetup ?? this.fromSetup,
+      );
+
   /// Null when the payload isn't something the form could have produced.
   static PairingResult? fromJson(Object? json) {
     if (json is! Map) return null;
@@ -72,6 +137,29 @@ class PairingResult {
     }
 
     final mode = s('mode', 10);
+    // A setup payload nests the playlist it already knows how to read and
+    // adds the settings the phone chose alongside it.
+    if (mode == 'setup') {
+      final inner = fromJson(json['playlist']);
+      if (inner == null || inner.fromSetup) return null;
+      if (inner.mode != 'xtream' &&
+          inner.mode != 'm3u' &&
+          inner.mode != 'stalker') {
+        return null;
+      }
+      final chosen = <String, String>{};
+      final raw = json['settings'];
+      if (raw is Map) {
+        for (final key in setupSettingKeys) {
+          final value = raw[key];
+          if (value is! String) continue;
+          final trimmed = value.trim().toLowerCase();
+          if (trimmed.isEmpty || trimmed.length > 40) continue;
+          chosen[key] = trimmed;
+        }
+      }
+      return inner.copyWith(settings: chosen, fromSetup: true);
+    }
     if (mode == 'names') {
       final raw = json['renames'];
       if (raw is! List) return null;
@@ -103,6 +191,13 @@ class PairingResult {
       if (data.isEmpty || data.length > _maxBackupChars) return null;
       return PairingResult(mode: 'backup', backupName: name, backupData: data);
     }
+    bool b(String k) {
+      final v = json[k];
+      if (v is bool) return v;
+      if (v is String) return v.trim().toLowerCase() != 'false';
+      return true;
+    }
+
     final r = PairingResult(
       mode: mode,
       name: s('name', 80),
@@ -112,8 +207,18 @@ class PairingResult {
       m3uUrl: s('m3u', 2000),
       epgUrl: s('epg', 2000),
       link: s('link', 4000),
+      portalUrl: s('portalUrl', 500),
+      portalMac: s('portalMac', 64),
+      portalUsername: s('portalUsername', 200),
+      portalPassword: s('portalPassword', 200),
+      includeLive: b('live'),
+      includeMovies: b('movies'),
+      includeSeries: b('series'),
     );
     if (mode == 'link') return r.link.isNotEmpty ? r : null;
+    if (mode == 'stalker') {
+      return r.portalUrl.isNotEmpty && r.portalMac.isNotEmpty ? r : null;
+    }
     if (mode == 'xtream' &&
         r.server.isNotEmpty &&
         r.username.isNotEmpty &&
@@ -176,6 +281,7 @@ class PhonePairingSession {
         PairingKind.link => 'link',
         PairingKind.names => 'names',
         PairingKind.backup => 'backup',
+        PairingKind.setup => 'setup',
         PairingKind.playlist => '',
       };
 
@@ -183,8 +289,13 @@ class PhonePairingSession {
         PairingKind.link => r.mode == 'link',
         PairingKind.names => r.mode == 'names',
         PairingKind.backup => r.mode == 'backup',
-        PairingKind.playlist =>
-          r.mode != 'link' && r.mode != 'names' && r.mode != 'backup',
+        PairingKind.setup => r.fromSetup,
+        // A setup payload carries a playlist mode too, but only a setup
+        // session may apply its settings.
+        PairingKind.playlist => !r.fromSetup &&
+            r.mode != 'link' &&
+            r.mode != 'names' &&
+            r.mode != 'backup',
       };
 
   final _results = StreamController<PairingResult>.broadcast();

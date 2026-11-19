@@ -13,14 +13,18 @@ import '../l10n/l10n.dart';
 /// "runs before the real MaterialApp/theme tree exists, so it carries its
 /// own" situation, same reason it reads [AppPreferences.palette] itself
 /// instead of inheriting a theme.
+/// What first run should do next. Phone setup is offered first because the
+/// alternative is typing a provider login and picking a theme with a remote.
+enum WelcomeChoice { phoneSetup, addPlaylist, skip }
+
 class WelcomeAddPlaylistScreen extends StatelessWidget {
   const WelcomeAddPlaylistScreen({super.key, required this.onRespond});
 
-  /// `true` to open [AddPlaylistScreen] right after bootstrap finishes,
-  /// `false` to land on the normal (empty) main app — see main.dart's
-  /// `_pendingAutoOpenAddPlaylist` for why this can't just push the screen
-  /// directly from here (no Navigator exists yet at this point).
-  final void Function(bool wantsToAddPlaylist) onRespond;
+  /// Which screen to open right after bootstrap finishes, or [WelcomeChoice
+  /// .skip] to land on the normal (empty) main app — see main.dart's
+  /// `_pendingWelcomeChoice` for why this can't just push the screen directly
+  /// from here (no Navigator exists yet at this point).
+  final void Function(WelcomeChoice choice) onRespond;
 
   @override
   Widget build(BuildContext context) {
@@ -61,28 +65,48 @@ class WelcomeAddPlaylistScreen extends StatelessWidget {
                     style: const TextStyle(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 28),
-                  // ModeButton over plain Outlined/FilledButton for the same
-                  // reason as CatalogSyncPromptScreen — a solid fill *only*
-                  // on real D-pad focus, not permanently on one button.
+                  const SizedBox(height: 24),
+                  // The phone flow carries the playlist *and* the settings that
+                  // otherwise mean hunting through menus with a remote, so it
+                  // leads. ModeButton over plain buttons for the same reason as
+                  // CatalogSyncPromptScreen — a solid fill *only* on real
+                  // D-pad focus, not permanently on one button.
                   SizedBox(
                     width: 320,
-                    child: Row(
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: ModeButton(
-                            label: tr('Skip for now'),
-                            selected: false,
-                            onTap: () => onRespond(false),
-                          ),
+                        ModeButton(
+                          icon: Icons.qr_code_2,
+                          label: tr('Set up on my phone'),
+                          selected: true,
+                          onTap: () => onRespond(WelcomeChoice.phoneSetup),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ModeButton(
-                            label: tr('Add Playlist'),
-                            selected: false,
-                            onTap: () => onRespond(true),
-                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          tr('Scan a code with your phone to add your playlist and choose the look — the fastest way with a remote.'),
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ModeButton(
+                                label: tr('Skip for now'),
+                                selected: false,
+                                onTap: () => onRespond(WelcomeChoice.skip),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ModeButton(
+                                label: tr('Add Playlist'),
+                                selected: false,
+                                onTap: () => onRespond(WelcomeChoice.addPlaylist),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -313,3 +313,14 @@ server
 {n} named by hand are left alone.
 {n} programs · {p}
 {p} live channels
+My playlist
+The playlist could not be added. Check its details on your phone and scan again.
+Setup complete. Your playlist is loading.
+Setup could not be saved. Please try again.
+Set up on my phone
+Setting up…
+Scan a code with your phone to add your playlist and choose the look — the fastest way with a remote.
+Set up this device from your phone
+Scan this code with your phone camera and set the whole device up there: your playlist, the theme and surface, the clock and the update channel all arrive here at once.
+Add your playlist, then choose the theme, surface and update channel.
+Tap Send to TV — the playlist is added and the settings change here.

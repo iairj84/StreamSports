@@ -42,6 +42,93 @@ void main() {
         PairingResult.fromJson({'mode': 'backup', 'data': '   '}), isNull);
   });
 
+  test('a setup payload carries the playlist and the chosen settings', () {
+    final result = PairingResult.fromJson({
+      'mode': 'setup',
+      'playlist': {
+        'mode': 'xtream',
+        'name': 'Living room',
+        'server': 'http://host:8080',
+        'username': 'someone',
+        'password': 'secret',
+        'movies': 'false',
+      },
+      'settings': {
+        'palette': 'oled',
+        'surface': 'stadium',
+        'clock24': 'true',
+        'scores': 'true',
+        'update': 'early',
+      },
+    });
+    expect(result, isNotNull);
+    expect(result!.fromSetup, isTrue);
+    expect(result.mode, 'xtream');
+    expect(result.name, 'Living room');
+    expect(result.server, 'http://host:8080');
+    // An omitted content choice keeps the Add Playlist default.
+    expect(result.includeLive, isTrue);
+    expect(result.includeMovies, isFalse);
+    expect(result.settings['surface'], 'stadium');
+    expect(result.settings['update'], 'early');
+  });
+
+  test('a setup payload only keeps settings the TV can apply', () {
+    final result = PairingResult.fromJson({
+      'mode': 'setup',
+      'playlist': {'mode': 'm3u', 'name': 'One', 'm3u': 'http://host/list.m3u'},
+      'settings': {'palette': ' OLED ', 'alien': 'yes', 'surface': ''},
+    });
+    expect(result, isNotNull);
+    expect(result!.settings, {'palette': 'oled'});
+  });
+
+  test('a setup payload needs a playlist it can actually save', () {
+    // No nested playlist at all.
+    expect(PairingResult.fromJson({'mode': 'setup'}), isNull);
+    expect(PairingResult.fromJson({'mode': 'setup', 'playlist': 'nope'}), isNull);
+    // Xtream still needs all three credentials.
+    expect(
+        PairingResult.fromJson({
+          'mode': 'setup',
+          'playlist': {'mode': 'xtream', 'server': 'http://host:8080'},
+        }),
+        isNull);
+    // Stalker needs both the portal and the MAC the provider registered.
+    expect(
+        PairingResult.fromJson({
+          'mode': 'setup',
+          'playlist': {'mode': 'stalker', 'portalUrl': 'http://portal/c/'},
+        }),
+        isNull);
+    // A setup payload cannot nest another one.
+    expect(
+        PairingResult.fromJson({
+          'mode': 'setup',
+          'playlist': {'mode': 'setup', 'playlist': {}},
+        }),
+        isNull);
+  });
+
+  test('a setup payload carries a stalker login', () {
+    final result = PairingResult.fromJson({
+      'mode': 'setup',
+      'playlist': {
+        'mode': 'stalker',
+        'name': 'Portal',
+        'portalUrl': 'http://portal.example.com/c/',
+        'portalMac': '00:1A:79:12:34:56',
+        'portalUsername': 'user',
+      },
+      'settings': {},
+    });
+    expect(result, isNotNull);
+    expect(result!.fromSetup, isTrue);
+    expect(result.mode, 'stalker');
+    expect(result.portalMac, '00:1A:79:12:34:56');
+    expect(result.portalUsername, 'user');
+  });
+
   test('a names payload needs a list of renames', () {
     expect(PairingResult.fromJson({'mode': 'names'}), isNull);
     expect(PairingResult.fromJson({'mode': 'names', 'renames': []}), isNull);
