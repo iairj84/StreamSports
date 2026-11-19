@@ -97,7 +97,7 @@ transfer test still passes.
 
 **Effort:** M  
 **Depends on:** —  
-**Status:** [ ] open
+**Status:** [x] fixed in `e9bfd00`
 
 ---
 
