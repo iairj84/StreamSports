@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.65 — 18 November 2026
+
+- Settings > Themes gains an opt-in Stadium Night look: true black surfaces with an electric lime LIVE and focus accent across the Sports hub and guide, keeping the same layout.
+
 ## 0.2.64 — 18 November 2026
 
 - Update channel options are plain rows again: RadioGroup trapped the remote inside Stable/Early builds so Download/Install below could never be reached.
