@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.66 — 18 November 2026
+
+- Stadium Night is now a real look, not just new colours: Settings > Themes > Surface adds it with pill shapes, ring-and-halo focus, tracked caps for headings and LIVE/FINAL, heavier team names and larger scores across the Sports hub and guide, keeping the same layout.
+
 ## 0.2.65 — 18 November 2026
 
 - Settings > Themes gains an opt-in Stadium Night look: true black surfaces with an electric lime LIVE and focus accent across the Sports hub and guide, keeping the same layout.
