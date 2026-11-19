@@ -1,5 +1,47 @@
 # Design notes
 
+## The scoreboard pipeline is a table, not six switches
+
+Adding a league used to mean finding `switch (league.source)` in six places:
+`supportsSportsScoreboard`/`supportsSportsSchedule` (two predicates), the URL
+builder in `_download`, the cache key in `_scoreboardKey`, the expiry rule in
+`_freshEntry`, the parser dispatch in `_parseScoreboardResult`, the bounded-read
+host allowlist in `_getScoreboard`, and the schedule-window branch that chose
+monthly/ESPN vs daily/regional vs motorsport. Two of those were separate switches
+over the same four cases (cache key and expiry are the same axis), and the
+bounded-read set was a host list that had to match the URL builder exactly - a
+copy-paste bug there silently removes the size cap.
+
+`lib/services/scoreboard_feeds.dart` now holds one `ScoreboardFeed` per
+provider: the URI builder, the optional POST body, whether to read with the size
+cap, whether to decode UTF-8 rather than trust the charset, the cache window
+(day/month/season/current season, which yields both the key and the expiry
+anchor), the schedule strategy, and the parser. Everything else reads that
+table. ESPN stays the default because most leagues name no provider of their
+own, and an unknown source keeps falling back to ESPN's *parser* while still
+reporting as unsupported - a saved league from a newer build must not request a
+path this build cannot score.
+
+The ESPN parser itself moved to `lib/services/espn_scoreboard.dart` (about 760
+lines: team, golf, racing, fight and tennis event shapes plus their helpers) so
+the catalogue can reference it without a circular import, and `sports_service`
+re-exports it so every existing import path still works. It also leaves the
+service about fetching and caching rather than parsing.
+
+What deliberately did not move: the per-league parsers. EASL's pools, K League's
+split ranks and RugbyPass's published table are different formats, and a
+generic field-mapping engine over them would be longer than the six parsers and
+lose their specific validation (position uniqueness, UUID shape, split-phase
+codes). The catalogue removes the wiring duplication, not the format knowledge.
+
+`test/scoreboard_feed_catalogue_test.dart` keeps the table honest: every entry
+is filed under the source it serves, no two requested feeds share an address,
+every catalogue-scored league reports score support, and each provider's URL,
+body and decoding flags are asserted once. The standings service still has its
+own if-chain; converting it to the same shape is the next slice, and it is
+harder because ESPN supplies teams there and several leagues enrich those with a
+second source.
+
 ## No OS backup, and three ways a bad payload is refused
 
 Three audit findings shared one property: the configuration plane could leave
