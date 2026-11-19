@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.78 — 19 November 2026
+
+- AUD-002: the app no longer participates in Android backup, so a provider login cannot be copied to Google's backup transport or a device-to-device migration. Both rule files exclude the whole data set, and SECURITY.md now explains where credentials live and how a configuration moves between devices.
+- AUD-003: a failed guide or playlist request no longer publishes the viewer's login. Error text shown in Settings and on the home screen is rebuilt from the provider's host and port, with username/password pairs redacted; provider messages that carry no address, such as an account rejection, read exactly as before.
+- AUD-004: an unreadable saved configuration can no longer make the app unlaunchable. Playlist entries that do not decode are skipped instead of failing every launch, and a restore or transfer whose playlist section is unreadable is refused before it replaces a working configuration - as is any payload that tries to write a device-only setting.
+
 ## 0.2.77 — 19 November 2026
 
 - AUD-001: device transfer now requires the viewer's approval before applying a bundle, consumes that approval once, resets the handshake after refusal/timeout and closes the listener when the transfer ends. Adds regression coverage for unapproved, replayed, declined and timed-out handshakes.
