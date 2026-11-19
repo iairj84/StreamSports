@@ -28,16 +28,19 @@ class SettingsSection extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
             padding: const EdgeInsets.fromLTRB(2, 0, 2, 7),
-            child: Text(title,
+            child: Text(
+                tokens.uppercaseLabels ? title.toUpperCase() : title,
                 style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: tokens.uppercaseLabels ? 11 : 12,
+                    fontWeight:
+                        tokens.uppercaseLabels ? FontWeight.w800 : FontWeight.w600,
+                    letterSpacing: tokens.labelLetterSpacing,
                     color: scheme.onSurfaceVariant))),
         DecoratedBox(
           decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest.withValues(alpha: .35),
               borderRadius: BorderRadius.circular(
-                  tokens.isModern ? tokens.rowRadius : 5),
+                  tokens.rounded ? tokens.rowRadius : 5),
               border: Border.all(
                   color: scheme.outlineVariant.withValues(alpha: .65))),
           child:

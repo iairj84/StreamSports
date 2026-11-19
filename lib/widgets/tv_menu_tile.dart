@@ -108,12 +108,19 @@ class _TvMenuTileState extends State<TvMenuTile> {
       return RepaintBoundary(
           child: Material(
         animationDuration: Duration.zero,
-        color: _focused ? scheme.primaryContainer : Colors.transparent,
+        // Ring-only looks keep the resting surface and show focus with the
+        // border plus halo, so a highlighted row never flips to a slab of
+        // accent colour.
+        color: _focused && !tokens.focusRingOnly
+            ? scheme.primaryContainer
+            : Colors.transparent,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-                tokens.isModern ? tokens.rowRadius : 4),
+            borderRadius:
+                BorderRadius.circular(tokens.settingsRowRadius),
             side: BorderSide(
-                width: 1.5,
+                width: _focused && tokens.focusRingOnly
+                    ? tokens.focusBorderWidth
+                    : 1.5,
                 color: _focused ? scheme.primary : Colors.transparent)),
         child: ListTile(
           dense: true,
@@ -134,7 +141,7 @@ class _TvMenuTileState extends State<TvMenuTile> {
                   decoration: BoxDecoration(
                       color: scheme.primary.withValues(alpha: .09),
                       borderRadius: BorderRadius.circular(
-                          tokens.isModern ? tokens.blockRadius : 5)),
+                          tokens.rounded ? tokens.blockRadius : 5)),
                   child: Icon(widget.icon,
                       size: 19,
                       color: _focused

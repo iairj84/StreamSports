@@ -26,6 +26,32 @@ void main() {
     expect(SurfaceTokens.fromId(null), SurfaceStyle.classic);
   });
 
+  test('Stadium Night is a whole look, not a colour swap', () {
+    final classic = SurfaceTokens.forStyle(SurfaceStyle.classic);
+    final stadium = SurfaceTokens.forStyle(SurfaceStyle.stadium);
+    expect(SurfaceTokens.fromId('stadium'), SurfaceStyle.stadium);
+    expect(stadium.rounded, isTrue);
+    expect(classic.rounded, isFalse);
+    // Shape: pill surfaces well past Modern's rounding.
+    expect(stadium.rowRadius,
+        greaterThan(SurfaceTokens.forStyle(SurfaceStyle.modern).rowRadius));
+    expect(stadium.blockRadius, greaterThan(6));
+    // Focus language: ring plus halo instead of an accent fill.
+    expect(stadium.focusRingOnly, isTrue);
+    expect(classic.focusRingOnly, isFalse);
+    expect(stadium.focusGlowBlur, greaterThan(14));
+    // Type language: tracked caps, heavier titles, a dedicated score size.
+    expect(stadium.uppercaseLabels, isTrue);
+    expect(stadium.labelLetterSpacing, greaterThan(0));
+    expect(stadium.titleWeight, FontWeight.w800);
+    expect(classic.titleWeight, FontWeight.w600);
+    expect(stadium.scoreSize, greaterThan(classic.scoreSize));
+    expect(stadium.uppercasesStatus, isTrue);
+    expect(classic.uppercasesStatus, isFalse);
+    expect(stadium.uppercaseLabels && stadium.focusRingOnly &&
+        stadium.uppercasesStatus, isTrue, reason: 'tokens combine into one look');
+  });
+
   test('prefs default to Classic and persist the choice', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = StorageService();
@@ -63,6 +89,11 @@ void main() {
     await tester.tap(find.text('Modern'));
     await tester.pumpAndSettle();
     expect(prefs.surfaceStyle, SurfaceStyle.modern);
+    await tester.ensureVisible(find.text('Stadium Night'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Stadium Night'));
+    await tester.pumpAndSettle();
+    expect(prefs.surfaceStyle, SurfaceStyle.stadium);
     expect(tester.takeException(), isNull);
   });
 }

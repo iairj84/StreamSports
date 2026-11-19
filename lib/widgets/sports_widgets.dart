@@ -220,13 +220,18 @@ class _SportsChipState extends State<SportsChip> {
                         : (widget.compact ? 14 : 12),
                 vertical: widget.dense ? 3 : 4),
             decoration: BoxDecoration(
-              color: _focused
+              color: _focused && !tokens.focusRingOnly
                   ? null
                   : (widget.selected
                       ? accent.withValues(alpha: .09)
                       : interfaceColor(context, Colors.white)
                           .withValues(alpha: 0.07)),
-              gradient: _focused ? sportsFocusSheen(scheme) : null,
+              // Ring-only looks show focus with the border and halo; the
+              // surface keeps its resting fill instead of flipping to a
+              // solid accent slab.
+              gradient: _focused && !tokens.focusRingOnly
+                  ? sportsFocusSheen(scheme)
+                  : null,
               borderRadius: BorderRadius.circular(tokens.blockRadius),
               border: Border.all(
                 color: _focused

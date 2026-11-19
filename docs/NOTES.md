@@ -1,14 +1,29 @@
 # Design notes
 
-## Stadium Night ships as an opt-in palette
+## Stadium Night is a look, not a palette
 
-Direction B from the look-and-feel mockups (true-black OLED, electric-lime
-LIVE and focus) ships as one more `CyberpunkPalette`, not a reskin: the
-Sports hub and guide keep their layout, rows and focus order, and only the
-tokens change. Opt-in through Settings > Themes > Appearance keeps every
-existing install on its look; `trueBlack` gives the flat black surfaces and
-keeps the lime accent explicit instead of HCT-muted. Pairing it with the
-Modern surface style gives the thin focus border plus glow from the mockup.
+Direction B first shipped as a colour palette and read as "different colours,
+not a new look" — correct, because colour is the one dimension every install
+already changes. The look now lives in `SurfaceTokens` as a third
+`SurfaceStyle`, which is where geometry already lived:
+
+- **Shape**: 18/12/14 radii turn rows, chips and settings tiles into pills.
+- **Focus**: `focusRingOnly` keeps the resting surface and shows focus with a
+  2px ring plus a 22px halo, instead of Classic's accent-fill slab. This is the
+  single change that most reads as a modern streaming UI on a TV.
+- **Type**: `uppercaseLabels` + tracking for section headings, `titleWeight`
+  w800 for team and fixture names, `scoreSize` 19 for scores, and tracked caps
+  for status words (LIVE, FINAL); sentence-case legacy stays untouched.
+- **Colour** is still the separate `Lime black` palette (`stadium_night` id).
+
+Widgets read tokens instead of hardcoded values so nothing else in the layout,
+focus order or data path moved: `settings_section`, `tv_menu_tile`,
+`live_navigation_body`, `sports_widgets` (chips) and `sports_fixture_row`.
+The look is opt-in; Classic and Modern are byte-identical to before.
+
+The palette label had to change from "Stadium Night" to "Lime black" once the
+look took that name — two entries with identical labels made the row
+ambiguous on screen and in tests.
 
 ## RadioGroup traps a TV remote
 

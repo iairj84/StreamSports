@@ -397,7 +397,7 @@ class AppConstants {
     ),
     CyberpunkPalette(
       id: 'stadium_night',
-      label: 'Stadium Night',
+      label: 'Lime black',
       primary: Color(0xFFC8F04A),
       secondary: Color(0xFF7FD7FF),
       description: 'True black surfaces · electric lime LIVE and focus',

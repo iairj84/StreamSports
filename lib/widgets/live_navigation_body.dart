@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/surface_style.dart';
 import '../services/app_preferences.dart';
 
 /// Category-only hierarchy; primary navigation keeps its own density.
@@ -137,6 +138,9 @@ class LiveNavigationBody extends StatelessWidget {
     final metrics = LiveNavigationMetrics(context,
         nested: nested, collapsed: collapsed, category: level != null);
     final scheme = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final ink = focused
         ? scheme.onPrimaryContainer
         : selected
@@ -147,7 +151,7 @@ class LiveNavigationBody extends StatelessWidget {
     final content = Container(
         constraints: BoxConstraints(minHeight: metrics.minHeight),
         decoration: BoxDecoration(
-            color: focused
+            color: focused && !tokens.focusRingOnly
                 ? scheme.primaryContainer
                 : selected
                     ? scheme.primary.withValues(alpha: .09)
@@ -155,10 +159,12 @@ class LiveNavigationBody extends StatelessWidget {
                         ? scheme.onSurface
                             .withValues(alpha: nested ? .025 : .045)
                         : Colors.transparent,
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(tokens.rounded ? tokens.blockRadius : 3),
             border: Border.all(
                 color: focused ? scheme.primary : Colors.transparent,
-                width: 1.5)),
+                width: focused && tokens.focusRingOnly
+                    ? tokens.focusBorderWidth
+                    : 1.5)),
         child: Stack(alignment: Alignment.centerLeft, children: [
           if (selected && !focused)
             Positioned(

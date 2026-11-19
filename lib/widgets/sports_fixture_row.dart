@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/sports.dart';
+import '../models/surface_style.dart';
+import '../services/app_preferences.dart';
 import '../utils/sports_detail_presentation.dart';
 import '../utils/sports_fixture_presentation.dart';
 import '../utils/sports_odds_presentation.dart';
@@ -35,6 +38,9 @@ class SportsFixtureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tokens = SurfaceTokens.forStyle(
+        context.watch<AppPreferences?>()?.surfaceStyle ??
+            SurfaceStyle.classic);
     final showScore = !hideScores && game.state != GameState.pre;
     final insight = sportsFixtureInsight(game, hideScores: hideScores);
     final possessionId =
@@ -58,9 +64,10 @@ class SportsFixtureRow extends StatelessWidget {
                           '${side.name.isEmpty ? side.shortName : side.name}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: tokens.titleWeight,
+                      letterSpacing: tokens.rounded ? -0.2 : 0,
                       height: 1.25))),
           if (showScore &&
               possessionId != null &&
@@ -80,7 +87,7 @@ class SportsFixtureRow extends StatelessWidget {
                       ? ''
                       : side.record ?? '',
               style: TextStyle(
-                  fontSize: showScore ? 13 : 10,
+                  fontSize: showScore ? tokens.scoreSize : 10,
                   fontWeight: showScore ? FontWeight.w600 : FontWeight.w400,
                   fontFeatures: const [FontFeature.tabularFigures()],
                   color:
@@ -88,6 +95,8 @@ class SportsFixtureRow extends StatelessWidget {
         ]);
     final oddsLine = showOdds ? sportsOddsLine(game.odds) : null;
     final status = game.isLive ? 'LIVE' : sportsFixtureStatus(game);
+    String asLabel(String value, bool caps) =>
+        caps && value.length <= 8 ? value.toUpperCase() : value;
     // Live cards show who has the ball and the spot: football down &
     // distance ("2nd & 7 at NE 32"), baseball count/outs/runners.
     // Gated by hideScores so spoiler mode stays clean.
@@ -137,12 +146,13 @@ class SportsFixtureRow extends StatelessWidget {
                               height: 1.15,
                               color: colors.onSurfaceVariant))),
                 if (status != 'Scheduled')
-                  Text(status,
+                  Text(asLabel(status, tokens.uppercasesStatus),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 9,
                           height: 1.15,
+                          letterSpacing: tokens.uppercasesStatus ? .7 : 0,
                           fontWeight: FontWeight.w600,
                           color: game.isLive
                               ? colors.primary
@@ -177,8 +187,10 @@ class SportsFixtureRow extends StatelessWidget {
               Text(game.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600, height: 1.2)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: tokens.titleWeight,
+                      height: 1.2)),
               if (insight != null)
                 Text(insight,
                     maxLines: 1,

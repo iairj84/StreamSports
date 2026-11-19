@@ -27,12 +27,26 @@ class ThemeScreen extends StatelessWidget {
                 Builder(builder: (context) {
                   final scheme = Theme.of(context).colorScheme;
                   final selected = prefs.surfaceStyle == style;
-                  final modern = style == SurfaceStyle.modern;
+                  final (label, subtitle, radius) = switch (style) {
+                    SurfaceStyle.classic => (
+                        'Classic',
+                        'Our original look · square rows and bold outlines',
+                        2.0
+                      ),
+                    SurfaceStyle.modern => (
+                        'Modern',
+                        'Rounder surfaces and a softer focus glow',
+                        8.0
+                      ),
+                    SurfaceStyle.stadium => (
+                        'Stadium Night',
+                        'Pill shapes, ring focus and bold caps · the newest look',
+                        14.0
+                      ),
+                  };
                   return TvMenuTile(
-                    title: modern ? 'Modern' : 'Classic',
-                    subtitle: modern
-                        ? 'Rounder surfaces and a softer focus glow'
-                        : 'Our original look · square rows and bold outlines',
+                    title: label,
+                    subtitle: subtitle,
                     leading: Container(
                         width: 46,
                         height: 34,
@@ -44,8 +58,7 @@ class ThemeScreen extends StatelessWidget {
                         child: Container(
                             decoration: BoxDecoration(
                                 color: scheme.primary,
-                                borderRadius: BorderRadius.circular(
-                                    modern ? 8 : 2)))),
+                                borderRadius: BorderRadius.circular(radius)))),
                     trailing: Icon(
                         selected ? Icons.check_circle : Icons.circle_outlined,
                         size: 21,
