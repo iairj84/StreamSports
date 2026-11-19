@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.68 — 18 November 2026
+
+- A new install can now be set up entirely from a phone: one QR code carries the playlist plus the theme, surface, clock, spoiler setting and update channel, and the device applies all of it at once and opens ready to watch.
+- Stadium Night now reaches the last surfaces that kept their own corners, so multiview thumbnails, category icons, the quality badge, the warm-up banner and picker chips follow the look. Classic and Modern render exactly as before.
+
 ## 0.2.67 — 18 November 2026
 
 - Stadium Night now reaches every screen: dialogs, player sheets, menus, text fields, chips, posters and search follow the look's shapes, ring focus and type instead of keeping square corners and accent fills.
