@@ -37,6 +37,12 @@ void main() {
         expect(response.statusCode, 200);
         expect(response.headers['cache-control'], 'no-store');
         expect(response.body.toLowerCase(), contains('<html'));
+        // The bytes the phone receives are the page this repo builds, not a
+        // stale copy: the app's name and the palette blocks ship with the
+        // asset the LAN server hands out.
+        expect(response.body, contains('StreamSports'));
+        expect(response.body, contains('data-palette="stadium_night"'));
+        expect(response.body, contains('form="form"'));
         final missing = await client.get(uri.replace(path: '/invalid'));
         expect(missing.statusCode, 404);
         final result = session.results.first;

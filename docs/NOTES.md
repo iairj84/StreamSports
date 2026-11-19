@@ -11,20 +11,29 @@ trustworthy on a second screen. It now reads as another screen of StreamSports.
 Nothing here is a second design system. The page carries the same tokens the
 app does, expressed as CSS variables:
 
-The palette blocks mirror `tv_theme.dart`'s swatches (surface, container,
-outline, on-surface, variant and the duo-tone accent). They are approximations,
-not the exact output of Material's HCT seeding — reproducing that in CSS would
-mean shipping the colour-science code to a phone for a page whose job is one
-form. Approximating the hue, the panel lift and the accent is enough for the
-page to read as the same product, and the default block is Classic TV's exact
-`#171D25`/`#252E39`/`#90CAF9`.
+The palette blocks are not approximations: they are the values
+`buildPaletteColorScheme` actually produces for each `CyberpunkPalette`,
+printed from a throwaway test and pasted in. Re-deriving Material's HCT seeding
+in CSS would mean shipping colour-science code to a phone for a page whose job
+is one form.
+
+Two traps only showed up once the page was rendered. A custom property that
+aliases another (`--select: var(--accent)`) is resolved where it is *declared*,
+so a per-palette `--accent` override still left every palette selecting in
+Classic's blue — selection is now its own value in every palette. And the app's
+true-black branch builds on `ColorScheme.dark()`, whose neutrals resolve to
+pure white: faithful alphas there would draw a white outline around every
+panel and field, so Lime black's hairlines are white at 8–13% and its secondary
+text is white at 62% instead of 100%, which is what keeps the reading
+hierarchy the rest of the app has.
 
 The surface tokens copy `SurfaceTokens`' three-way split rather than one general
 "rounded" flag: Classic keeps flat fills and 8px corners, Modern adds its glow,
-and Stadium Night brings 22px panels, pill buttons, tracked uppercase labels and
-ring-only selection (`box-shadow: inset 0 0 0 2px` instead of an accent fill) —
-the same `focusRingOnly` distinction the widgets make. A selected tab therefore
-fills with accent in Classic and keeps its surface in Stadium Night, which is
+and Stadium Night brings its 16px panels, 18px chips and 12px buttons with
+tracked uppercase labels, tracked uppercase buttons and ring-only selection
+(`box-shadow: inset 0 0 0 2px` instead of an accent fill) — the same
+`focusRingOnly` distinction the widgets make. A selected tab therefore fills
+with the accent in Classic and keeps its surface in Stadium Night, which is
 exactly how a focused row behaves on the TV.
 
 The look reaches the phone through the query string (`?p=<palette>&s=<surface>`,

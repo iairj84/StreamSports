@@ -29,77 +29,97 @@
   dependency-free: no CDN, no fonts, nothing that phones home.
 -->
 <style>
-  /* Shipped default: Dark grey + Classic, the app's own defaults. */
+  /* Tokens come from the app itself: the palette blocks are the exact values
+     buildPaletteColorScheme produces for each CyberpunkPalette, and the
+     surface blocks mirror SurfaceTokens. Neutrals stay neutral (onSurface,
+     onSurfaceVariant, hairlines) so the accent means "selected / primary
+     action / focus" — which is how every screen of the app reads. */
   :root {
-    --bg:#151B22; --tint:rgba(144,202,249,.11);
-    --panel:#1E2731; --panel-2:#151C24;
-    --line:rgba(232,237,242,.09); --line-strong:rgba(232,237,242,.18);
-    --text:#E8EDF2; --muted:#9AA7B4;
-    --accent:#90CAF9; --accent-2:#90CAF9; --on-accent:#101820;
+    --surface:#171D25; --tint:rgba(144,202,249,.10);
+    --panel:#1C232C; --field:#252E39;
+    --ink:#E8EDF2; --muted:#A9B4C0;
+    --hairline:rgba(232,237,242,.07); --field-line:rgba(232,237,242,.11);
+    --track:rgba(232,237,242,.22);
+    --accent:#90CAF9; --accent-ink:#101820;
+    /* Selection is its own token: every palette sets it (custom properties
+       resolve where they are declared, so an alias here would keep the
+       default palette's accent on every other palette). */
+    --select:#90CAF9; --select-ink:#101820;
     --err:#FF8A8F; --ok:#6FD08C;
-    /* Surface tokens: Classic keeps flat rows and square-ish corners. */
+    /* SurfaceTokens: Classic keeps flat rows and square-ish corners. */
     --r-card:10px; --r-input:8px; --r-btn:8px; --r-tabs:10px;
     --title-weight:600; --title-track:-.015em;
-    --label-case:none; --label-track:0;
-    --select-fill:var(--accent); --select-text:var(--on-accent);
+    --label-size:12px; --label-weight:600; --label-case:none; --label-track:0;
     --button-case:none; --button-track:0;
+    --glow:none;
   }
   body[data-palette="oled"] {
-    --bg:#000; --tint:rgba(144,202,249,.08);
-    --panel:#0E141A; --panel-2:#080C10;
-    --line:rgba(255,255,255,.10); --line-strong:rgba(255,255,255,.20);
+    --surface:#000; --tint:rgba(144,202,249,.07);
+    --panel:#0C1116; --field:#1B2632;
+    --hairline:rgba(255,255,255,.07); --field-line:rgba(255,255,255,.11);
+    --track:rgba(255,255,255,.22);
+    --select:#90CAF9; --select-ink:#101820;
   }
   body[data-palette="light"] {
-    --bg:#F4F7FA; --tint:rgba(23,100,155,.07);
-    --panel:#fff; --panel-2:#EDF2F7;
-    --line:rgba(24,37,49,.10); --line-strong:rgba(24,37,49,.22);
-    --text:#182531; --muted:#5A6C7A;
-    --accent:#17649B; --accent-2:#17649B; --on-accent:#fff;
+    --surface:#F5F7FA; --tint:rgba(23,100,155,.06);
+    --panel:#EFF3F7; --field:#E5EBF1;
+    --ink:#182531; --muted:#4A5B6A;
+    --hairline:rgba(24,37,49,.09); --field-line:rgba(24,37,49,.13);
+    --track:rgba(24,37,49,.20);
+    --accent:#17649B; --accent-ink:#fff;
+    --select:#17649B; --select-ink:#fff;
     --err:#AF2834; --ok:#1E7A46;
   }
   body[data-palette="midnight"] {
-    --bg:#080F16; --tint:rgba(100,199,255,.12);
-    --panel:#101A23; --panel-2:#0A121A;
-    --line:rgba(100,199,255,.14); --line-strong:rgba(100,199,255,.26);
-    --text:#E6F1F7; --muted:#93A9B8;
-    --accent:#64C7FF; --accent-2:#8B7CFF; --on-accent:#021018;
+    --surface:#0F1417; --tint:rgba(146,206,245,.10);
+    --panel:#1B2023; --field:#313539;
+    --ink:#DFE3E7; --muted:#C1C7CE;
+    --hairline:rgba(223,227,231,.08); --field-line:rgba(223,227,231,.13);
+    --track:rgba(223,227,231,.22);
+    --accent:#92CEF5; --accent-ink:#00344B;
+    --select:#92CEF5; --select-ink:#00344B;
   }
   body[data-palette="ember"] {
-    --bg:#140F0A; --tint:rgba(255,180,89,.12);
-    --panel:#1F1811; --panel-2:#160F09;
-    --line:rgba(255,180,89,.14); --line-strong:rgba(255,180,89,.26);
-    --text:#F4EAE0; --muted:#B7A793;
-    --accent:#FFB459; --accent-2:#FF7A59; --on-accent:#20140A;
-    --err:#FF8A8F; --ok:#6FD08C;
+    --surface:#18120C; --tint:rgba(249,186,114,.10);
+    --panel:#241F19; --field:#3B332C;
+    --ink:#EEE0D5; --muted:#D4C4B5;
+    --hairline:rgba(238,224,213,.08); --field-line:rgba(238,224,213,.13);
+    --track:rgba(238,224,213,.22);
+    --accent:#F9BA72; --accent-ink:#482A00;
+    --select:#F9BA72; --select-ink:#482A00;
   }
   body[data-palette="forest"] {
-    --bg:#0B1310; --tint:rgba(111,227,168,.10);
-    --panel:#14201B; --panel-2:#0C1512;
-    --line:rgba(111,227,168,.13); --line-strong:rgba(111,227,168,.24);
-    --text:#E4F2EA; --muted:#93AD9F;
-    --accent:#6FE3A8; --accent-2:#7FD7FF; --on-accent:#04140C;
-    --err:#FF8A8F; --ok:#6FD08C;
+    --surface:#0F1511; --tint:rgba(144,213,173,.10);
+    --panel:#1B211D; --field:#303632;
+    --ink:#DFE4DD; --muted:#C0C9C1;
+    --hairline:rgba(223,228,221,.08); --field-line:rgba(223,228,221,.13);
+    --track:rgba(223,228,221,.22);
+    --accent:#90D5AD; --accent-ink:#003822;
+    --select:#90D5AD; --select-ink:#003822;
   }
   body[data-palette="stadium_night"] {
-    --bg:#000; --tint:rgba(200,240,74,.10);
-    --panel:#0F130D; --panel-2:#080A07;
-    --line:rgba(200,240,74,.14); --line-strong:rgba(200,240,74,.26);
-    --text:#F1F5E8; --muted:#A7B29A;
-    --accent:#C8F04A; --accent-2:#7FD7FF; --on-accent:#1A1203;
-    --err:#FF8A8F; --ok:#6FD08C;
+    --surface:#000; --tint:rgba(200,240,74,.07);
+    --panel:#0B0C0A; --field:#121212;
+    --ink:#fff; --muted:rgba(255,255,255,.62);
+    --hairline:rgba(255,255,255,.08); --field-line:rgba(255,255,255,.13);
+    --track:rgba(255,255,255,.24);
+    --accent:#C8F04A; --accent-ink:#1A1203;
+    --select:#C8F04A; --select-ink:#1A1203;
   }
   /* Modern and Stadium Night are the app's rounded surfaces; only the pill
-     look changes the type treatment and ring-only selection, exactly as
-     SurfaceTokens does. */
+     look changes the type treatment and selection, as SurfaceTokens does. */
   body[data-surface="modern"] {
-    --r-card:14px; --r-input:10px; --r-btn:10px; --r-tabs:12px;
+    --glow:0 0 18px -6px var(--accent);
   }
   body[data-surface="stadium"] {
-    --r-card:22px; --r-input:14px; --r-btn:999px; --r-tabs:999px;
+    --r-card:16px; --r-input:14px; --r-btn:12px; --r-tabs:18px;
     --title-weight:800; --title-track:.005em;
-    --label-case:uppercase; --label-track:.14em;
-    --select-fill:transparent; --select-text:var(--accent);
+    --label-size:11px; --label-weight:800;
+    --label-case:uppercase; --label-track:.12em;
     --button-case:uppercase; --button-track:.07em;
+    /* Ring-only focus: a selected control keeps its surface. */
+    --select:transparent; --select-ink:var(--accent);
+    --glow:0 0 22px -8px var(--accent);
   }
 
   * { box-sizing:border-box; }
@@ -109,72 +129,73 @@
     min-height:100vh;
     background:
       radial-gradient(130% 70% at 50% -12%, var(--tint), transparent 62%),
-      var(--bg);
-    color:var(--text);
+      var(--surface);
+    color:var(--ink);
     font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  ::selection { background:var(--accent); color:var(--on-accent); }
-  .shell { max-width:520px; margin:0 auto; padding:0 16px calc(56px + env(safe-area-inset-bottom)); }
+  ::selection { background:var(--accent); color:var(--accent-ink); }
+  /* Column so the footer sits at the bottom of a short page (the sent view)
+     instead of floating under the last card. */
+  .shell {
+    display:flex; flex-direction:column; min-height:100vh;
+    max-width:520px; margin:0 auto;
+    padding:0 16px calc(24px + env(safe-area-inset-bottom));
+  }
 
   /* Broadcast-style top rule, then the app's own mark: a live-TV glyph and
      the wordmark, with the mode the TV asked for on the right. */
   .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:22px 0 16px; }
   .topbar::after {
     content:""; position:absolute; left:0; right:0; top:0; height:3px;
-    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    background:linear-gradient(90deg, var(--accent), transparent 92%);
   }
   .brand { display:flex; align-items:center; gap:9px; min-width:0; }
   .glyph { width:22px; height:22px; flex:0 0 auto; color:var(--accent); }
   .wordmark { font-size:16px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; }
   .chip {
-    flex:0 0 auto; padding:5px 10px; border:1px solid var(--line-strong);
-    border-radius:999px; color:var(--muted); font-size:10px;
-    text-transform:uppercase; letter-spacing:.13em; font-weight:700;
+    flex:0 0 auto; padding:5px 11px; border:0;
+    background:var(--field); border-radius:999px; color:var(--muted);
+    font-size:10px; text-transform:uppercase; letter-spacing:.13em; font-weight:700;
   }
 
-  main { display:block; }
+  main { display:block; flex:1 0 auto; padding-bottom:18px; }
   .kicker {
     margin:6px 0 6px; color:var(--accent); font-size:11px; font-weight:700;
     text-transform:uppercase; letter-spacing:.16em;
   }
   h1 {
-    margin:0 0 6px; font-size:27px; line-height:1.16;
+    margin:0 0 6px; font-size:26px; line-height:1.18;
     font-weight:var(--title-weight); letter-spacing:var(--title-track);
   }
-  h1 .accent { color:var(--accent); }
   p.lead { margin:0 0 20px; color:var(--muted); font-size:14.5px; }
 
   .card {
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:var(--r-card); padding:16px; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--hairline);
+    border-radius:var(--r-card); padding:16px; margin-bottom:12px;
   }
   .section-label {
-    display:flex; align-items:center; gap:8px;
-    margin:0 0 12px; color:var(--muted); font-size:11px; font-weight:700;
+    margin:0 0 12px; color:var(--muted);
+    font-size:var(--label-size); font-weight:var(--label-weight);
     text-transform:var(--label-case); letter-spacing:var(--label-track);
   }
-  .section-label::before {
-    content:""; width:14px; height:2px; border-radius:2px; background:var(--accent);
-    flex:0 0 auto;
-  }
 
+  /* Filter chips, like the app's sports filters: filled at rest, filled with
+     the accent when selected (ring only in Stadium Night). */
   .tabs {
-    display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:4px;
-    padding:4px; margin-bottom:16px;
-    background:var(--panel-2); border:1px solid var(--line);
-    border-radius:var(--r-tabs);
+    display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px;
+    margin-bottom:16px;
   }
   .tabs button {
-    padding:11px 6px; border:1px solid transparent; border-radius:calc(var(--r-tabs) - 3px);
-    background:transparent; color:var(--muted); font:inherit;
-    font-size:13px; font-weight:700; letter-spacing:.01em;
+    padding:11px 6px; border:0; border-radius:var(--r-tabs);
+    background:var(--field); color:var(--muted); font:inherit;
+    font-size:12.5px; font-weight:600; letter-spacing:0;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     cursor:pointer; transition:background .14s, color .14s, box-shadow .14s;
   }
   .tabs button[aria-pressed="true"] {
-    background:var(--select-fill); color:var(--select-text);
-    box-shadow:inset 0 0 0 2px var(--accent);
+    background:var(--select); color:var(--select-ink); font-weight:800;
+    box-shadow:var(--glow);
   }
   body[data-surface="stadium"] .tabs button[aria-pressed="true"] {
     box-shadow:inset 0 0 0 2px var(--accent);
@@ -183,22 +204,22 @@
   .field { margin-bottom:12px; }
   .field:last-child { margin-bottom:0; }
   label, .field-label {
-    display:block; margin:0 0 6px; color:var(--muted);
-    font-size:11px; font-weight:700;
+    display:block; margin:0 0 7px; color:var(--muted);
+    font-size:var(--label-size); font-weight:var(--label-weight);
     text-transform:var(--label-case); letter-spacing:var(--label-track);
   }
-  label .optional { color:var(--muted); opacity:.7; text-transform:none; letter-spacing:0; font-weight:500; }
+  label .optional { opacity:.75; text-transform:none; letter-spacing:0; font-weight:500; }
   input[type=text], input[type=search], input[type=password], input[type=url], input:not([type]), textarea, select {
     width:100%; padding:13px 14px;
-    border:1px solid var(--line-strong); border-radius:var(--r-input);
-    background:var(--panel-2); color:var(--text); font:inherit; font-size:15.5px;
+    border:1px solid var(--field-line); border-radius:var(--r-input);
+    background:var(--field); color:var(--ink); font:inherit; font-size:15.5px;
     transition:border-color .14s, box-shadow .14s;
   }
   textarea { min-height:118px; word-break:break-all; resize:vertical; line-height:1.45; }
-  input::placeholder, textarea::placeholder { color:var(--muted); opacity:.65; }
+  input::placeholder, textarea::placeholder { color:var(--muted); opacity:.7; }
   input:focus, textarea:focus, select:focus {
     outline:none; border-color:var(--accent);
-    box-shadow:0 0 0 1px var(--accent), 0 0 18px -6px var(--accent);
+    box-shadow:0 0 0 1px var(--accent), var(--glow);
   }
   .select-wrap { position:relative; }
   .select-wrap::after {
@@ -209,40 +230,41 @@
   select { appearance:none; -webkit-appearance:none; padding-right:40px; }
   input[type=file] {
     padding:11px 12px; font-size:14px; color:var(--muted);
-    border:1px solid var(--line-strong); border-radius:var(--r-input);
-    background:var(--panel-2); width:100%;
+    border:1px solid var(--field-line); border-radius:var(--r-input);
+    background:var(--field); width:100%;
   }
   input[type=file]::file-selector-button {
     margin-right:12px; padding:8px 14px;
-    border:1px solid var(--line-strong); border-radius:var(--r-btn);
-    background:transparent; color:var(--accent); font:inherit; font-weight:700;
+    border:0; border-radius:var(--r-btn);
+    background:var(--surface); color:var(--accent); font:inherit; font-weight:700;
     font-size:13px; cursor:pointer;
   }
   .hint { margin:8px 0 0; color:var(--muted); font-size:12.5px; line-height:1.45; }
 
-  /* Switches read like the app's settings rows, not like web checkboxes. */
+  /* Switches read like the app's settings rows: a filled row with the switch
+     on the right, not a web checkbox. */
   .switch {
     display:flex; align-items:center; justify-content:space-between; gap:14px;
     margin:8px 0 0; padding:13px 14px;
-    border:1px solid var(--line); border-radius:var(--r-input);
-    background:var(--panel-2); color:var(--text);
+    border:0; border-radius:var(--r-input);
+    background:var(--field); color:var(--ink);
     font-size:15px; font-weight:500; text-transform:none; letter-spacing:0;
     cursor:pointer;
   }
   .switch input {
     appearance:none; -webkit-appearance:none; flex:0 0 auto;
     width:46px; height:26px; margin:0; padding:0;
-    border:1px solid var(--line-strong); border-radius:999px;
-    background:transparent; position:relative; cursor:pointer;
-    transition:background .16s, border-color .16s;
+    border:0; border-radius:999px;
+    background:var(--track); position:relative; cursor:pointer;
+    transition:background .16s;
   }
   .switch input::after {
-    content:""; position:absolute; top:3px; left:3px; width:18px; height:18px;
-    border-radius:50%; background:var(--muted);
+    content:""; position:absolute; top:4px; left:4px; width:18px; height:18px;
+    border-radius:50%; background:var(--surface);
     transition:transform .16s, background .16s;
   }
-  .switch input:checked { background:var(--accent); border-color:var(--accent); }
-  .switch input:checked::after { transform:translateX(20px); background:var(--on-accent); }
+  .switch input:checked { background:var(--accent); }
+  .switch input:checked::after { transform:translateX(20px); background:var(--accent-ink); }
   .switch input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .tabs button:focus-visible, .send:focus-visible, a:focus-visible {
     outline:2px solid var(--accent); outline-offset:2px;
@@ -251,10 +273,10 @@
   button.send {
     width:100%; margin-top:18px; padding:16px;
     border:0; border-radius:var(--r-btn);
-    background:linear-gradient(180deg, var(--accent), var(--accent-2));
-    color:var(--on-accent); font:inherit; font-weight:800; font-size:16px;
+    background:var(--accent); color:var(--accent-ink);
+    font:inherit; font-weight:800; font-size:16px;
     text-transform:var(--button-case); letter-spacing:var(--button-track);
-    cursor:pointer; box-shadow:0 10px 26px -14px var(--accent);
+    cursor:pointer; box-shadow:0 10px 26px -16px var(--accent);
     transition:opacity .14s, transform .08s;
   }
   button.send:active { transform:translateY(1px); }
@@ -262,8 +284,8 @@
 
   .msg {
     display:none; margin-top:14px; padding:13px 14px;
-    border:1px solid var(--line); border-left:3px solid var(--accent);
-    border-radius:var(--r-input); background:var(--panel-2);
+    border:0; border-left:3px solid var(--accent);
+    border-radius:var(--r-input); background:var(--field);
     font-size:14px;
   }
   .msg.err { border-left-color:var(--err); }
@@ -274,7 +296,7 @@
     width:88px; height:88px; margin:0 auto 20px;
     display:flex; align-items:center; justify-content:center;
     border-radius:50%; color:var(--accent); font-size:42px; line-height:1;
-    box-shadow:inset 0 0 0 3px var(--accent), 0 0 46px -14px var(--accent);
+    box-shadow:inset 0 0 0 3px var(--accent), 0 0 46px -16px var(--accent);
   }
   .done h1 { font-size:25px; }
   .done p.lead { margin-bottom:10px; }
@@ -283,16 +305,25 @@
   .file-row {
     display:flex; gap:12px; align-items:center; justify-content:space-between;
     padding:13px 14px; margin-bottom:8px;
-    border:1px solid var(--line); border-radius:var(--r-input);
-    background:var(--panel-2); font-size:14.5px;
+    border:0; border-radius:var(--r-input);
+    background:var(--field); font-size:14.5px;
   }
   .file-row a { color:var(--accent); font-weight:700; text-decoration:none; }
 
   .foot {
-    margin:26px 0 0; padding-top:16px; border-top:1px solid var(--line);
+    margin-top:auto; padding-top:16px; border-top:1px solid var(--hairline);
     color:var(--muted); font-size:11.5px; letter-spacing:.02em;
   }
   [hidden] { display:none !important; }
+
+  /* Narrow phones: shrink the chips a little, then stack them rather than
+     truncating a playlist type mid-word. */
+  @media (max-width: 380px) {
+    .tabs button { font-size:12px; padding:10px 4px; }
+  }
+  @media (max-width: 340px) {
+    .tabs { grid-auto-flow:row; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     * { transition:none !important; }
@@ -336,7 +367,7 @@
   <main>
     <section id="form-view">
       <p class="kicker">From your phone</p>
-      <h1 id="form-title">Add a playlist to <span class="accent">your TV</span></h1>
+      <h1 id="form-title">Add a playlist</h1>
       <p class="lead" id="form-lead">Type your details here and they'll appear on your TV.</p>
 
       <div class="card">
@@ -432,11 +463,12 @@
             <label for="setup-surface">Surface</label>
             <div class="select-wrap">
               <select id="setup-surface">
-                <option value="classic">Classic — flat, square corners</option>
-                <option value="modern">Modern — rounded with a soft focus glow</option>
-                <option value="stadium">Stadium Night — pills and a focus ring</option>
+                <option value="classic">Classic</option>
+                <option value="modern">Modern</option>
+                <option value="stadium">Stadium Night</option>
               </select>
             </div>
+            <p class="hint">Classic keeps square corners. Modern adds a soft glow. Stadium Night adds pills and a focus ring.</p>
           </div>
           <label class="switch"><span>24-hour clock</span><input type="checkbox" id="setup-clock"></label>
           <label class="switch"><span>Hide scores on sports cards</span><input type="checkbox" id="setup-scores"></label>
@@ -460,7 +492,7 @@
 
     <section id="link-view" hidden>
       <p class="kicker">From your phone</p>
-      <h1>Send a link to <span class="accent">your TV</span></h1>
+      <h1>Send a link to your TV</h1>
       <p class="lead">Paste the long link here and it will appear on your TV.</p>
       <div class="card">
         <form id="link-form" autocomplete="off" novalidate>
@@ -476,7 +508,7 @@
 
     <section id="names-view" hidden>
       <p class="kicker">From your phone</p>
-      <h1>Rename channels on <span class="accent">your TV</span></h1>
+      <h1>Rename channels on your TV</h1>
       <p class="lead">Search for a channel, type the name you want and send them all at once. Your playlist itself is never changed.</p>
       <div class="card">
         <div class="field">
@@ -491,7 +523,7 @@
 
     <section id="backup-view" hidden>
       <p class="kicker">From your phone</p>
-      <h1>Move a backup to or from <span class="accent">your TV</span></h1>
+      <h1>Move a backup to or from your TV</h1>
       <p class="lead">Save this device's backup onto your phone, then open this code on the new device and choose Restore from phone.</p>
       <div class="card">
         <div class="tabs" role="group" aria-label="Backup action">
@@ -592,7 +624,7 @@
     $("tab-stalker").hidden = false;
     $("setup-extras").hidden = false;
     $("brand-chip").textContent = "Setup";
-    $("form-title").innerHTML = "Set up <span class=\"accent\">your TV</span>";
+    $("form-title").textContent = "Set up your TV";
     $("form-lead").textContent =
       "Add your playlist and choose how the app looks. It all arrives on your TV at once.";
     document.title = "StreamSports · Set up";
