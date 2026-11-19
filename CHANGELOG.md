@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.71 — 18 November 2026
+
+- The phone page now uses the app's own colours: every palette takes the exact surface, container, outline and accent values the TV's theme builds, and neutrals stay neutral so the accent only marks selection, the primary action and focus.
+- Lime black no longer looks like a wireframe on the phone: fields, switches and cards are filled panels with faint hairlines, section labels are tracked caps, the selected chip keeps a ring instead of a fill, and Send is a solid accent button.
+- Narrow phones stack the playlist-type chips rather than cutting their labels, the footer sits at the bottom of the sent screen, and the Light palette's selection colour now follows the palette instead of staying Classic blue.
+
 ## 0.2.70 — 18 November 2026
 
 - The phone page is now a StreamSports screen instead of a generic web form: it carries the app's name and mark, its Dark grey, OLED, Light, Midnight, Ember, Forest and Lime black palettes, and the Classic, Modern and Stadium Night surfaces, so it matches the TV that showed the code.
