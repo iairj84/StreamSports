@@ -251,7 +251,7 @@ void main() {
     await restored.init();
     expect(restored.palette.id, 'classic_tv');
     expect(restored.guideViewMode, 'timeline');
-    expect(AppConstants.cyberpunkPalettes, hasLength(6));
+    expect(AppConstants.cyberpunkPalettes, hasLength(7));
     restored.dispose();
   });
   testWidgets('themes persist and old layout switches are absent',

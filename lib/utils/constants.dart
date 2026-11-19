@@ -395,6 +395,14 @@ class AppConstants {
       secondary: Color(0xFF7FD7FF),
       description: 'Muted green surfaces · mint and ice accents',
     ),
+    CyberpunkPalette(
+      id: 'stadium_night',
+      label: 'Stadium Night',
+      primary: Color(0xFFC8F04A),
+      secondary: Color(0xFF7FD7FF),
+      description: 'True black surfaces · electric lime LIVE and focus',
+      trueBlack: true,
+    ),
   ];
 
   // On-disk cache file names (under the OS temp/cache directory — safe to

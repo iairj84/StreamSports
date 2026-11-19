@@ -1,5 +1,15 @@
 # Design notes
 
+## Stadium Night ships as an opt-in palette
+
+Direction B from the look-and-feel mockups (true-black OLED, electric-lime
+LIVE and focus) ships as one more `CyberpunkPalette`, not a reskin: the
+Sports hub and guide keep their layout, rows and focus order, and only the
+tokens change. Opt-in through Settings > Themes > Appearance keeps every
+existing install on its look; `trueBlack` gives the flat black surfaces and
+keeps the lime accent explicit instead of HCT-muted. Pairing it with the
+Modern surface style gives the thin focus border plus glow from the mockup.
+
 ## RadioGroup traps a TV remote
 
 The update channel picker shipped as `RadioGroup` + `RadioListTile` and had
