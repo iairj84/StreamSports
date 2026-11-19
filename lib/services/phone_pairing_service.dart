@@ -325,7 +325,9 @@ class PhonePairingSession {
         PairingKind.link => r.mode == 'link',
         PairingKind.names => r.mode == 'names',
         PairingKind.backup => r.mode == 'backup',
-        PairingKind.setup => r.fromSetup,
+        // A setup page with a blank playlist sends the look choices alone,
+        // so either payload belongs to the session that served that page.
+        PairingKind.setup => r.fromSetup || r.mode == 'settings',
         PairingKind.settings => r.mode == 'settings',
         // A setup payload carries a playlist mode too, but only a setup
         // session may apply its settings. A settings payload carries no

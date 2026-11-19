@@ -263,7 +263,47 @@ void main() {
     harness.prefs.dispose();
   });
 
-  test('a setup session only accepts setup payloads', () {
+  testWidgets('a blank playlist on the setup page applies settings alone',
+      (tester) async {
+    final harness = await _pumpSetup(tester);
+    // Exactly what the setup page sends when every playlist field is left
+    // blank: a settings payload with no playlist in it.
+    await _deliver(
+        tester,
+        PairingResult.fromJson({
+          'mode': 'settings',
+          'settings': const {
+            'palette': 'oled',
+            'surface': 'stadium',
+            'clock24': 'false',
+            'scores': 'true',
+            'update': 'early',
+          },
+        })!);
+    await tester.pumpAndSettle();
+
+    expect(harness.storage.getPaletteId(), 'oled');
+    expect(harness.storage.getSurfaceStyleId(), SurfaceStyle.stadium.name);
+    expect(harness.storage.getTime24h(), isFalse);
+    expect(harness.storage.getSportsHideScores(), isTrue);
+    expect(harness.storage.getUpdateChannel(),
+        AppConstants.updateChannelEarly);
+    expect(harness.prefs.palette.id, 'oled');
+    // No playlist was typed, so none is added and no guide starts.
+    expect(harness.playlists.saved, isEmpty);
+    expect(harness.playlists.removed, isEmpty);
+    expect(harness.guide.requested, isEmpty);
+
+    // Same landing as the settings screen: back underneath, settings saved.
+    expect(find.byType(SetupFromPhoneScreen), findsNothing);
+    expect(find.text('home'), findsOneWidget);
+    expect(find.text('Settings saved on your TV.'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    harness.prefs.dispose();
+  });
+
+  test('a setup session accepts setup and settings-alone payloads', () {
     final setup = _setupPayload();
     final playlistOnly = PairingResult.fromJson({
       'mode': 'xtream',
@@ -272,13 +312,21 @@ void main() {
       'username': 'someone',
       'password': 'secret',
     })!;
+    final settingsAlone = PairingResult.fromJson({
+      'mode': 'settings',
+      'settings': {'palette': 'oled'},
+    })!;
     final setupSession = PhonePairingSession(kind: PairingKind.setup);
     expect(setupSession.acceptsResult(setup), isTrue);
+    expect(setupSession.acceptsResult(settingsAlone), isTrue,
+        reason:
+            'a blank playlist on the setup page sends the settings alone');
     expect(setupSession.acceptsResult(playlistOnly), isFalse,
         reason: 'a playlist-only payload must not reach the settings writer');
     // The other direction: an old Add Playlist code cannot apply settings.
     final playlistSession = PhonePairingSession();
     expect(playlistSession.acceptsResult(playlistOnly), isTrue);
     expect(playlistSession.acceptsResult(setup), isFalse);
+    expect(playlistSession.acceptsResult(settingsAlone), isFalse);
   });
 }

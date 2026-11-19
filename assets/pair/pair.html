@@ -938,10 +938,31 @@
   }
 
   // The setup form: the same playlist fields, plus what the phone chose for
-  // the look and updates. The TV applies both in one pass.
+  // the look and updates. The TV applies both in one pass. With every
+  // playlist field left blank this is a settings change, not a setup: the
+  // look and update choices travel alone and the TV asks for no login.
+  // Anything typed in a playlist field means a playlist, so the full
+  // validation still runs and a half-filled login cannot silently drop it.
   function collectSetup() {
     var v = function (id) { return $(id).value.trim(); };
-    var playlist = { v: 1, mode: mode, name: v("name"), epg: v("epg") };
+    var settings = {
+      palette: $("setup-theme").value,
+      surface: $("setup-surface").value,
+      clock24: $("setup-clock").checked ? "true" : "false",
+      scores: $("setup-scores").checked ? "true" : "false",
+      update: setupUpdate,
+    };
+    var name = v("name"), epg = v("epg");
+    var blank =
+      !name && !epg &&
+      (mode === "xtream"
+        ? !v("server") && !v("username") && !v("password")
+        : mode === "m3u"
+          ? !v("m3u")
+          : !v("portal-url") && !v("portal-mac") &&
+            !v("portal-username") && !v("portal-password"));
+    if (blank) return { v: 1, mode: "settings", settings: settings };
+    var playlist = { v: 1, mode: mode, name: name, epg: epg };
     if (mode === "xtream") {
       playlist.server = v("server");
       playlist.username = v("username");
@@ -970,18 +991,7 @@
         return "Choose at least one kind of content.";
       }
     }
-    return {
-      v: 1,
-      mode: "setup",
-      playlist: playlist,
-      settings: {
-        palette: $("setup-theme").value,
-        surface: $("setup-surface").value,
-        clock24: $("setup-clock").checked ? "true" : "false",
-        scores: $("setup-scores").checked ? "true" : "false",
-        update: setupUpdate,
-      },
-    };
+    return { v: 1, mode: "setup", playlist: playlist, settings: settings };
   }
 
   // ---------------------------------------------------------------- settings
@@ -1045,7 +1055,9 @@
       $("form-view").hidden = true;
       $("link-view").hidden = true;
       $("brand-chip").textContent = "Sent";
-      if (setupKind) $("done-hint").textContent = "Your TV is adding the playlist and applying the settings now. You can close this page.";
+      if (setupKind) $("done-hint").textContent = data.mode === "settings"
+        ? "Your TV has the new settings already. You can close this page."
+        : "Your TV is adding the playlist and applying the settings now. You can close this page.";
       if (linkKind) $("done-hint").textContent = "Check it there, then press Add. You can close this page.";
       $("done-view").style.display = "block";
     } catch (err) {

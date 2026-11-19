@@ -75,6 +75,18 @@ class _SetupFromPhoneScreenState extends State<SetupFromPhoneScreen> {
       await applyPhoneSettings(result.settings,
           prefs: prefs, storage: storage, update: update);
 
+      if (result.mode == 'settings') {
+        // Blank playlist on the setup page: the look choices arrived alone
+        // and there is nothing to add. Same landing as the settings screen.
+        if (!mounted) return;
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+              content: Text(tr('Settings saved on your TV.'))));
+        navigator.pop();
+        return;
+      }
+
       final id = DateTime.now().microsecondsSinceEpoch.toString();
       final enteredEpg = result.epgUrl.trim();
       final name = result.name.isEmpty ? tr('My playlist') : result.name;

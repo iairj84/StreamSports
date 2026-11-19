@@ -124,7 +124,13 @@ first, which made the phone's settings page unusable as a settings page.
 `{"mode":"settings","settings":{…}}` carries no playlist at all, and
 `SettingsFromPhoneScreen` applies it with no `PlaylistManager` in scope. The
 page shows the app-wide preferences a remote makes tedious, grouped the way
-the settings screens group them.
+the settings screens group them. The setup page falls back to the same
+payload: with every playlist field left blank it sends the look and update
+choices alone instead of demanding a login, and `SetupFromPhoneScreen`
+applies them and pops with the settings-saved confirmation. Any single typed
+playlist field still means a playlist, so the full validation runs and a
+half-filled login cannot silently drop the provider. Either QR code can now
+change a setting; only a typed playlist adds one.
 
 Two rules keep a short visit from doing more than was asked:
 
@@ -137,7 +143,8 @@ Two rules keep a short visit from doing more than was asked:
   `applyPhoneSettings` the one writer. `PairingKind.playlist` refuses a
   `settings` payload and `PairingKind.settings` refuses a setup payload, so an
   old code still on screen can neither add a playlist nor write a preference
-  its page never offered. An unknown value inside a known key (a palette or a
+  its page never offered; `PairingKind.setup` accepts both, because its page
+  can now send either. An unknown value inside a known key (a palette or a
   buffering preset from a newer build) is ignored rather than fatal.
 
 `test/phone_settings_test.dart` covers it: all fifteen keys land in storage and
