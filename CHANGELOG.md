@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.74 — 19 November 2026
+
+- New Gold Rush appearance theme: true black surfaces with 49ers gold focus and a lifted scarlet for badges, swatches and the phone page's error tone.
+- The phone settings and setup pages show Gold Rush as a theme choice and paint themselves in it when the TV already uses it.
+- The Themes tile no longer quotes a palette count that goes stale with every new look.
+
 ## 0.2.73 — 19 November 2026
 
 - The "Set up from phone" page no longer demands a playlist for a settings change: with every playlist field left blank it sends the theme, surface, clock, scores and update choices alone, and the TV applies them straight away.
