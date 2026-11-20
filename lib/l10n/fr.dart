@@ -360,6 +360,11 @@ const Map<String, String> kFr = {
       "Voulez-vous vraiment quitter {appName}?",
   'Stay': "Rester",
   'History': "Historique",
+  'Live Sports': "Sport en direct",
+  'Looking for live games...': "Recherche des matchs en direct...",
+  'Could not load live games.': "Impossible de charger les matchs en direct.",
+  'No live games from your leagues right now.':
+      "Aucun match en direct dans vos ligues pour le moment.",
   'No channels watched yet.': "Aucune chaîne regardée pour l'instant.",
   'Update Content': "MAJ du contenu",
   'Minimize': "Réduire",

@@ -359,6 +359,11 @@ const Map<String, String> kIt = {
       "Vuoi davvero uscire da {appName}?",
   'Stay': "Resta",
   'History': "Cronologia",
+  'Live Sports': "Sport in diretta",
+  'Looking for live games...': "Ricerca delle partite in diretta...",
+  'Could not load live games.': "Impossibile caricare le partite in diretta.",
+  'No live games from your leagues right now.':
+      "Nessuna partita in diretta delle tue leghe in questo momento.",
   'No channels watched yet.': "Nessun canale guardato finora.",
   'Update Content': "Agg. contenuti",
   'Minimize': "Riduci a icona",

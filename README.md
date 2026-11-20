@@ -18,7 +18,7 @@ The same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7
 
 ## Features
 
-- **Live TV** with a timeline guide, category management, favorites, hidden channels and picture-in-picture.
+- **Live TV** with a timeline guide, category management, favorites, hidden channels and picture-in-picture. A pinned **Live Sports** category above the playlist groups lists the channel each followed game is playing on with its score, followed teams first and RedZone leading NFL Sundays.
 - **Sports** across leagues, college conferences, Top 25 polls, motorsport and regional feeds — events, schedules, standings, team pages, replays and highlights, matched against your own channels.
 - **Movies and series** with category browsing, search, favorites and watch history.
 - **Multiview** for watching several live channels side by side.

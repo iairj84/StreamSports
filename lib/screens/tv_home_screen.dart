@@ -36,6 +36,7 @@ import '../models/m3u_group.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/sports_guide_overlay.dart';
+import '../services/live_sports_channels.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/remote_controls.dart';
@@ -685,6 +686,44 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   static const _historyGroupSentinel = '__history__';
   static const _allGroupSentinel = '__all_live__';
 
+  /// Pinned category of the channel each followed live game is on — see
+  /// [LiveSportsChannels]. Real channels, not synthetic rows: everything the
+  /// guide already does with a row works on them.
+  static const _liveSportsGroupSentinel = '__live_sports__';
+
+  /// Rebuilds the pinned row's count, and the guide's rows while it is open.
+  void _liveSportsChanged() {
+    if (!mounted) return;
+    // The category is cached against the selected group; its own rows have to
+    // be read again after a refresh.
+    _guideChannelsKey = null;
+    _guideChannels = const [];
+    // A refresh can begin inside build (the guide asks for its rows), so mark
+    // the tree dirty on the next frame instead of during that build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _refreshLiveSports({bool force = false}) {
+    if (!mounted) return Future<void>.value();
+    return LiveSportsChannels.instance.refresh(
+      storage: context.read<StorageService>(),
+      playlist: context.read<PlaylistManager>(),
+      epg: context.read<EpgService>(),
+      force: force,
+    );
+  }
+
+  /// A Live Sports row's second line: the game's score, or its clock when the
+  /// viewer hides scores.
+  String? _liveSportsLabel(Channel channel) {
+    final storage = context.read<StorageService>();
+    return LiveSportsChannels.instance.labelFor(channel.id,
+        hideScores: storage.getSportsHideScores(),
+        hideMyTeams: storage.getSportsHideMyTeamsScores());
+  }
+
   /// [playlistId] is required for a real group selection (from a
   /// `_GroupRow`, which always has its own `M3uGroup.playlistId` on
   /// hand), null for the sentinels ("All", "Favorites") — Favorites-tab
@@ -725,6 +764,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       setState(select);
     } else {
       select();
+    }
+    // The category's scores and finals move while it is open; other
+    // categories need no timer.
+    if (group == _liveSportsGroupSentinel) {
+      LiveSportsChannels.instance.startTicker();
+    } else {
+      LiveSportsChannels.instance.stopTicker();
     }
     if (group == null) return;
     _focusPickedCategory();
@@ -882,6 +928,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       }
     });
     RemoteControls.instance.attach(context.read<StorageService>());
+    LiveSportsChannels.instance.addListener(_liveSportsChanged);
     HardwareKeyboard.instance.addHandler(_onHardwareKey);
     _guideSearchRefresh = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted && _timelineFilterQuery.isNotEmpty && !_previewCovered) {
@@ -898,6 +945,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   void dispose() {
     _releasePreviewHint?.call();
     HardwareKeyboard.instance.removeHandler(_onHardwareKey);
+    LiveSportsChannels.instance.removeListener(_liveSportsChanged);
+    LiveSportsChannels.instance.stopTicker();
     _guideFocus.dispose();
     _columnDepth.dispose();
     _sportsOpen.dispose();
@@ -979,7 +1028,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       if (!stayOnFavorites &&
           !stayOnHistory &&
           !stayOnCollection &&
-          _selectedGroup != _allGroupSentinel) {
+          _selectedGroup != _allGroupSentinel &&
+          _selectedGroup != _liveSportsGroupSentinel) {
         setState(() => _selectedGroup = null);
       }
     }
@@ -1047,6 +1097,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   List<Channel> _currentLiveChannels(PlaylistManager playlist) {
     final group = _effectiveLiveGroup(playlist);
+    // A category of live games, not one of the provider's own groups: the rows
+    // are the channel each followed game is on, already ordered by
+    // [LiveSportsChannels], so none of the playlist/category cache below
+    // applies. Asking for them here is also what starts the first load.
+    if (group == _liveSportsGroupSentinel) {
+      unawaited(_refreshLiveSports());
+      return LiveSportsChannels.instance.channels;
+    }
     final history = group == _historyGroupSentinel
         ? context.read<PlaybackService>().recentLiveChannels(limit: 30)
         : null;
@@ -2260,6 +2318,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           _favoritesGroupSentinel => tr('Favorites'),
           _historyGroupSentinel => tr('History'),
           _allGroupSentinel => tr('All channels'),
+          _liveSportsGroupSentinel => tr('Live Sports'),
           final group => _selectedLiveCollection?.title == group
               ? _selectedLiveCollection!.displayName
               : group
@@ -2513,6 +2572,29 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               onTap: () => _onGroupSelected(_favoritesGroupSentinel),
               onLongPress: _confirmClearFavorites,
             ),
+          ),
+          // Live games, not a playlist's channels: each row is the channel a
+          // followed game is on, so opening one tunes what the Sports card
+          // would. Re-opening it rechecks finals and kick-offs.
+          _SelectableRow(
+            navigation: true,
+            key: const ValueKey('live-sports-category'),
+            icon: Icons.stadium,
+            label: tr('Live Sports'),
+            trailing: LiveSportsChannels.instance.loaded &&
+                    LiveSportsChannels.instance.channels.isNotEmpty
+                ? Text('${LiveSportsChannels.instance.channels.length}',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: interfaceColor(context, Colors.white54)))
+                : null,
+            selected: effectiveGroup == _liveSportsGroupSentinel,
+            collapsed: collapsed,
+            fontSize: _groupFontSize,
+            onTap: () {
+              unawaited(_refreshLiveSports(force: true));
+              _onGroupSelected(_liveSportsGroupSentinel);
+            },
           ),
           // Hold Select = shortcut to Settings > General's channel-history
           // clear (same HoldToActivate-over-InkWell shape as the live list).
@@ -2912,10 +2994,23 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         searching: _guideSearching,
         emptyLabel: playlist.isLoading
             ? tr('Loading channels...')
-            : _effectiveLiveGroup(playlist) == _historyGroupSentinel &&
+            : _effectiveLiveGroup(playlist) == _liveSportsGroupSentinel &&
                     _timelineFilterQuery.isEmpty
-                ? tr('No channels watched yet.')
-                : tr('No channels found.'),
+                ? LiveSportsChannels.instance.loading
+                    ? tr('Looking for live games...')
+                    : LiveSportsChannels.instance.error != null
+                        ? tr('Could not load live games.')
+                        : tr('No live games from your leagues right now.')
+                : _effectiveLiveGroup(playlist) == _historyGroupSentinel &&
+                        _timelineFilterQuery.isEmpty
+                    ? tr('No channels watched yet.')
+                    : tr('No channels found.'),
+        // These rows are games, so the label's tag slot carries the score (or
+        // the clock, when scores are hidden) instead of a playlist name.
+        selectionStatus:
+            _effectiveLiveGroup(playlist) == _liveSportsGroupSentinel
+                ? _liveSportsLabel
+                : null,
         epg: epg,
         // Close the filter before opening a channel so its keyboard does not remain active
         // when fullscreen playback closes.
