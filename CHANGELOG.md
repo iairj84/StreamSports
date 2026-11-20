@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.85 — 20 November 2026
+
+- Releases cut in well under half the time: the release gate no longer reruns the 94 layout and navigation cases locally. CI's four-shard matrix has already run them on the pushed commit, and on the release machine that step was the entire gate (177-182s) while covering nothing the release commit changed.
+- Both privacy audits stay in the local gate because CI runs neither of them, and a cut carrying Dart changes CI has not seen still passes the focused tests through the same gate.
+- `tools/preflight.py` with no test files now runs the analyzer and both audits alone. It used to start `flutter test` over the whole suite, which is the form the project's own rules forbid in one checkout.
+- The layout test suite is split into seven focused files, so its cases run in parallel instead of one 253s file setting the gate.
+- `docs/NOTES.md` records the measurements, including why the version bump cannot move after the build: the bump invalidates Flutter's AOT compile, and a release carrying Dart changes pays that compile either way.
+
 ## 0.2.84 — 20 November 2026
 
 - The release checks now run at the same time. `tools/preflight.py` starts the analyzer, the focused Flutter tests and both privacy audits together, prints each one's wall time as it finishes and fails with that check's own output; the gate that took 485s in sequence measured 317s.
