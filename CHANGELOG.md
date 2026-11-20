@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.80 — 19 November 2026
+
+- Standings for the leagues that publish their own table (B.League, NPB, KBO, ABL, EASL and both K League divisions) now come from one table instead of a per-provider chain of ifs, so the season rule and the ABL's previous-season retry are declared with the request they belong to. Same requests, same seasons, same tables.
+- ESPN's own standings and enrichment pipeline (field hockey, World Rugby, the rugby competitions, NPC, the NCAA soccer polls) stays explicit because it composes rather than dispatches, and MotoGP keeps its own source because a class table needs a season lookup first.
+
 ## 0.2.79 — 19 November 2026
 
 - Adding a scoreboard league is one entry in a feed catalogue instead of edits in six switches. lib/services/scoreboard_feeds.dart now declares each provider's request, POST body, size cap, decoding, cache window, schedule strategy and parser; the ESPN parser moved to its own library so sports_service is about fetching and caching only.
