@@ -17,13 +17,29 @@ than its sum. Analyze varies with cache warmth (88s here against 181s in the
 cold release run), so read the runner's per-check numbers rather than trusting
 a fixed budget.
 
-Parallel `flutter test` is not what buys the time. Those three files take 266s
-at the default concurrency and 280s serial, because
-`live_layout_navigation_test.dart` alone is about 253s of the 266s — the other
-two together are 13s. Beside the analyzer the test step measured 317s, so the
-contention costs about 50s and the overlap still returns 2.8 minutes. Splitting
-that one test file is the next lever and the whole remainder of the gate, but
-it is a test refactor, not a process change, so it is not folded in here.
+Parallel `flutter test` is not what buys most of the time. Those three files
+take 266s at the default concurrency and 280s serial. Beside the analyzer the
+test step measured 317s, so the contention costs about 50s and the overlap
+still returns 2.8 minutes.
+
+The 253s file was not one long test. Its 84 cases measured 285s with the JSON
+reporter: the first case paid a 45s cold start (compile, sqflite, first widget
+tree), the largest single case was 30s (`Live column drills ...
+fullVideo=false`) and the rest were mostly 1-4s. Six suites now carry those
+same 84 cases — `live_layout_navigation_test.dart` (26),
+`sports_tabs_navigation_test.dart` (10), `sports_panels_navigation_test.dart`
+(5), `sports_card_navigation_test.dart` (14),
+`sports_matching_navigation_test.dart` (15) and `live_layout_fit_test.dart` (14)
+— over one `live_layout_test_support.dart` holding the fake services. Alone
+they measure 69s, 30s, 49s, 53s, 49s and 97s; together 174s. The gate around
+those six plus `live_sports_channels_test.dart` and `l10n_parity_test.dart`
+went from 317s wall to 211s, and its test step from 317s to 210s.
+
+Each suite pays about 12s of compile and harness startup of its own, so the
+split adds work as well as removing a serial block: the parts sum to roughly
+350s against 285s for the original file, and all of the gain comes from
+overlap. That is why the largest suite (97s, the fit cases) is the floor now
+rather than a 253s block, and why splitting further would only add startup.
 
 `dart analyze` measured 127s against `flutter analyze`'s 181s on the same clean
 tree, and the gate keeps `flutter analyze`: CI runs exactly that command, and a
