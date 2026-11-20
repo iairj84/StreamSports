@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.88 — 20 November 2026
+
+- The Live Sports guide names the game in its block now: "Manhattan 31 / Miami 52", away first, the winning score in bold, then the clock and who has the ball - instead of "MAN 32-51 * 15:00 * 1st" over a repeated game title that ran past the block.
+- The channel label drops its orange score line, so the game's name gets both lines of that narrow column, and the score lives only in the guide.
+- A tennis or golf block without a score reads its round and leader instead, and hiding scores leaves the clock on its own.
+
 ## 0.2.87 — 20 November 2026
 
 - The Live Sports guide shows the game now: the score sits above the row name, and the block airing right now leads with it - "NU 48-68 · Q3 4:12" - then the game itself, instead of a programme title that only named who was playing.
