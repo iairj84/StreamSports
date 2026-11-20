@@ -361,6 +361,11 @@ const Map<String, String> kEs = {
       "¿Seguro que quieres salir de {appName}?",
   'Stay': "Quedarme",
   'History': "Historial",
+  'Live Sports': "Deporte en vivo",
+  'Looking for live games...': "Buscando partidos en vivo...",
+  'Could not load live games.': "No se pudieron cargar los partidos en vivo.",
+  'No live games from your leagues right now.':
+      "No hay partidos en vivo de tus ligas ahora mismo.",
   'No channels watched yet.': "Todavía no has visto ningún canal.",
   'Update Content': "Act. contenido",
   'Minimize': "Minimizar",
