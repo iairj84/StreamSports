@@ -678,6 +678,27 @@ channel, not a fixture) and every other category keep their channel names. The
 Timeline Guide's label column and the fast-browse banner read the same method,
 so the category is named one way in all three places.
 
+The guide's timeline carried the channel's EPG title and nothing else, so a row
+named "Northwestern at Virginia Tech" while the game sat at 48-68 told the
+viewer only who was playing, and a game with no EPG entry (tennis on a channel
+the guide has no schedule for) was a "No program data available" block. The
+block covering now reads the score first and the game second, and stands in for
+the missing programme where there is none.
+
+Only the block airing now carries it: a score is a fact about the minute it was
+read, so stamping "48-68" on the row's evening programmes would claim they are
+being played at that score. The block order is deliberate too - a two-line block
+has room for two lines, and a game name long enough to wrap would push a score
+placed second out of the block entirely.
+
+The score in the label column is its own line above the name. It started as a
+tag in the playlist slot, which is a pill drawn over the name and 12dp of top
+padding, so a two-line column clipped both; set beside the name it also ate a
+third of the 152dp column, leaving the name too little to say which game it
+was. A landscape row is 36dp and holds the score plus one line of name, so the
+name loses its second line there.
+
+
 ## A stopped cut puts its own bump back
 
 The release script edits `pubspec.yaml` and `CHANGELOG.md` before it builds, so

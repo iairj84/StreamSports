@@ -4670,6 +4670,27 @@ class _TimelineGuideState extends State<_TimelineGuide>
       ? null
       : LiveSportsChannels.instance.titleFor(channel.id);
 
+  /// A Live Sports row's guide cell: the game and its score, so the timeline
+  /// carries the state of the game instead of an EPG title that only names it,
+  /// and a game the guide has no programme for is not left blank. Null outside
+  /// Live Sports and for the lead channel, whose cell keeps its programme.
+  String? _gameCellText(Channel channel) {
+    final title = _gameTitle(channel);
+    if (title == null) return null;
+    final storage = context.read<StorageService>();
+    final status = LiveSportsChannels.instance.statusLineFor(channel.id,
+        hideScores: storage.getSportsHideScores(),
+        hideMyTeams: storage.getSportsHideMyTeamsScores());
+    // Score first: a game name long enough to wrap would otherwise push the
+    // score off a block that has two lines.
+    return status == null || status.isEmpty ? title : '$status\n$title';
+  }
+
+  /// The pill above a row's name: its playlist, in a guide that mixes them.
+  /// A game row carries its score beside the name instead.
+  String? _pillFor(Channel channel, int i) =>
+      _gameTitle(channel) == null ? _playlistTagFor(i) : null;
+
   void _applyRemoteStep(int delta) {
     _browseDismiss?.cancel();
     if (delta.abs() > 1 && !_fastBrowsing.value) {
@@ -5377,6 +5398,7 @@ class _TimelineGuideState extends State<_TimelineGuide>
                               false,
                           epgLoading: epgLoading,
                           translucent: widget.translucent,
+                          gameText: _gameCellText(widget.channels[i]),
                         )),
           ));
 
@@ -5600,7 +5622,10 @@ class _TimelineGuideState extends State<_TimelineGuide>
                                           ? 12
                                           : 13,
                                       topInset:
-                                          _playlistTagFor(i) == null ? 0 : 12,
+                                          _pillFor(widget.channels[i], i) ==
+                                                  null
+                                              ? 0
+                                              : 12,
                                       label: true)
                                   : GestureDetector(
                                       behavior: HitTestBehavior.opaque,
@@ -5611,9 +5636,10 @@ class _TimelineGuideState extends State<_TimelineGuide>
                                       child: _ChannelLabel(
                                           channel: widget.channels[i],
                                           title: _gameTitle(widget.channels[i]),
-                                          playlistTag: widget.selectionStatus
-                                                  ?.call(widget.channels[i]) ??
-                                              _playlistTagFor(i))),
+                                          score: widget.selectionStatus
+                                              ?.call(widget.channels[i]),
+                                          playlistTag: _pillFor(
+                                              widget.channels[i], i))),
                             ),
                           ),
                         ),
@@ -6073,9 +6099,16 @@ double _guideLabelTextInset(BuildContext context, Channel channel) {
 }
 
 class _ChannelLabel extends StatelessWidget {
-  const _ChannelLabel({required this.channel, this.playlistTag, this.title});
+  const _ChannelLabel(
+      {required this.channel, this.playlistTag, this.title, this.score});
 
   final Channel channel;
+
+  /// The game's score, or its clock when the viewer hides scores, on its own
+  /// line above the name in a Live Sports row. Above rather than beside: the
+  /// column is 152dp wide, so a score sharing that row cost the name the width
+  /// it needed to show which game it is.
+  final String? score;
 
   /// The game a Live Sports row's channel is showing, so the guide's label
   /// column names the game rather than the feed carrying it. Null in every
@@ -6115,7 +6148,9 @@ class _ChannelLabel extends StatelessWidget {
       );
     }
     final name = Text(title ?? channel.name,
-        maxLines: 2,
+        // A landscape row is 36dp: one line of name plus the score fits, two
+        // do not. Every taller row keeps both name lines.
+        maxLines: score != null && _landscapeGuide(context) ? 1 : 2,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
             color: interfaceColor(context, Colors.white).withValues(alpha: .82),
@@ -6126,6 +6161,35 @@ class _ChannelLabel extends StatelessWidget {
                     : 12.5,
             fontWeight: FontWeight.w400,
             height: tv ? 1.1 : 1.15));
+    final scheme = Theme.of(context).colorScheme;
+    // A game's score gets a readable line above its name. The tag slot used to
+    // draw it as an 8.5px pill over the name, borrowing the height of a label
+    // column that only has two lines to give.
+    final heading = score != null
+        ? Text(score!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                color: scheme.primary,
+                fontSize: tv || _landscapeGuide(context) ? 10 : 11,
+                height: 1.0,
+                fontWeight: FontWeight.w600))
+        : tv && tag != null
+            ? Text(tag,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 8.5,
+                    height: 1.1,
+                    fontWeight: FontWeight.w500,
+                    color: scheme.primary))
+            : null;
+    final label = heading == null
+        ? name
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [heading, name]);
     final row = SizedBox(
       height: _guideRowHeight(context),
       child: Padding(
@@ -6140,30 +6204,12 @@ class _ChannelLabel extends StatelessWidget {
                   : const Icon(Icons.tv),
             ),
             SizedBox(width: _mobileGuide(context) ? 6 : 8),
-            Expanded(
-                child: tv && tag != null
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                            Text(tag,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 8.5,
-                                    height: 1.1,
-                                    fontWeight: FontWeight.w500,
-                                    color:
-                                        Theme.of(context).colorScheme.primary)),
-                            name,
-                          ])
-                    : name),
+            Expanded(child: label),
           ],
         ),
       ),
     );
     if (tag == null || tv) return row;
-    final scheme = Theme.of(context).colorScheme;
     return Stack(
       children: [
         row,
@@ -6224,6 +6270,7 @@ class _TimelineRow extends StatelessWidget {
     required this.keepFocused,
     required this.epgLoading,
     this.translucent = false,
+    this.gameText,
   });
 
   final bool translucent;
@@ -6251,6 +6298,10 @@ class _TimelineRow extends StatelessWidget {
   final ScrollController hScroll;
   final ValueListenable<(double, double)> timeViewport;
   final bool Function(EpgProgram) keepFocused;
+
+  /// A Live Sports row's cell text: the game and its score. Null elsewhere,
+  /// where each block shows its own programme title.
+  final String? gameText;
 
   /// Whether the EPG fetch hasn't completed at all yet — vs. having
   /// completed with genuinely nothing for this channel (a duplicate with
@@ -6321,6 +6372,7 @@ class _TimelineRow extends StatelessWidget {
                       bottom: _guideBlockGap(context),
                       child: _ProgramBlock(
                         program: program,
+                        gameText: program.isNowPlaying(now) ? gameText : null,
                         isNow: program.isNowPlaying(now),
                         translucent: translucent,
                         onOpen: onOpen,
@@ -6371,6 +6423,7 @@ class _TimelineRow extends StatelessWidget {
           bottom: _guideBlockGap(context),
           child: _ProgramBlock(
             program: null,
+            gameText: gameText,
             placeholderLabel: isGuideSection(channel)
                 ? guideSectionTitle(channel)
                 : epgLoading
@@ -6408,6 +6461,7 @@ class _ProgramBlock extends StatefulWidget {
       required this.hScroll,
       this.onFocusGained,
       this.placeholderLabel,
+      this.gameText,
       this.onRegister,
       this.onUnregister,
       this.revealOnFocus = true,
@@ -6426,6 +6480,11 @@ class _ProgramBlock extends StatefulWidget {
   /// (Select still opens the channel) exactly like a real one.
   final EpgProgram? program;
   final String? placeholderLabel;
+
+  /// A Live Sports row's cell text, which replaces the programme title (the
+  /// EPG only names the game) and stands in for the placeholder where the row
+  /// has no programme at all.
+  final String? gameText;
   final bool isNow;
   final VoidCallback onOpen;
 
@@ -6600,13 +6659,16 @@ class _ProgramBlockState extends State<_ProgramBlock> {
               child: ValueListenableBuilder<double>(
                 valueListenable: _labelInset,
                 child: Text(
-                  widget.program?.title ?? widget.placeholderLabel ?? '',
+                  widget.gameText ??
+                      widget.program?.title ??
+                      widget.placeholderLabel ??
+                      '',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                       color: _focused
                           ? scheme.onPrimaryContainer
-                          : widget.program == null
+                          : widget.program == null && widget.gameText == null
                               ? interfaceColor(context, Colors.white54)
                               : widget.isNow || widget.translucent
                                   ? interfaceColor(context, Colors.white)
@@ -6624,9 +6686,10 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                       fontWeight: widget.isNow || _focused
                           ? FontWeight.w500
                           : FontWeight.w400,
-                      fontStyle: widget.program == null
-                          ? FontStyle.italic
-                          : FontStyle.normal,
+                      fontStyle:
+                          widget.program == null && widget.gameText == null
+                              ? FontStyle.italic
+                              : FontStyle.normal,
                       // Readable over the video in full-video mode.
                       shadows: widget.translucent
                           ? const [Shadow(color: Colors.black, blurRadius: 4)]
