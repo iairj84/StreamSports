@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.82 — 19 November 2026
+
+- **Fixes**
+- Search results are ordered by evidence: your explicit pick, then the card's confident match, then anything that answers what you typed, and only then the card's weak guesses. The previous change put every typed hit above every card channel, which buried a channel you had picked for the event under any channel whose name contained the word.
+
 ## 0.2.81 — 19 November 2026
 
 - **Fixes**
