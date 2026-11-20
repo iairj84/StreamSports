@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.84 — 20 November 2026
+
+- The release checks now run at the same time. `tools/preflight.py` starts the analyzer, the focused Flutter tests and both privacy audits together, prints each one's wall time as it finishes and fails with that check's own output; the gate that took 485s in sequence measured 317s.
+- `docs/development.md` and `docs/release.md` show the one-pass gate, and `docs/NOTES.md` records the measurements, why the saving comes from overlap rather than parallel `flutter test`, and the next lever (the 253s live-layout test file).
+
 ## 0.2.83 — 20 November 2026
 
 - Live TV's groups column gains a pinned Live Sports category above the playlist groups: one row for each live game in your followed leagues and teams, on the channel Sports would start for it, followed teams first.
