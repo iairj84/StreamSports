@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.87 — 20 November 2026
+
+- The Live Sports guide shows the game now: the score sits above the row name, and the block airing right now leads with it - "NU 48-68 · Q3 4:12" - then the game itself, instead of a programme title that only named who was playing.
+- Games the guide has no schedule for, tennis included, read as the game and its score instead of "No program data available", and only the current block carries the score, so later programmes are not painted with a score from an hour ago.
+- Cutting a release no longer leaves its version bump behind when it stops before its release commit, so a retry starts from the same version instead of refusing a dirty tree.
+
 ## 0.2.86 — 20 November 2026
 
 - Live Sports rows are named for the game now: a golf afternoon reads "RSM Classic" instead of "GOLF CHANNEL HD" three times, and the line under it is the game rather than the channel's EPG - "Round 3 · Leader · S. Scheffler · -12", or "BUF 17-14 · Q3 4:12 · 2nd & 7 at NE 32" for a team game. Hiding scores keeps the clock and leaves out the possession line, and the Sunday lead channel keeps its own name because it is a channel and not a fixture.
