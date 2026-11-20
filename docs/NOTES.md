@@ -677,3 +677,15 @@ Sunday lead channel and for anything that is not a live game, so RedZone (a
 channel, not a fixture) and every other category keep their channel names. The
 Timeline Guide's label column and the fast-browse banner read the same method,
 so the category is named one way in all three places.
+
+## A stopped cut puts its own bump back
+
+The release script edits `pubspec.yaml` and `CHANGELOG.md` before it builds, so
+a run that stopped at the APK audit left both files bumped with no release
+commit behind them. The next cut refuses to start on a dirty tree, which meant
+discarding the leftovers by hand every time - and forgetting that step left the
+retry building a version nobody had released. The script now captures both files
+before the bump and writes them back if anything fails before its release
+commit, staged copies included, so a retry starts exactly where the failed
+attempt did. Once the release commit exists the bump stays: that is what makes
+the tag, the CHANGELOG entry and the version inside the APK agree.

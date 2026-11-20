@@ -21,7 +21,9 @@ reviewed.
 
 Refuses to start while tracked source changes are uncommitted, because those
 would be left out of the release commit. The generated desktop registrant files
-a build rewrites are restored rather than committed. Needs the same GitHub token
+a build rewrites are restored rather than committed, and a run that stops before
+its release commit puts its version bump back, so a retry starts from the same
+version instead of refusing a dirty tree. Needs the same GitHub token
 as the mirror tool: GITHUB_TOKEN in the ignored `.env` or the Git credential
 helper.
 """
@@ -316,26 +318,39 @@ def cut(root, args):
             print('  warning         uncommitted tracked changes: ' + ', '.join(leftover))
         return 0
 
-    write_text(pubspec_path, bump_pubspec(pubspec, version, build_number))
-    write_text(changelog_path, insert_changelog_entry(
-        read_text(changelog_path), changelog_entry(version, date, notes)))
+    # A stopped run must not leave its bump behind: the next cut refuses a dirty
+    # tree, so the leftovers would have to be discarded by hand before a retry.
+    # Anything that fails before the release commit puts both files back.
+    changelog_before = read_text(changelog_path)
+    committed = False
+    try:
+        write_text(pubspec_path, bump_pubspec(pubspec, version, build_number))
+        write_text(changelog_path, insert_changelog_entry(
+            changelog_before, changelog_entry(version, date, notes)))
 
-    if not args.skip_build:
-        build(root)
-    apk = root / APK
-    if not apk.is_file():
-        raise ValueError(f'{APK} is missing; build it first or drop --skip-build.')
-    result = audit(root, apk)
-    if result['findings'] and not args.accept_audit_findings:
-        raise ValueError(f"{len(result['findings'])} audit finding(s) need review before "
-                         'publishing; pass --accept-audit-findings once you have.')
-    size = result['apk_bytes']
-    digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+        if not args.skip_build:
+            build(root)
+        apk = root / APK
+        if not apk.is_file():
+            raise ValueError(f'{APK} is missing; build it first or drop --skip-build.')
+        result = audit(root, apk)
+        if result['findings'] and not args.accept_audit_findings:
+            raise ValueError(f"{len(result['findings'])} audit finding(s) need review before "
+                             'publishing; pass --accept-audit-findings once you have.')
+        size = result['apk_bytes']
+        digest = hashlib.sha256(apk.read_bytes()).hexdigest()
 
-    restore_generated(root)
-    git(root, 'add', 'pubspec.yaml', 'CHANGELOG.md')
-    git(root, 'commit', '-m', f'Release {version_label(version, build_number)}',
-        '-m', '\n'.join(f'- {note}' for note in notes))
+        restore_generated(root)
+        git(root, 'add', 'pubspec.yaml', 'CHANGELOG.md')
+        git(root, 'commit', '-m', f'Release {version_label(version, build_number)}',
+            '-m', '\n'.join(f'- {note}' for note in notes))
+        committed = True
+    finally:
+        if not committed:
+            write_text(pubspec_path, pubspec)
+            write_text(changelog_path, changelog_before)
+            # Staged copies come back too, or the tree still reads as dirty.
+            git(root, 'add', 'pubspec.yaml', 'CHANGELOG.md', check=False)
     git(root, 'tag', '-a', tag, '-m', f'StreamSports {version_label(version, build_number)}')
     print(f'Committed and tagged {tag}.')
 
