@@ -14,6 +14,7 @@ These tools are separate from the normal `lib/main.dart` app entry point.
 | Split-file APK downloads | `package_preview_download.py` |
 | Rolling beta download (`beta-latest`) | `publish_beta_mirror.py` |
 | One-command beta release | `cut_release.py` |
+| Release checks in one pass | `preflight.py` |
 
 Read each script's header and CLI help before running it. Device profiling sends remote input; fixture setup and cleanup modify the installed app's test playlist. Use a dedicated test install and locally served media. The profiling scripts currently target the release application ID, so a separate debug install requires adjusting that target.
 

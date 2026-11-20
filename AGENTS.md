@@ -39,7 +39,8 @@ python3 tools/cut_release.py --notes-file release-notes.txt  # bump, changelog, 
 
 - During development run `flutter analyze` and the focused tests for the
   change, plus `tools/audit_repository.py` and the tools unit tests when
-  touching `tools/`.
+  touching `tools/`. `python3 tools/preflight.py <test files>` runs all four
+  at once and prints each check's time; use it for the gate before a release.
 - The full suite is verified by CI's 4-shard matrix (separate machines,
   about 5 minutes). Do not run the 4 shards in parallel in one checkout:
   measured about 37 minutes wall time with 8 timing/perf flakes on code

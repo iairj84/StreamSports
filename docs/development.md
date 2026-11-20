@@ -13,6 +13,17 @@ Keep `pubspec.lock`; dependency upgrades are separate changes. To verify the pin
 
 ## Checks
 
+Run the gate in one pass. It starts the analyzer, the focused tests and both
+privacy checkers together and prints each one's wall time, so the wait is the
+slowest check instead of their sum (about 2.8 minutes less per release):
+
+```sh
+python3 tools/preflight.py test/<focused>_test.dart test/<another>_test.dart
+```
+
+Drop the test files to run only the analyzer and the audits, or pass
+`--serial` to run `flutter test --concurrency=1`. The same checks by hand:
+
 ```sh
 flutter analyze
 flutter test --concurrency=1

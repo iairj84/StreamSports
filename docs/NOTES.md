@@ -1,5 +1,38 @@
 # Design notes
 
+## The release gate runs its four checks at once
+
+Non-build time in a cut was mostly waiting. Measured in the 0.2.83 release run
+(8 cores, Windows): `flutter analyze` 181s, three focused test files 280s with
+`--concurrency=1`, `tools/audit_repository.py` 11s and the tools' unit tests
+13s — 485s of work that never had to happen in sequence. The four read
+independent inputs (sources, fixtures, the worktree, the APK) and none writes
+what another reads, so `tools/preflight.py` starts them together, reports each
+one as it finishes and fails with that check's own output.
+
+The same gate through the runner measured 317s wall: analyze 88s, tests 317s,
+source audit 9s, tools tests 13s. The saving is the checks that used to add up
+behind the slowest one, which is why the wall time is now the test step rather
+than its sum. Analyze varies with cache warmth (88s here against 181s in the
+cold release run), so read the runner's per-check numbers rather than trusting
+a fixed budget.
+
+Parallel `flutter test` is not what buys the time. Those three files take 266s
+at the default concurrency and 280s serial, because
+`live_layout_navigation_test.dart` alone is about 253s of the 266s — the other
+two together are 13s. Beside the analyzer the test step measured 317s, so the
+contention costs about 50s and the overlap still returns 2.8 minutes. Splitting
+that one test file is the next lever and the whole remainder of the gate, but
+it is a test refactor, not a process change, so it is not folded in here.
+
+`dart analyze` measured 127s against `flutter analyze`'s 181s on the same clean
+tree, and the gate keeps `flutter analyze`: CI runs exactly that command, and a
+gate that is faster because it checks something else is not a saving.
+
+The full suite stays out of the runner. It runs in CI's sharded matrix, and a
+single serial local run is the only local form that does not flake; wrapping
+four checks together does not change that.
+
 ## The picker search reads the listing, and the query outranks the guess
 
 The sports card said the game was on CBSSN and offered "No Channel - Choose".

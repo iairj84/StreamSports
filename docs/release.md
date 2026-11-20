@@ -32,6 +32,7 @@ Daily work lands on the `beta` branch. Every release cuts from `beta`: one comma
 
 ```sh
 git checkout beta
+python3 tools/preflight.py test/<focused>_test.dart   # analyze, tests and audits together
 python3 tools/cut_release.py --notes-file release-notes.txt
 ```
 
