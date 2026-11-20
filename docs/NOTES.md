@@ -29,8 +29,8 @@ fullVideo=false`) and the rest were mostly 1-4s. Six suites now carry those
 same 84 cases — `live_layout_navigation_test.dart` (26),
 `sports_tabs_navigation_test.dart` (10), `sports_panels_navigation_test.dart`
 (5), `sports_card_navigation_test.dart` (14),
-`sports_matching_navigation_test.dart` (15) and `live_layout_fit_test.dart` (14)
-— over one `live_layout_test_support.dart` holding the fake services. Alone
+`sports_matching_navigation_test.dart` (15) and `live_layout_fit_test.dart` (14,
+split in two below) over one `live_layout_test_support.dart` holding the fake services. Alone
 they measure 69s, 30s, 49s, 53s, 49s and 97s; together 174s. The gate around
 those six plus `live_sports_channels_test.dart` and `l10n_parity_test.dart`
 went from 317s wall to 211s, and its test step from 317s to 210s.
@@ -38,8 +38,39 @@ went from 317s wall to 211s, and its test step from 317s to 210s.
 Each suite pays about 12s of compile and harness startup of its own, so the
 split adds work as well as removing a serial block: the parts sum to roughly
 350s against 285s for the original file, and all of the gain comes from
-overlap. That is why the largest suite (97s, the fit cases) is the floor now
-rather than a 253s block, and why splitting further would only add startup.
+overlap. That is why the largest suite was the floor then rather than a 253s
+block. It was not the floor for long: at 97s it was still the biggest single
+file, so it was measured case by case in the next pass.
+
+## The fit suite is two files, because its cost is spread
+
+The 97s fit suite's 14 cases carry 98.7s of test time in the JSON reporter's
+own durations, so almost none of it is startup: `guide and navigation fit`
+24.8s, 25.4s and 17.5s at 960x540, 390x844 and 1280x720; `guide sports
+survive scores and refresh` 20.6s (that file's cold start) then 2.3s and
+2.1s; `tennis tournament cards fit` 0.8-2.1s across four sizes; `sports
+header keeps its controls readable` 0.3s across four. No case dominates, and
+the expensive ones are not waits that a restructure could delete: the three
+fit cases are 68s of real work, mostly inside `settleSports`, which drives
+200 rounds of a 5ms real delay so background matching can settle.
+
+So the four loops became two files: `live_layout_fit_test.dart` (3 cases, the
+fit loop, 74s alone) and `live_layout_cards_fit_test.dart` (11 cases, survive,
+tennis and header, 17s alone). Same names, same assertions, same 14 cases; a
+statement-by-statement comparison against the previous commit reports none
+missing, added or duplicated. The 68s fit loop is left in one file on
+measurement rather than taste: those three cases share its cold start, and
+each further file would buy nothing with its ~12s of compile and harness
+startup.
+
+Gate after the split, on the same machine: 211s wall to 182s and then 177s on a
+second run, test step 210s to 182s and 177s, with analyze 114s/100s, source
+audit 10s and tools tests 16s/15s (322s and 302s if the four checks ran one
+after another). The nine suites on their own run 163s and
+report 94 passing tests, the same 94 as before. One earlier run of the same
+command failed its test step at 200s, before these two clean runs; the
+failure's output was lost to a truncated log, so it is recorded as an
+unexplained flake rather than a saving.
 
 `dart analyze` measured 127s against `flutter analyze`'s 181s on the same clean
 tree, and the gate keeps `flutter analyze`: CI runs exactly that command, and a

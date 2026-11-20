@@ -2,7 +2,8 @@
 // playback and score services plus the pump and capture helpers that
 // live_layout_navigation_test.dart, sports_tabs_navigation_test.dart,
 // sports_panels_navigation_test.dart, sports_card_navigation_test.dart,
-// sports_matching_navigation_test.dart and live_layout_fit_test.dart all use.
+// sports_matching_navigation_test.dart, live_layout_fit_test.dart and
+// live_layout_cards_fit_test.dart all use.
 //
 // Split out of one 6,461-line file so the suites run in parallel isolates;
 // the tests themselves are unchanged. Keep fake services here so every suite

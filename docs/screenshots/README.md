@@ -26,10 +26,11 @@ Rendered from the current Flutter widgets with sample channels, events and a tes
 
 ## Refresh these images
 
-Use the screenshot cases in `test/live_layout_fit_test.dart` and `test/library_test.dart`. Set `LAYOUT_FONT_DIR` to a local folder containing `Roboto-Regular.ttf` and `MaterialIcons-Regular.otf`:
+Use the screenshot cases in `test/live_layout_fit_test.dart`, `test/live_layout_cards_fit_test.dart` and `test/library_test.dart`. Set `LAYOUT_FONT_DIR` to a local folder containing `Roboto-Regular.ttf` and `MaterialIcons-Regular.otf`:
 
 ```sh
-flutter test --concurrency=1 --dart-define=CAPTURE_LAYOUT=true --dart-define=LAYOUT_FONT_DIR=/path/to/fonts test/live_layout_fit_test.dart --name 'guide and navigation fit (1280|390)|tennis tournament cards fit (390|844|1280)'
+flutter test --concurrency=1 --dart-define=CAPTURE_LAYOUT=true --dart-define=LAYOUT_FONT_DIR=/path/to/fonts test/live_layout_fit_test.dart --name 'guide and navigation fit (1280|390)'
+flutter test --concurrency=1 --dart-define=CAPTURE_LAYOUT=true --dart-define=LAYOUT_FONT_DIR=/path/to/fonts test/live_layout_cards_fit_test.dart --name 'tennis tournament cards fit (390|844|1280)'
 flutter test --dart-define=LAYOUT_FONT_DIR=/path/to/fonts test/library_test.dart --name 'library fits Size\(960'
 ```
 
