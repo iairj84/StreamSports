@@ -2,73 +2,22 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../models/sports.dart';
-import 'ncaa_soccer_rankings.dart';
+import '../models/standings.dart';
+import 'motogp_standings_source.dart';
 import 'ncaa_field_hockey_rankings.dart';
-import 'k_league_standings.dart';
+import 'ncaa_soccer_rankings.dart';
 import 'npc_standings.dart';
 import 'rugby_pass_standings.dart';
-import 'easl_standings.dart';
-import 'regional_baseball.dart';
-import 'b_league.dart';
-import 'motogp_standings_source.dart';
+import 'standings_feeds.dart';
 
-class StandingTeam {
-  const StandingTeam(this.team, this.stats, this.position,
-      {this.statLabels = const {}, this.nameAliases = const {}});
-  final SportsTeam team;
-  final Map<String, String> stats;
-  final int? position;
-  final Map<String, String> statLabels;
-  final Set<String> nameAliases;
-}
-
-class StandingTable {
-  const StandingTable(this.name, this.rows);
-  final String name;
-  final List<StandingTeam> rows;
-}
-
-class LeagueStandings {
-  const LeagueStandings(
-      {this.tables = const [],
-      this.season,
-      this.previousSeason,
-      this.directory = false,
-      this.failed = false,
-      this.fallbackYear,
-      this.fallbackIsPreviousSeason = true,
-      this.rankings = false,
-      this.rankingTitle,
-      this.sourceName,
-      this.updatedAt});
-  final List<StandingTable> tables;
-  final String? season;
-  final bool? previousSeason;
-  final bool directory, failed;
-  final int? fallbackYear;
-  final bool fallbackIsPreviousSeason;
-  final bool rankings;
-  final String? rankingTitle;
-  final String? sourceName;
-  final DateTime? updatedAt;
-  bool get hasRows => tables.any((table) => table.rows.isNotEmpty);
-
-  LeagueStandings withRefreshFailure() => LeagueStandings(
-      tables: tables,
-      season: season,
-      previousSeason: previousSeason,
-      directory: directory,
-      failed: true,
-      fallbackYear: fallbackYear,
-      fallbackIsPreviousSeason: fallbackIsPreviousSeason,
-      rankings: rankings,
-      rankingTitle: rankingTitle,
-      sourceName: sourceName,
-      updatedAt: updatedAt);
-}
+/// Standing tables are value types in their own library; the parsers and the
+/// screens keep importing them from here.
+export '../models/standings.dart';
 
 class _StandingsUnavailable implements Exception {
   const _StandingsUnavailable();
@@ -236,66 +185,48 @@ class SportsStandingsService {
     }
   }
 
+  /// Read and parse one own-source competition.
+  ///
+  /// A previous-season retry is the only variation the providers need: the ABL
+  /// answers an empty table for a season that has not started, and moves its
+  /// request and its parser a year back rather than leaving the viewer with
+  /// nothing.
+  Future<LeagueStandings> _loadOwnSource(
+      SportsLeague league, StandingsFeed feed) async {
+    final now = _clock();
+    StandingsRequest request(bool previous) => (
+          league: league,
+          now: now,
+          year: previous ? feed.yearOf(now) - 1 : feed.yearOf(now),
+          previous: previous,
+        );
+    Future<LeagueStandings> fetch(StandingsRequest request) async =>
+        compute(
+            feed.parse,
+            (
+              await _read(feed.uri(request),
+                  method: feed.method, headers: feed.headers),
+              request,
+            ));
+    var result = await fetch(request(false));
+    if (feed.previousSeasonFallback && !result.hasRows) {
+      result = await fetch(request(true));
+    }
+    return result;
+  }
+
   Future<LeagueStandings> _load(SportsLeague league) async {
     await _acquire();
     LeagueStandings result;
     try {
       result = const LeagueStandings();
+      // Own-source competitions answer with their table directly; ESPN and its
+      // enrichment pipeline are handled below, because those compose.
+      final ownSource = standingsFeedFor(league);
       if (motoGpStandingsClasses.containsKey(league.id)) {
         result = await _motoGp.load(league, _clock().year);
-      } else if (league.source == 'B.League' &&
-          league.id == 'basketball.bleague') {
-        result = await compute(parseBLeagueStandings,
-            await _read(Uri.https('www.bleague.jp', '/en/standings-stats/')));
-      }
-      if (league.source == 'NPB' && league.id == 'baseball.npb') {
-        final year = _clock().month < 3 ? _clock().year - 1 : _clock().year;
-        result = await compute(parseNpbStandings,
-            (await _read(Uri.https('npb.jp', '/bis/eng/$year/stats/')), year));
-      }
-      if (league.source == 'KBO' && league.id == 'baseball.kbo') {
-        result = await compute(
-            parseKboStandings,
-            await _read(Uri.https(
-                'eng.koreabaseball.com', '/Standings/TeamStandings.aspx')));
-      }
-      if (league.source == 'ABL' && league.id == 'baseball.abl') {
-        final year = ablSeasonYear(_clock());
-        Future<LeagueStandings> fetch(int season, bool previous) async =>
-            compute(parseAblStandings, (
-              await _read(Uri.https('statsapi.mlb.com', '/api/v1/standings', {
-                'leagueId': '595',
-                'season': '$season',
-                'standingsTypes': 'regularSeason',
-                'hydrate': 'team',
-              })),
-              season,
-              previous
-            ));
-        result = await fetch(year, false);
-        if (!result.hasRows) result = await fetch(year - 1, true);
-      }
-      if (league.source == 'EASL' && league.id == 'basketball.easl') {
-        result = await compute(parseEaslStandings,
-            await _read(Uri.https('easl.joshricha.com', '/api/v1/standings')));
-      }
-      if (league.source == 'K League' &&
-          (league.id == 'kor.1' || league.id == 'kor.2')) {
-        final year = _clock().year;
-        result = await compute(parseKLeagueStandings, (
-          await _read(
-              Uri.https('www.kleague.com', '/record/teamRank.do', {
-                'leagueId': league.id == 'kor.1' ? '1' : '2',
-                'year': '$year',
-                'stadium': 'all',
-                'recordType': 'rank',
-                'lang': 'en',
-              }),
-              method: 'POST',
-              headers: const {'Accept-Language': 'en'}),
-          league,
-          year,
-        ));
+      } else if (ownSource != null) {
+        result = await _loadOwnSource(league, ownSource);
       }
       // A conference pick narrows the sport's own standings rather than reading
       // the whole division: ESPN answers `group` with that conference alone.

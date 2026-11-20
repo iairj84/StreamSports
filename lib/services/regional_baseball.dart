@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:xml/xml.dart';
 import '../models/sports.dart';
-import 'sports_standings_service.dart';
+import '../models/standings.dart';
 
 // Team codes are the leagues' published identifiers, shared by standings and
 // schedules. Explicit bilingual aliases avoid fuzzy cross-team joins.

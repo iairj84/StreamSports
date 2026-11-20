@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import '../models/sports.dart';
-import 'sports_standings_service.dart';
+import '../models/standings.dart';
 
 /// Published RugbyPass tables are accepted only with the expected competition,
 /// season, membership and unique existing ESPN identities.

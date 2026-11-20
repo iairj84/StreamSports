@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:xml/xml.dart';
-import 'sports_standings_service.dart';
+import '../models/standings.dart';
 
 /// The NCAA publishes these polls as small HTML tables, rather than a standings
 /// API. Accept the verified structure only; a changed page leaves teams usable.

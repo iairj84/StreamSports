@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:xml/xml.dart';
 import '../models/sports.dart';
-import 'sports_standings_service.dart';
+import '../models/standings.dart';
 
 // Official club-directory IDs and crest codes join both published tables and
 // schedules without a metadata request per team. Unknown clubs fail closed.

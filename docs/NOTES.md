@@ -37,10 +37,42 @@ codes). The catalogue removes the wiring duplication, not the format knowledge.
 `test/scoreboard_feed_catalogue_test.dart` keeps the table honest: every entry
 is filed under the source it serves, no two requested feeds share an address,
 every catalogue-scored league reports score support, and each provider's URL,
-body and decoding flags are asserted once. The standings service still has its
-own if-chain; converting it to the same shape is the next slice, and it is
-harder because ESPN supplies teams there and several leagues enrich those with a
-second source.
+body and decoding flags are asserted once.
+
+## Standings: same shape where it is a dispatch, explicit where it composes
+
+`sports_standings_service._load` held a chain of `if` blocks, one per
+own-source competition (B.League, NPB, KBO, ABL, EASL, K League). Each did
+read → compute → assign, and because a league has exactly one source, exactly
+one block ran: it was a dispatch wearing an if-chain, with the season rule and
+the ABL's previous-season retry buried in the middle of it.
+
+`lib/services/standings_feeds.dart` makes that dispatch a table keyed by league
+id, carrying the request, method, headers, the season rule (`yearOf`) and the
+retry flag. The league id is only half the match: an entry also names its
+source and the lookup checks both, because the old code did — a saved league or
+a hand-built instance with a catalogued id and a different source must fall
+through to the ESPN path rather than being answered by a provider it does not
+belong to. The one generic loader is `_loadOwnSource`.
+
+Deliberately not tabled:
+
+- **ESPN itself.** Its table, one-season retry and team-directory fallback are
+  one pipeline with three stages, and several leagues then enrich the directory
+  with a second source (field hockey, World Rugby rankings, the annual rugby
+  competitions and RugbyPass, NPC, the NCAA soccer polls). That composes rather
+  than dispatches; a table would have to grow a mini-language for "and then".
+  The enrichment order is the correctness property, so it stays visible.
+- **MotoGP.** A class table needs a season lookup before the category table, so
+  it is not one request and one parser; it keeps its own source object behind
+  the same transport.
+
+The standing value types (`StandingTeam`, `StandingTable`, `LeagueStandings`)
+moved to `lib/models/standings.dart`, re-exported from the service so every
+existing import still works. That was not cosmetic: the per-league parsers
+imported the service that calls them, so the table would either have created a
+real import cycle or forced the service to own data that is not its business.
+Every parser now imports the model instead.
 
 ## No OS backup, and three ways a bad payload is refused
 

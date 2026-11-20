@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:xml/xml.dart';
 import '../models/sports.dart';
-import 'sports_standings_service.dart';
+import '../models/standings.dart';
 
 /// ESPN's field-hockey team collection is empty, while its season scoreboard
 /// supplies the same team identities used by live events and favorites.

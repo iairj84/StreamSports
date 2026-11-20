@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import '../models/sports.dart';
-import 'sports_standings_service.dart';
+import '../models/standings.dart';
 
 /// The current-season feed used by EASL's own website. Team UUIDs also appear
 /// in its schedule, so following a row retains the same event identity.

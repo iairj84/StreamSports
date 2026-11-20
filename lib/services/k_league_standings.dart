@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import '../models/sports.dart';
-import 'sports_standings_service.dart';
+import '../models/standings.dart';
 
 /// The official league website publishes the same team IDs used by its schedule
 /// feed. Retain published positions and final-round groups, including deductions.
