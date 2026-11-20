@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.86 — 20 November 2026
+
+- Live Sports rows are named for the game now: a golf afternoon reads "RSM Classic" instead of "GOLF CHANNEL HD" three times, and the line under it is the game rather than the channel's EPG - "Round 3 · Leader · S. Scheffler · -12", or "BUF 17-14 · Q3 4:12 · 2nd & 7 at NE 32" for a team game. Hiding scores keeps the clock and leaves out the possession line, and the Sunday lead channel keeps its own name because it is a channel and not a fixture.
+
 ## 0.2.85 — 20 November 2026
 
 - Releases cut in well under half the time: the release gate no longer reruns the 94 layout and navigation cases locally. CI's four-shard matrix has already run them on the pushed commit, and on the release machine that step was the entire gate (177-182s) while covering nothing the release commit changed.
