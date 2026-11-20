@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.81 — 19 November 2026
+
+- **Fixes**
+- The channel picker now searches the same evidence as the live guide. Typing a network the card names (for example CBSSN) found nothing when the network only appeared in the listing's synopsis, because the picker read programme titles alone; it now reads title and synopsis, as the guide search always has.
+- A row the query actually answers now outranks the card's own low-confidence guesses. Searching a network no longer puts an unrelated programme that merely mentions the sport above the service itself.
+- **Internal**
+- docs/NOTES.md records why the picker reads listings and why seeded evidence sorts below query hits; the day-window fallback stays title-only because it reuses the guide store's title index.
+
 ## 0.2.80 — 19 November 2026
 
 - Standings for the leagues that publish their own table (B.League, NPB, KBO, ABL, EASL and both K League divisions) now come from one table instead of a per-provider chain of ifs, so the season rule and the ABL's previous-season retry are declared with the request they belong to. Same requests, same seasons, same tables.
