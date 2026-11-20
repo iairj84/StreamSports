@@ -22,10 +22,18 @@ of long synopses, in a debug VM; searches are debounced and cancellable).
 The stray row was a second bug. The matcher seeds the event's own matched
 channels into every search result so a viewer looking at a card always sees its
 channels. That seeding sorted above every row the query found, because the
-comparator ranked by `evidenceTier` before score - a weak sport match (a sitcom
-that mentions basketball) therefore beat the network's own channel. Seeded rows
-that do not answer the typed words now sort below rows that do. Seeding still
-wins when nothing answers the query, which is the case it was added for.
+comparator ranked by evidence tier before score - a weak sport match (a sitcom
+that mentions basketball) therefore beat the network's own channel. Results now
+carry a lens instead of a tier: explicit pick, then a confident match, then "it
+answers the typed words", then "the card's weak guess". The bottom lens is the
+new one, and it is what stops a stray programme from leading a search it does
+not answer.
+
+Widening "the query found it" to the whole lens was wrong in the other
+direction: a test pins that a channel the viewer explicitly picked still leads a
+search for a rival's name, and the confident case is the same one seeding was
+added for (a typed team name is usually absent from the name of the channel that
+carries its game). Only the weak guess moved.
 
 The day-window fallback stays title-only: it reuses the guide store's
 title-indexed scan, so widening it to synopses would mean a full description

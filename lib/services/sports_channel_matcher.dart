@@ -3771,17 +3771,20 @@ class SportsChannelMatcher {
     // restart=true asks the caller to rerun the whole search on the new
     // index. scannedAny records a non-seeded hit, which skips the fallback.
     Future<({List<ChannelSearchResult> results, bool restart})> scan() async {
-      // [query] records whether the row answers the typed words at all. The
-      // event's own channels are seeded into every search, and seeding alone
-      // must not outrank a row the viewer actually asked for: searching the
-      // network the card names used to show a weak sport match first and the
-      // channel itself below it, or nothing at all.
+      // [rank] orders the two things a result can be. 4 = the viewer picked
+      // it for this event, 3 = the card's confident match, 2 = it answers the
+      // typed words, 1 = the card's weak guess. Seeding alone used to outrank
+      // everything, so searching the network a card named showed an unrelated
+      // programme that merely mentioned the sport above the service itself;
+      // a weak guess now sits below anything the query actually found, while a
+      // pick or a confident match still leads (a typed team name is often
+      // absent from the name of the channel that carries its game).
       final found = <
           ({
             ChannelSearchResult result,
             int score,
             int index,
-            bool query
+            int rank
           })>[];
       // The event's own channels are what the viewer is usually looking for, so
       // they belong at the top even when the typed words are team names that the
@@ -3795,6 +3798,9 @@ class SportsChannelMatcher {
         seeded.add(match.channel.id);
         final slot = matchedSlot(slotsFor(match.channel.epgId), _names[index]);
         final name = _names[index];
+        final answers = slot != null ||
+            words.every(name.contains) ||
+            aliasBucket.contains(index);
         found.add((
           result: ChannelSearchResult(match.channel,
               match: match,
@@ -3802,9 +3808,13 @@ class SportsChannelMatcher {
               programmeSearchHit: slot != null),
           score: 3200 + match.score,
           index: index,
-          query: slot != null ||
-              words.every(name.contains) ||
-              aliasBucket.contains(index)
+          rank: match.reason == MatchReason.pick
+              ? 4
+              : match.isConfident
+                  ? 3
+                  : answers
+                      ? 2
+                      : 1
         ));
       }
       int compare(
@@ -3812,15 +3822,15 @@ class SportsChannelMatcher {
             ChannelSearchResult result,
             int score,
             int index,
-            bool query
+            int rank
           }) a,
           ({
             ChannelSearchResult result,
             int score,
             int index,
-            bool query
+            int rank
           }) b) {
-        if (a.query != b.query) return a.query ? -1 : 1;
+        if (a.rank != b.rank) return b.rank.compareTo(a.rank);
         int evidenceTier(ChannelMatch? match) => match == null
             ? 0
             : match.reason == MatchReason.pick
@@ -3874,7 +3884,13 @@ class SportsChannelMatcher {
               programmeSearchHit: slot != null || day != null),
           score: score,
           index: i,
-          query: true
+          rank: match == null
+              ? 2
+              : match.reason == MatchReason.pick
+                  ? 4
+                  : match.isConfident
+                      ? 3
+                      : 2
         ));
         scannedAny = true;
         if (found.length >= limit * 2) {
