@@ -11,10 +11,13 @@ void main() {
   SportsGame game(String id, String size, DateTime start,
           {String? homeScore,
           String? awayScore,
-          String status = 'Live'}) =>
+          String status = 'Live',
+          SportsLeague? competition,
+          SportsSituation? situation,
+          SportsEventInfo? event}) =>
       SportsGame(
           id: id,
-          league: league,
+          league: competition ?? league,
           start: start,
           state: GameState.live,
           statusText: status,
@@ -29,7 +32,9 @@ void main() {
               name: 'Away $size',
               shortName: 'Away $size',
               abbreviation: 'A',
-              score: awayScore));
+              score: awayScore),
+          situation: situation,
+          event: event);
 
   Channel channel(String id) => Channel(
       id: id,
@@ -131,6 +136,60 @@ void main() {
         LiveSportsChannels.scoreLabelFor(scored,
             hideScores: false, hideMyTeams: true, followed: false),
         'A 84–88');
+  });
+
+  test('the status line carries the score, the clock and who has the ball', () {
+    final live = game('nfl', 'A', now,
+        homeScore: '17',
+        awayScore: '14',
+        status: 'Q3 4:12',
+        situation: const SportsSituation(text: '2nd & 7 at NE 32'));
+    expect(
+        LiveSportsChannels.gameStatusLine(live,
+            hideScores: false, hideMyTeams: false, followed: false),
+        'A 14\u201317 \u00b7 Q3 4:12 \u00b7 2nd & 7 at NE 32');
+  });
+
+  test('a hidden score leaves the clock without the ball', () {
+    final live = game('nfl', 'A', now,
+        homeScore: '17',
+        awayScore: '14',
+        status: 'Q3 4:12',
+        situation: const SportsSituation(text: '2nd & 7 at NE 32'));
+    expect(
+        LiveSportsChannels.gameStatusLine(live,
+            hideScores: true, hideMyTeams: false, followed: false),
+        'Q3 4:12');
+    expect(
+        LiveSportsChannels.gameStatusLine(live,
+            hideScores: false, hideMyTeams: true, followed: true),
+        'Q3 4:12');
+  });
+
+  test('a game without a score yet keeps its status once', () {
+    final live = game('nfl', 'A', now,
+        status: 'Q3 4:12',
+        situation: const SportsSituation(text: '2nd & 7 at NE 32'));
+    expect(
+        LiveSportsChannels.gameStatusLine(live,
+            hideScores: false, hideMyTeams: false, followed: false),
+        'Q3 4:12 \u00b7 2nd & 7 at NE 32');
+  });
+
+  test('a field event shows its leader where a team game shows possession',
+      () {
+    final open = game('rsm', 'A', now,
+        status: 'Round 3',
+        competition: sportsLeagueById('golf.pga'),
+        event: const SportsEventInfo(
+            title: 'RSM Classic',
+            leaders: [
+              SportsEventEntry(position: '1', name: 'S. Scheffler', value: '-12')
+            ]));
+    expect(
+        LiveSportsChannels.gameStatusLine(open,
+            hideScores: false, hideMyTeams: false, followed: false),
+        'Round 3 \u00b7 Leader \u00b7 S. Scheffler \u00b7 -12');
   });
 
   test('an unscored event shows its clock instead of an empty score', () {

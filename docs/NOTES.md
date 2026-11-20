@@ -655,3 +655,25 @@ into its first card instead of selecting a sport.
 The in-player Scores panel needed nothing structural either: its Up/Down scope
 cycle (Live, All, each sport) already skips empty scopes, so My Teams is one
 more scope with a followed-team predicate, hidden when nothing is followed.
+
+## A Live Sports row is named for the game, not the channel
+
+The pinned category listed the channel each followed game is on, so a golf
+afternoon read "GOLF CHANNEL HD" down the list and nothing said which
+tournament was being played. The row's name is now the game's own title - the
+tournament from the provider's event name ("RSM Classic"), or "Away at Home"
+for a team game.
+
+The second line was the channel's EPG programme, which describes the feed and
+not the game: a golf tournament read as whatever the cable channel had
+scheduled. It is now the game's own state - the score, then the clock with who
+has the ball ("BUF 17-14 · Q3 4:12 · 2nd & 7 at NE 32"), or for a field
+event the leader ("Round 3 · Leader · S. Scheffler · -12"). Hiding scores
+keeps the clock and drops the possession line, the same spoiler gate the sports
+cards use, so following a team never leaks its score from the guide.
+
+`LiveSportsChannels.titleFor` owns the substitution and returns null for the
+Sunday lead channel and for anything that is not a live game, so RedZone (a
+channel, not a fixture) and every other category keep their channel names. The
+Timeline Guide's label column and the fast-browse banner read the same method,
+so the category is named one way in all three places.

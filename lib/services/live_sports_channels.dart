@@ -7,6 +7,8 @@ import '../models/channel.dart';
 import '../models/sports.dart';
 import '../utils/sports_calendar.dart';
 import '../utils/sports_channel_filter.dart';
+import '../utils/sports_detail_presentation.dart';
+import '../utils/sports_fixture_presentation.dart';
 import 'epg_service.dart';
 import 'multiview_sports.dart';
 import 'playlist_manager.dart';
@@ -68,15 +70,65 @@ class LiveSportsChannels extends ChangeNotifier {
   bool get stale =>
       _loadedAt == null || DateTime.now().difference(_loadedAt!) >= refreshAfter;
 
-  /// The line under a row's channel name: the game's score, or its clock when
-  /// the viewer hides scores. Null for rows that are not a followed game.
+  /// The live game on a row, when the channel has one. Null for the Sunday
+  /// lead channel — a channel, not a fixture — and for every other category.
+  _LiveSportsRow? _gameRow(String channelId) =>
+      channelId == _leadId ? null : _rows[channelId];
+
+  /// The tag beside a row's name in the Timeline Guide: the game's score, or
+  /// its clock when the viewer hides scores. Null for anything but a followed
+  /// game, whose row keeps its playlist label instead.
   String? labelFor(String channelId,
       {required bool hideScores, required bool hideMyTeams}) {
-    if (channelId == _leadId) return null;
-    final row = _rows[channelId];
+    final row = _gameRow(channelId);
     if (row == null) return null;
     return scoreLabelFor(row.game,
         hideScores: hideScores, hideMyTeams: hideMyTeams, followed: row.followed);
+  }
+
+  /// [gameStatusLine] for a loaded row. Null where the row is a channel, so it
+  /// keeps its programme line.
+  String? statusLineFor(String channelId,
+      {required bool hideScores, required bool hideMyTeams}) {
+    final row = _gameRow(channelId);
+    if (row == null) return null;
+    return gameStatusLine(row.game,
+        hideScores: hideScores,
+        hideMyTeams: hideMyTeams,
+        followed: row.followed);
+  }
+
+  /// The game's own title where a row is a live game — "RSM Classic",
+  /// "BOS at LAL" — so the category reads as the games it lists instead of as
+  /// a wall of channel names. Null where the row is a channel, which keeps its
+  /// own name.
+  String? titleFor(String channelId) => _gameRow(channelId)?.game.title;
+
+  /// The line under a row's game name, without I/O: the score, then the clock
+  /// with who has the ball (football down & distance, baseball count), or — for
+  /// a field event, which has no score — the leader or the round. This is the
+  /// game's own state, not the channel's EPG programme, which says nothing
+  /// about the game the row is for.
+  @visibleForTesting
+  static String? gameStatusLine(SportsGame game,
+      {required bool hideScores,
+      required bool hideMyTeams,
+      required bool followed}) {
+    final hidden = hideScores || (hideMyTeams && followed);
+    final score = scoreLabelFor(game,
+        hideScores: hideScores, hideMyTeams: hideMyTeams, followed: followed);
+    // A hidden score must not become a visible down & distance or leader.
+    if (hidden) return score;
+    var extra = game.league.isField
+        ? sportsFixtureInsight(game, hideScores: false)
+        : sportsLiveProgress(game);
+    // Without a score yet the score slot already falls back to the status, and
+    // the progress line opens with that same status; keep it once.
+    if (score != null && extra != null && extra.startsWith('$score · ')) {
+      extra = extra.substring(score.length + 3);
+    }
+    if (extra == null || extra.isEmpty || extra == score) return score;
+    return score == null ? extra : '$score · $extra';
   }
 
   /// [game]'s score line without I/O, in the shape the guide's label slot

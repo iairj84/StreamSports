@@ -715,8 +715,18 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
   }
 
-  /// A Live Sports row's second line: the game's score, or its clock when the
-  /// viewer hides scores.
+  /// A Live Sports row's second line in the live list: the game's score, clock
+  /// and who has the ball, or its leader — never the channel's own EPG
+  /// programme, which says nothing about the game on it.
+  String? _liveSportsStatusLine(Channel channel) {
+    final storage = context.read<StorageService>();
+    return LiveSportsChannels.instance.statusLineFor(channel.id,
+        hideScores: storage.getSportsHideScores(),
+        hideMyTeams: storage.getSportsHideMyTeamsScores());
+  }
+
+  /// The tag beside a Live Sports row's name in the Timeline Guide: the game's
+  /// score, or its clock when the viewer hides scores.
   String? _liveSportsLabel(Channel channel) {
     final storage = context.read<StorageService>();
     return LiveSportsChannels.instance.labelFor(channel.id,
@@ -3248,6 +3258,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   Widget _buildLiveList(PlaylistManager playlist) {
     final channels = _currentLiveChannels(playlist);
+    // Live Sports rows are games, so each row is named and described by its
+    // game rather than by the channel carrying it. Every other category keeps
+    // the channel's name and programme.
+    final gameRows = _effectiveLiveGroup(playlist) == _liveSportsGroupSentinel;
     // Favorites from two or more playlists: a playlist label above each
     // one's first channel (the getter already groups them by playlist).
     // Inside the row's item, not an extra list item, so row indexes stay
@@ -3278,7 +3292,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         itemCount: channels.length,
         itemBuilder: (context, i) {
           final channel = channels[i];
-          var row = _buildLiveRow(playback, channel, i, channels.length);
+          var row = _buildLiveRow(playback, channel, i, channels.length,
+              gameTitle: gameRows
+                  ? LiveSportsChannels.instance.titleFor(channel.id)
+                  : null);
           if (channels.length > 1) {
             if (i == 0) {
               row = _liveEdgeWrap(
@@ -3313,7 +3330,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   Widget _buildLiveRow(
-      PlaybackService playback, Channel channel, int i, int total) {
+      PlaybackService playback, Channel channel, int i, int total,
+      {String? gameTitle}) {
     final isSelected = playback.currentChannel?.id == channel.id;
     // Exclude the favorite star from remote traversal so Up/Down selects rows.
     // HoldToActivate supplies remote long-press actions alongside touch handling.
@@ -3343,11 +3361,19 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   errorWidget: (_, __, ___) => const Icon(Icons.tv))
               : const Icon(Icons.tv),
         ),
-        label: channel.name,
+        label: gameTitle ?? channel.name,
         // epgId (rawId, or a manual override), not the composite `id`
         // — see
         // PlaylistManager.knownChannelIdsFor's doc comment.
-        subtitle: _CurrentProgramLine(channelId: channel.epgId),
+        // A game row is named for the game, so its second line carries the
+        // game's own state (score, clock, possession, leader) instead of the
+        // channel's EPG programme; other rows keep their programme.
+        subtitle: gameTitle == null
+            ? _CurrentProgramLine(channelId: channel.epgId)
+            : Text(_liveSportsStatusLine(channel) ?? channel.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12)),
         trailing: ExcludeFocus(
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -4638,6 +4664,12 @@ class _TimelineGuideState extends State<_TimelineGuide>
     return KeyEventResult.handled;
   }
 
+  /// The game a Live Sports row is showing, so the guide names the row for its
+  /// game instead of for the feed carrying it. Null in every other category.
+  String? _gameTitle(Channel channel) => widget.selectionStatus == null
+      ? null
+      : LiveSportsChannels.instance.titleFor(channel.id);
+
   void _applyRemoteStep(int delta) {
     _browseDismiss?.cancel();
     if (delta.abs() > 1 && !_fastBrowsing.value) {
@@ -4655,7 +4687,7 @@ class _TimelineGuideState extends State<_TimelineGuide>
             category: liveCategoryLabel(channel.group),
             channel: isGuideSection(channel)
                 ? guideSectionTitle(channel)
-                : channel.name,
+                : _gameTitle(channel) ?? channel.name,
             fast: true);
       }
     }
@@ -5578,6 +5610,7 @@ class _TimelineGuideState extends State<_TimelineGuide>
                                               widget.onOpen(widget.channels[i]),
                                       child: _ChannelLabel(
                                           channel: widget.channels[i],
+                                          title: _gameTitle(widget.channels[i]),
                                           playlistTag: widget.selectionStatus
                                                   ?.call(widget.channels[i]) ??
                                               _playlistTagFor(i))),
@@ -6040,9 +6073,14 @@ double _guideLabelTextInset(BuildContext context, Channel channel) {
 }
 
 class _ChannelLabel extends StatelessWidget {
-  const _ChannelLabel({required this.channel, this.playlistTag});
+  const _ChannelLabel({required this.channel, this.playlistTag, this.title});
 
   final Channel channel;
+
+  /// The game a Live Sports row's channel is showing, so the guide's label
+  /// column names the game rather than the feed carrying it. Null in every
+  /// other category, where the channel's own name is the label.
+  final String? title;
 
   /// Source context for the first row of each playlist in a mixed guide.
   final String? playlistTag;
@@ -6076,7 +6114,7 @@ class _ChannelLabel extends StatelessWidget {
         ]),
       );
     }
-    final name = Text(channel.name,
+    final name = Text(title ?? channel.name,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
