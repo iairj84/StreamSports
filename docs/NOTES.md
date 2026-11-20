@@ -1,5 +1,38 @@
 # Design notes
 
+## The picker search reads the listing, and the query outranks the guess
+
+The sports card said the game was on CBSSN and offered "No Channel - Choose".
+Typing CBSSN into the picker answered with zero channels plus a stray shopping
+channel whose current programme was a basketball sitcom, while the same query in
+the live guide found the service immediately. Two independent causes:
+
+The live guide search has always matched channel name plus current programme
+title *and description* (`lib/utils/live_guide_search.dart`). The picker's search
+matched channel name, network alias and programme *title* only - so a listing
+that names the network in its synopsis ("Duke at North Carolina (CBSSN)") was
+invisible to it. Providers name the network in the synopsis far more often than
+in the title, which is why the guide found it and the picker did not. The
+picker's now/next slots now carry title plus the first 400 characters of the
+synopsis, lowercased but not punctuation-normalized: the searched words already
+are, and regex-cleaning a paragraph for every channel on every keystroke is not
+worth it on a TV box (measured about +50-90ms on a 20,000-channel catalogue full
+of long synopses, in a debug VM; searches are debounced and cancellable).
+
+The stray row was a second bug. The matcher seeds the event's own matched
+channels into every search result so a viewer looking at a card always sees its
+channels. That seeding sorted above every row the query found, because the
+comparator ranked by `evidenceTier` before score - a weak sport match (a sitcom
+that mentions basketball) therefore beat the network's own channel. Seeded rows
+that do not answer the typed words now sort below rows that do. Seeding still
+wins when nothing answers the query, which is the case it was added for.
+
+The day-window fallback stays title-only: it reuses the guide store's
+title-indexed scan, so widening it to synopses would mean a full description
+scan of two days of programmes per keystroke. The now/next slot covers the case
+that matters for a network query, because the channel airing now is the one the
+viewer wants.
+
 ## The scoreboard pipeline is a table, not six switches
 
 Adding a league used to mean finding `switch (league.source)` in six places:

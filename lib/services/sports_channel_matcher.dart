@@ -421,6 +421,24 @@ String _structuredFixtureText(String text) {
   return parts.isEmpty ? ' ' : parts.join('|');
 }
 
+/// A listing's searchable text: its title and the start of its synopsis.
+///
+/// The synopsis is where a provider usually names the network ("... (CBSSN)"),
+/// so searching the network the event is listed on reaches the channel that
+/// carries it — the same evidence the live guide's own search reads.
+///
+/// Lowercased but not normalized: the searched words already are, and cleaning
+/// punctuation out of a paragraph for every channel in the catalogue on every
+/// keystroke is not worth it on a TV box. The synopsis is bounded for the same
+/// reason.
+String _listingText(EpgProgram programme) {
+  final description = programme.description;
+  final synopsis = description == null || description.length <= 400
+      ? (description ?? '')
+      : description.substring(0, 400);
+  return '${programme.title} $synopsis'.toLowerCase();
+}
+
 /// Streaming-only services ESPN lists that have no linear channel to find.
 const Set<String> _streamingOnly = {
   'ESPN+',
@@ -3660,11 +3678,11 @@ class SportsChannelMatcher {
         ? const <int>{}
         : (_byCanonical[aliasKey]?.toSet() ?? const <int>{});
     final known = {for (final match in matches) match.channel.id: match};
-    final guide = <String, List<({EpgProgram programme, String title})>>{};
-    // Cached guide slots for one channel: a compact (programme, lowercase
-    // title) pair built once per search, so neither the typed words nor the
-    // programme titles are normalized per row.
-    List<({EpgProgram programme, String title})> slotsFor(String epgId) {
+    final guide = <String, List<({EpgProgram programme, String text})>>{};
+    // Cached guide slots for one channel: a compact (programme, searchable
+    // text) pair built once per search, so neither the typed words nor the
+    // listing text are normalized per row.
+    List<({EpgProgram programme, String text})> slotsFor(String epgId) {
       final cached = guide[epgId];
       if (cached != null) return cached;
       final current = _epg.getCurrentProgram(epgId);
@@ -3672,19 +3690,24 @@ class SportsChannelMatcher {
       final slots = [
         for (final p in [current, next])
           if (p != null && p.stop.isAfter(now))
-            (programme: p, title: _fixtureText(p.title))
+            (programme: p, text: _listingText(p))
       ];
       // Do not retain tens of thousands of empty guide entries on TV boxes.
       if (slots.isNotEmpty) guide[epgId] = slots;
       return slots;
     }
 
-    ({EpgProgram programme, String title})? matchedSlot(
-            List<({EpgProgram programme, String title})> slots, String name) =>
+    // A listing is more than its title: providers name the network in the
+    // synopsis ("Duke at North Carolina (CBSSN)") far more often than in the
+    // title. The live guide's own search already reads title and description
+    // together, which is why "CBSSN" finds the channel there; the picker read
+    // titles only, so the same query found nothing.
+    ({EpgProgram programme, String text})? matchedSlot(
+            List<({EpgProgram programme, String text})> slots, String name) =>
         slots
             .where((p) =>
-                words.any(p.title.contains) &&
-                words.every((w) => name.contains(w) || p.title.contains(w)))
+                words.any(p.text.contains) &&
+                words.every((w) => name.contains(w) || p.text.contains(w)))
             .firstOrNull;
 
     // The main guide search reaches later listings; the picker must too. A
@@ -3692,9 +3715,9 @@ class SportsChannelMatcher {
     // nor the next slot yet. One cached day-window title fetch covers the
     // whole search; short prefixes keep the now/next-only behavior rather
     // than scanning the title dictionary per keystroke.
-    bool dayHit(String title, String name) =>
-        words.any(title.contains) &&
-        words.every((w) => name.contains(w) || title.contains(w));
+    bool dayHit(String text, String name) =>
+        words.any(text.contains) &&
+        words.every((w) => name.contains(w) || text.contains(w));
     // The day-window read runs only as a fallback when names and now/next
     // slots find nothing at all (populated below), so ordinary searches
     // never touch the guide store; short prefixes keep the now/next-only
@@ -3727,8 +3750,7 @@ class SportsChannelMatcher {
         for (final i
             in _byEpgId[normalizeEpgId(p.channelId)] ?? const <int>[]) {
           if (_excluded.contains(i)) continue;
-          final title = _fixtureText(p.title);
-          if (!dayHit(title, _names[i])) continue;
+          if (!dayHit(_listingText(p), _names[i])) continue;
           final had = best[i];
           if (had == null) {
             best[i] = p;
@@ -3749,7 +3771,18 @@ class SportsChannelMatcher {
     // restart=true asks the caller to rerun the whole search on the new
     // index. scannedAny records a non-seeded hit, which skips the fallback.
     Future<({List<ChannelSearchResult> results, bool restart})> scan() async {
-      final found = <({ChannelSearchResult result, int score, int index})>[];
+      // [query] records whether the row answers the typed words at all. The
+      // event's own channels are seeded into every search, and seeding alone
+      // must not outrank a row the viewer actually asked for: searching the
+      // network the card names used to show a weak sport match first and the
+      // channel itself below it, or nothing at all.
+      final found = <
+          ({
+            ChannelSearchResult result,
+            int score,
+            int index,
+            bool query
+          })>[];
       // The event's own channels are what the viewer is usually looking for, so
       // they belong at the top even when the typed words are team names that the
       // channel name does not contain ("ACC Network" for a Duke game). They can
@@ -3761,17 +3794,33 @@ class SportsChannelMatcher {
         if (index == null || _excluded.contains(index)) continue;
         seeded.add(match.channel.id);
         final slot = matchedSlot(slotsFor(match.channel.epgId), _names[index]);
+        final name = _names[index];
         found.add((
           result: ChannelSearchResult(match.channel,
               match: match,
               programme: slot?.programme ?? match.programme,
               programmeSearchHit: slot != null),
           score: 3200 + match.score,
-          index: index
+          index: index,
+          query: slot != null ||
+              words.every(name.contains) ||
+              aliasBucket.contains(index)
         ));
       }
-      int compare(({ChannelSearchResult result, int score, int index}) a,
-          ({ChannelSearchResult result, int score, int index}) b) {
+      int compare(
+          ({
+            ChannelSearchResult result,
+            int score,
+            int index,
+            bool query
+          }) a,
+          ({
+            ChannelSearchResult result,
+            int score,
+            int index,
+            bool query
+          }) b) {
+        if (a.query != b.query) return a.query ? -1 : 1;
         int evidenceTier(ChannelMatch? match) => match == null
             ? 0
             : match.reason == MatchReason.pick
@@ -3824,7 +3873,8 @@ class SportsChannelMatcher {
               programme: slot?.programme ?? day ?? match?.programme,
               programmeSearchHit: slot != null || day != null),
           score: score,
-          index: i
+          index: i,
+          query: true
         ));
         scannedAny = true;
         if (found.length >= limit * 2) {
