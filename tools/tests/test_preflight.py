@@ -27,7 +27,7 @@ class PreflightTests(unittest.TestCase):
         self.assertEqual(command, 'flutter test test/a_test.dart test/b_test.dart')
 
     def test_no_tests_skips_the_flutter_step(self):
-        planned = steps([], run_tests=False)
+        planned = steps([])
         self.assertEqual([name for name, _ in planned], ['analyze', 'source audit', 'tools tests'])
         self.assertEqual(test_command([]), 'flutter test')
 

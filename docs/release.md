@@ -32,9 +32,20 @@ Daily work lands on the `beta` branch. Every release cuts from `beta`: one comma
 
 ```sh
 git checkout beta
-python3 tools/preflight.py test/<focused>_test.dart   # analyze, tests and audits together
+python3 tools/preflight.py                  # analyzer and both privacy audits
 python3 tools/cut_release.py --notes-file release-notes.txt
 ```
+
+The cut runs the analyzer and both privacy audits, not the Flutter tests. CI runs the
+full suite in four shards on every push to `beta`, so the code a cut ships has already
+been tested, and the release commit itself only changes `pubspec.yaml` and
+`CHANGELOG.md`; on the release machine the local test step was the whole gate
+(177-182s) without covering a line that cut carried. Both audits stay local because CI
+runs neither, and a cut that carries Dart changes CI has not seen - unpushed work, or
+an emergency cut from another branch - still passes the focused tests here. The trade is
+that CI reports after the cut has published: the green that protects a release is the
+feature commit's on `beta`, so check it landed before cutting. Measurements are in
+`docs/NOTES.md`.
 
 Notes are one bullet per line and become both the changelog section and the release body. The script refuses to start anywhere but `beta` (override with `--allow-any-branch` for emergencies only), refuses while tracked source changes are uncommitted, restores the generated desktop registrant files a build rewrites, and stops on audit findings unless `--accept-audit-findings` says they were reviewed. `--dry-run` prints the plan, `--skip-build` reuses the APK already under `build/`, `--local` stops after the commit and tag, and `--version`/`--build` override the automatic bump. If only the mirror step fails, rerun `python3 tools/publish_beta_mirror.py <apk>`; the versioned release is already published by then. The manual steps that follow describe the same beta release.
 

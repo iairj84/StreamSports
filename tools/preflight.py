@@ -1,10 +1,9 @@
 """Run the release checks at the same time, then report what failed.
 
-The gate is four independent checks: the analyzer, the focused Flutter tests,
+The gate is up to four independent checks: the analyzer, the focused Flutter tests,
 the source privacy audit and the tools' own unit tests. Run one after another
 they cost their sum; run together they cost the slowest of them and use the
-cores the others leave idle. On the release machine that is about four minutes
-per cut, so it is the cheapest part of the process to reclaim.
+cores the others leave idle.
 
 Usage, from the checkout root:
 
@@ -18,6 +17,9 @@ The exit status is non-zero when any check fails.
 
 Keep the full suite out of this: the sharded CI matrix runs it, and a serial
 local run is the only local form that does not flake (see docs/development.md).
+The release cut passes no test files at all - the analyzer and both audits -
+because the pushed commit has already been through those shards: rerunning the
+focused suites on the release commit only re-tested code that cut did not touch.
 Flutter commands share the SDK's startup lock, so a slow machine may not see
 the whole saving; the per-check timings show what actually happened.
 """
@@ -60,10 +62,14 @@ def test_command(tests, serial=False):
     return ' '.join(parts)
 
 
-def steps(tests=(), serial=False, run_tests=True):
-    """The checks to run, slowest first so the long one starts immediately."""
+def steps(tests=(), serial=False):
+    """The checks to run, slowest first so the long one starts immediately.
+
+    A test step runs only for files that were asked for: `flutter test` with
+    no paths runs the whole suite, which is CI's sharded job, not a local gate.
+    """
     planned = [('analyze', ANALYZE)]
-    if run_tests:
+    if tests:
         planned.append(('tests', test_command(tests, serial)))
     planned.append(('source audit', SOURCE_AUDIT))
     planned.append(('tools tests', TOOLS_TESTS))
@@ -104,14 +110,13 @@ def main(argv=None):
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('tests', nargs='*', type=Path,
                         help='test files for flutter test; omit to skip tests')
-    parser.add_argument('--no-tests', action='store_true', help='skip the Flutter tests')
     parser.add_argument('--serial', action='store_true',
                         help='run flutter test with --concurrency=1')
     parser.add_argument('--jobs', type=int, default=0,
                         help='checks to run at once (default: all of them)')
     args = parser.parse_args(argv)
 
-    planned = steps(args.tests, serial=args.serial, run_tests=not args.no_tests)
+    planned = steps(args.tests, serial=args.serial)
     jobs = args.jobs or len(planned)
     lock = threading.Lock()
     print(f'{len(planned)} checks, {jobs} at a time', flush=True)

@@ -1,5 +1,58 @@
 # Design notes
 
+## The cut no longer reruns the tests
+
+A cut's gate used to rerun nine suites and 94 cases locally before the build
+started. On the release machine that step was the whole gate: 177-182s wall,
+with the test step at 177-182s, the analyzer at 100-114s (the tests held all
+eight cores), the source audit at 9-10s and the tools' own tests at 15-16s. It
+also re-tested code the cut was not shipping. A cut's own commit changes
+`pubspec.yaml` and `CHANGELOG.md`; the app it packs is the previous `beta`
+commit, and CI runs the full suite in four shards on that push (ci.yaml triggers
+on `beta`). So the local rerun covered nothing the release carried.
+
+The cut now runs `python3 tools/preflight.py` with no test files: analyzer,
+source audit, tools tests. Five runs after the change measured 18s, 18s, 17s,
+19s and 93s wall (source audit 7-9s and tools tests 10-11s throughout), against
+177-182s before. The analyzer is all of it now, and it moves with its cache:
+17-18s warm, 93s on a run that re-analyzed after a source change, and about
+181s cold in the 0.2.83 run - level with the old gate at worst, and the warm case
+is the saving.
+
+`python3 tools/preflight.py` with no test paths used to run `flutter test` over
+the whole suite, contradicting its own docstring ("analyze and the audits
+only") and AGENTS.md's rule against the full suite in one checkout. An empty
+list now means no test step, so the documented release command cannot quietly
+start a 22-minute run, and `test_preflight.py` pins it. The first attempt at this
+measurement was that accidental run: it starved the analyzer to 247s and had to
+be killed.
+
+What the trade costs: CI reports after the cut has published, not before it.
+The green that protects a release is the feature commit's run on `beta`; a red
+run on the release commit itself arrives post-hoc and means fixing forward.
+
+## A version bump invalidates the whole AOT compile, and reordering cannot help
+
+Two builds on one warm tree, with a 54.7 MB release APK already in `build/`:
+
+- Nothing changed: `flutter build apk --release --target-platform
+  android-arm,android-arm64` took 127s. `kernel_snapshot_program` was skipped
+  and no `gen_snapshot` ran.
+- Only `version: 0.2.84+2577` became `0.2.85+2578`: 186s. Flutter opened a new
+  `.dart_tool/flutter_build/bf41f56a12d4e703947559929c8126b0`, ran
+  `kernel_snapshot_program` for 39.1s and executed both AOT snapshots.
+
+The version is part of the build system's environment (FLUTTER_BUILD_NAME and
+FLUTTER_BUILD_NUMBER), so a bumped version is a different build directory, and
+Flutter's release compile is all-or-nothing: it skips the target or recompiles
+the kernel. `--build-name`/`--build-number` feed those same two defines, so they
+change nothing about this. The 127s case also needs unchanged Dart source, which
+a release carrying code never has: the same bump before a cut with real changes
+costs nothing extra, because the kernel and AOT snapshots were going to run
+anyway. So the version bump adds about 59s only to a release with no Dart change,
+and "build first, stamp the version afterwards" would trade that for an APK
+stamped with the previous version.
+
 ## The release gate runs its four checks at once
 
 Non-build time in a cut was mostly waiting. Measured in the 0.2.83 release run
