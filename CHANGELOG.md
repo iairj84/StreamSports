@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.83 — 20 November 2026
+
+- Live TV's groups column gains a pinned Live Sports category above the playlist groups: one row for each live game in your followed leagues and teams, on the channel Sports would start for it, followed teams first.
+- It loads when opened and rechecks on every open, says so while it looks, and shows a plain "no live games" line when nothing is on rather than an empty guide.
+- Each row carries its game's score under the channel, or the game clock when scores are hidden, and keeps it current while the category is open.
+- On NFL Sundays the playlist's own RedZone channel leads the category when it carries one, since that afternoon is on that one channel.
+
 ## 0.2.82 — 19 November 2026
 
 - **Fixes**
