@@ -37,8 +37,8 @@ class LiveSportsChannels extends ChangeNotifier {
 
   static final LiveSportsChannels instance = LiveSportsChannels._();
 
-  /// No live score is drawn inside the guide's blocks, so the rows only need
-  /// refreshing often enough to keep the label's score and clock current.
+  /// The guide's blocks carry the score too, so a refresh only has to keep the
+  /// clock, the score and who has the ball current.
   static const refreshAfter = Duration(minutes: 2);
   static const tick = Duration(seconds: 60);
 
@@ -75,15 +75,18 @@ class LiveSportsChannels extends ChangeNotifier {
   _LiveSportsRow? _gameRow(String channelId) =>
       channelId == _leadId ? null : _rows[channelId];
 
-  /// The tag beside a row's name in the Timeline Guide: the game's score, or
-  /// its clock when the viewer hides scores. Null for anything but a followed
-  /// game, whose row keeps its playlist label instead.
-  String? labelFor(String channelId,
+  /// The Timeline Guide's cell for a row: both sides with their scores, then
+  /// how the game is going — or, with scores hidden, the provider's status
+  /// alone. Empty for anything but a game row, whose block keeps its own
+  /// programme title.
+  List<List<({String text, bool strong})>> guideLinesFor(String channelId,
       {required bool hideScores, required bool hideMyTeams}) {
     final row = _gameRow(channelId);
-    if (row == null) return null;
-    return scoreLabelFor(row.game,
-        hideScores: hideScores, hideMyTeams: hideMyTeams, followed: row.followed);
+    if (row == null) return const [];
+    return guideLines(row.game,
+        hideScores: hideScores,
+        hideMyTeams: hideMyTeams,
+        followed: row.followed);
   }
 
   /// [gameStatusLine] for a loaded row. Null where the row is a channel, so it
@@ -119,6 +122,90 @@ class LiveSportsChannels extends ChangeNotifier {
         hideScores: hideScores, hideMyTeams: hideMyTeams, followed: followed);
     // A hidden score must not become a visible down & distance or leader.
     if (hidden) return score;
+    final progress = _progressAfterScore(game, score);
+    if (progress == null) return score;
+    return score == null ? progress : '$score · $progress';
+  }
+
+  /// The guide cell's lines for [game], without I/O: both sides with their
+  /// scores on the first — the leader's set strong — then the clock and who has
+  /// the ball. One line where there is no score to draw, which is every field
+  /// event and every viewer who hides scores.
+  ///
+  /// The sides are spelled out where [scoreLabelFor] abbreviates them: the cell
+  /// is the only place the score is drawn, and a 180dp block holds
+  /// "Manhattan 31 / Miami 52" where "MAN 31-52" left the viewer to work out
+  /// which number was whose.
+  @visibleForTesting
+  static List<List<({String text, bool strong})>> guideLines(SportsGame game,
+      {required bool hideScores,
+      required bool hideMyTeams,
+      required bool followed}) {
+    final hidden = hideScores || (hideMyTeams && followed);
+    if (hidden) {
+      final status = game.statusText.trim();
+      return status.isEmpty
+          ? const []
+          : [
+              [(text: status, strong: false)]
+            ];
+    }
+    final sides = scoreSegments(game);
+    // With no score to draw the status is already the line; nothing to strip.
+    final progress = _progressAfterScore(
+        game,
+        sides == null
+            ? null
+            : scoreLabelFor(game,
+                hideScores: hideScores,
+                hideMyTeams: hideMyTeams,
+                followed: followed));
+    if (sides == null) {
+      // No score to show: the status, then the rest of the line, each once.
+      final status = game.statusText.trim();
+      final line = progress == null
+          ? status
+          : status.isEmpty ||
+                  progress == status ||
+                  progress.startsWith('$status \u00b7 ')
+              ? progress
+              : '$status \u00b7 $progress';
+      if (line.isEmpty) return const [];
+      return [
+        [(text: line, strong: false)]
+      ];
+    }
+    return [
+      sides,
+      if (progress != null) [(text: progress, strong: false)],
+    ];
+  }
+
+  /// [game]'s two sides with their scores in the guide cell's shape: the away
+  /// side first, matching the row's own "Away at Home", with the leading side
+  /// marked strong. Null until both scores are in.
+  @visibleForTesting
+  static List<({String text, bool strong})>? scoreSegments(SportsGame game) {
+    final first = game.first, second = game.second;
+    final a = first.score?.trim(), b = second.score?.trim();
+    if (a == null || b == null || a.isEmpty || b.isEmpty) return null;
+    final left = int.tryParse(a), right = int.tryParse(b);
+    final lead = left == null || right == null ? 0 : left.compareTo(right);
+    return [
+      (text: '${_sideName(first)} $a', strong: lead > 0),
+      (text: ' / ', strong: false),
+      (text: '${_sideName(second)} $b', strong: lead < 0),
+    ];
+  }
+
+  static String _sideName(SportsTeam team) {
+    final short = team.shortName.trim();
+    return short.isEmpty ? team.name.trim() : short;
+  }
+
+  /// The clock, possession or leader line, without a score the provider repeated
+  /// in its own status. Null when there is nothing to add.
+  static String? _progressAfterScore(SportsGame game, String? score) {
     var extra = game.league.isField
         ? sportsFixtureInsight(game, hideScores: false)
         : sportsLiveProgress(game);
@@ -127,13 +214,14 @@ class LiveSportsChannels extends ChangeNotifier {
     if (score != null && extra != null && extra.startsWith('$score · ')) {
       extra = extra.substring(score.length + 3);
     }
-    if (extra == null || extra.isEmpty || extra == score) return score;
-    return score == null ? extra : '$score · $extra';
+    if (extra == null || extra.isEmpty || extra == score) return null;
+    return extra;
   }
 
-  /// [game]'s score line without I/O, in the shape the guide's label slot
-  /// takes: the leading side and both scores ("BOS 88–84"), or the provider's
-  /// own status ("Q3 4:12") when scores are hidden or absent.
+  /// [game]'s score in the live list's second line, abbreviated: the leading
+  /// side and both scores ("BOS 88–84"), or the provider's own status
+  /// ("Q3 4:12") when scores are hidden or absent. The guide's cell spells the
+  /// sides out instead — see [scoreSegments].
   @visibleForTesting
   static String? scoreLabelFor(SportsGame game,
       {required bool hideScores,

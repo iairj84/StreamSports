@@ -710,3 +710,36 @@ before the bump and writes them back if anything fails before its release
 commit, staged copies included, so a retry starts exactly where the failed
 attempt did. Once the release commit exists the bump stays: that is what makes
 the tag, the CHANGELOG entry and the version inside the APK agree.
+
+
+## The guide's block names both sides, and the label column stops repeating it
+
+"MAN 32-51" fit the block but asked the viewer to decode a box score, and the
+same fact appeared twice: the cell's score line and an orange score line above
+the game's name in the label column. The cell now reads "Manhattan 31 / Miami
+52" - both sides spelled out, away first to match the row's own "Away at
+Home" - with the winning side's score in bold, then the clock and who has the
+ball on the second line.
+
+Giving the cell the game's title as well is what cut it off at the block edge:
+"MAN 32-51 * 15:00 * 1st" plus "Manhattan at Miami" is three lines of text in a
+two-line block, and the overflow landed on the score. The title left the cell
+because the label column already names the game, so the two now divide the
+work: one says which game, the other says what the game is doing.
+
+Bold is a span, not a second string: `guideLines` returns each line as
+(text, strong) segments and the block renders them in one `Text.rich`, so the
+winning score is set apart without the cell parsing scores. The names come from
+the same `shortName` the row title uses, which keeps "Thunder 31 / Lakers 52"
+consistent with "Thunder at Lakers" beside it.
+
+The score line is first for the same reason it always was: a long game name
+wraps, and a wrapped second line ellipsizes the tail of the block, not the
+score. A block with no score at all - tennis, golf, a game before it starts -
+puts its status and leader on that first line instead, and hiding scores leaves
+the status alone.
+
+Live Sports no longer passes a label status. `selectionStatus` was doing two
+jobs - the Multiview picker's "In use" tag, and "these rows are games" - so
+dropping the score needed a separate `liveSports` flag rather than a callback
+that always returned null.

@@ -199,4 +199,71 @@ void main() {
             hideScores: false, hideMyTeams: false, followed: false),
         'Lap 40/70');
   });
+
+  test('the guide cell spells both sides out, the leader strong', () {
+    final scored = game('scored', 'A', now, homeScore: '52', awayScore: '31');
+    expect(
+        LiveSportsChannels.guideLines(scored,
+            hideScores: false, hideMyTeams: false, followed: false),
+        [
+          [
+            (text: 'Away A 31', strong: false),
+            (text: ' / ', strong: false),
+            (text: 'Home A 52', strong: true),
+          ],
+          [(text: 'Live', strong: false)],
+        ]);
+  });
+
+  test('a tie leaves neither side strong', () {
+    final level = game('level', 'A', now, homeScore: '31', awayScore: '31');
+    expect(
+        LiveSportsChannels.guideLines(level,
+            hideScores: false, hideMyTeams: false, followed: false).first,
+        [
+          (text: 'Away A 31', strong: false),
+          (text: ' / ', strong: false),
+          (text: 'Home A 31', strong: false),
+        ]);
+  });
+
+  test('a hidden score leaves the cell its status alone', () {
+    final scored = game('scored', 'A', now,
+        homeScore: '52', awayScore: '31', status: 'Q3 4:12');
+    expect(
+        LiveSportsChannels.guideLines(scored,
+            hideScores: true, hideMyTeams: false, followed: false),
+        [
+          [(text: 'Q3 4:12', strong: false)]
+        ]);
+  });
+
+  test('a cell without a score yet keeps the clock and who has the ball', () {
+    final live = game('nfl', 'A', now,
+        status: 'Q3 4:12',
+        situation: const SportsSituation(text: '2nd & 7 at NE 32'));
+    expect(
+        LiveSportsChannels.guideLines(live,
+            hideScores: false, hideMyTeams: false, followed: false),
+        [
+          [(text: 'Q3 4:12 \u00b7 2nd & 7 at NE 32', strong: false)]
+        ]);
+  });
+
+  test('a field event fills the cell with its leader', () {
+    final open = game('rsm', 'A', now,
+        status: 'Round 3',
+        competition: sportsLeagueById('golf.pga'),
+        event: const SportsEventInfo(
+            title: 'RSM Classic',
+            leaders: [
+              SportsEventEntry(position: '1', name: 'S. Scheffler', value: '-12')
+            ]));
+    expect(
+        LiveSportsChannels.guideLines(open,
+            hideScores: false, hideMyTeams: false, followed: false),
+        [
+          [(text: 'Round 3 \u00b7 Leader \u00b7 S. Scheffler \u00b7 -12', strong: false)]
+        ]);
+  });
 }
