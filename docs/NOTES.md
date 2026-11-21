@@ -965,11 +965,20 @@ cannot tell a backup copy from a regional or quality variant, because
 `canonicalChannelKey` drops punctuation and quality tokens, so "ESPN", "ESPN *"
 and "ESPN HD" all reduce to the same key. That left the common provider layout
 entirely manual. The rule now also pairs inside one playlist, but only when the
-raw names differ by a trailing `*` marker alone and exactly one counterpart
-exists; a quality variant still never gets chosen automatically, and an
-ambiguous second backup is left for the picker. A cross-playlist exact match
-still wins, since that is a real second subscription rather than a duplicate
-feed.
+raw names differ by decoration alone and exactly one counterpart exists. The
+comparison is on the name's letters, digits and `+`, upper-cased, with a
+trailing run of anything else acting as the marker: `SPT | ESPN`,
+`SPT|ESPN*` and `SPT | ESPN *` all reduce to the same core, so spacing or a
+different star glyph cannot hide the pair. `+` stays in the core because
+`ESPN+` is a different service, and `ESPN HD` has a different core from
+`ESPN`, so a quality variant is still never taken for a backup. A second
+ambiguous backup is left for the picker.
+
+A cross-playlist exact match still wins, since that is a real second
+subscription rather than a duplicate feed, but an *ambiguous* one no longer
+vetoes the provider's own copy: the playlist-local backup is the target the
+viewer actually asked for, and it is unambiguous as soon as exactly one
+counterpart exists.
 
 ## The player that kept spinning
 

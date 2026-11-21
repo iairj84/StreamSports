@@ -155,6 +155,45 @@ void main() {
       expect(links.containsKey('espn2'), isFalse);
     });
 
+    test('the provider names from the field pair: "SPT | ESPN*"', () {
+      final links = plan([
+        _channel('1', 'SPT | ESPN'),
+        _channel('2', 'SPT | ESPN*'),
+        _channel('3', 'SPT | ESPN 2'),
+        _channel('4', 'SPT | ESPN 2*'),
+        _channel('5', 'SPT | ESPN News'),
+        _channel('6', 'SPT | ESPN News*'),
+        _channel('7', 'SPT | ESPN U'),
+      ]);
+
+      expect(links['1'], (playlistId: 'fixture', rawId: '2'));
+      expect(links['2'], (playlistId: 'fixture', rawId: '1'));
+      expect(links['3'], (playlistId: 'fixture', rawId: '4'));
+      expect(links['4'], (playlistId: 'fixture', rawId: '3'));
+      expect(links['5'], (playlistId: 'fixture', rawId: '6'));
+      expect(links['6'], (playlistId: 'fixture', rawId: '5'));
+      expect(links.containsKey('7'), isFalse);
+    });
+
+    test('separator and marker spacing do not hide the pair', () {
+      final links = plan([
+        _channel('a', 'SPT | ESPN'),
+        _channel('b', 'SPT|ESPN *'),
+      ]);
+
+      expect(links['a'], (playlistId: 'fixture', rawId: 'b'));
+      expect(links['b'], (playlistId: 'fixture', rawId: 'a'));
+    });
+
+    test('a plus is part of the name, never a backup marker', () {
+      final links = plan([
+        _channel('espn', 'ESPN'),
+        _channel('espn_plus', 'ESPN+'),
+      ]);
+
+      expect(links, isEmpty);
+    });
+
     test('a quality variant is never taken for a backup', () {
       final links = plan([
         _channel('espn', 'ESPN'),
@@ -191,6 +230,26 @@ void main() {
 
       expect(links['espn'], (playlistId: 'other', rawId: 'espn'));
       expect(links['espn_star'], (playlistId: 'other', rawId: 'espn'));
+    });
+
+    test('an ambiguous other playlist does not veto the own backup', () {
+      final links = plan(
+        [
+          _channel('espn', 'SPT | ESPN'),
+          _channel('espn_star', 'SPT | ESPN*'),
+        ],
+        otherPlaylistsByKey: [
+          {
+            'ESPN': [
+              _channel('a', 'ESPN', playlistId: 'one'),
+              _channel('b', 'ESPN', playlistId: 'two'),
+            ],
+          }
+        ],
+      );
+
+      expect(links['espn'], (playlistId: 'fixture', rawId: 'espn_star'));
+      expect(links['espn_star'], (playlistId: 'fixture', rawId: 'espn'));
     });
 
     test('a channel that already has a link is left alone', () {

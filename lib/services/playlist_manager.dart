@@ -23,22 +23,22 @@ import 'storage_service.dart';
 import 'channel_names.dart';
 
 /// The one channel in [candidates] that [source] should fail over to:
-/// the other side of a provider backup pair, i.e. a name that differs only
-/// by the trailing `*` marker. Null when there is none or more than one,
-/// the same "leave it for the manual picker" rule the cross-playlist match
-/// uses.
+/// the other side of a provider backup pair — the same letters, digits and
+/// `+` name core, with exactly one of the two carrying a trailing decoration
+/// ("ESPN" beside "ESPN*"). Null when there is none or more than one, the
+/// same "leave it for the manual picker" rule the cross-playlist match uses.
 Channel? backupCopyInPlaylist(Channel source, List<Channel> candidates) {
-  final sourceBase = backupChannelBaseName(source.name);
-  if (sourceBase.isEmpty) return null;
-  final sourceIsBackup = isBackupChannelName(source.name);
+  final sourceCore = channelNameCore(source.name);
+  if (sourceCore.isEmpty) return null;
+  final sourceIsBackup = hasTrailingNameMarker(source.name);
   Channel? found;
   for (final candidate in candidates) {
     if (candidate.playlistId == source.playlistId &&
         candidate.rawId == source.rawId) {
       continue;
     }
-    if (backupChannelBaseName(candidate.name) != sourceBase) continue;
-    if (isBackupChannelName(candidate.name) == sourceIsBackup) continue;
+    if (channelNameCore(candidate.name) != sourceCore) continue;
+    if (hasTrailingNameMarker(candidate.name) == sourceIsBackup) continue;
     if (found != null) return null;
     found = candidate;
   }
@@ -67,39 +67,44 @@ Map<String, ChannelLink> planAutoPairLinks({
   required Set<String> alreadyLinked,
   required List<Map<String, List<Channel>>> otherPlaylistsByKey,
 }) {
-  // Bucketed once per playlist rather than per source, so a catalog with
-  // thousands of channels is still a linear pass plus one lookup each.
-  final byBackupBase = <String, List<Channel>>{};
-  for (final channel in channels) {
-    final base = backupChannelBaseName(channel.name);
-    if (base.isEmpty) continue;
-    (byBackupBase[base] ??= []).add(channel);
-  }
+      // Bucketed once per playlist rather than per source, so a catalog with
+    // thousands of channels is still a linear pass plus one lookup each.
+    final byNameCore = <String, List<Channel>>{};
+    for (final channel in channels) {
+      final core = channelNameCore(channel.name);
+      if (core.isEmpty) continue;
+      (byNameCore[core] ??= []).add(channel);
+    }
 
-  final links = <String, ChannelLink>{};
-  for (final source in channels) {
-    if (alreadyLinked.contains(source.rawId)) continue;
-    final key = canonicalChannelKey(source.name);
-    if (key.isEmpty) continue;
-    Channel? found;
-    var ambiguous = false;
-    for (final other in otherPlaylistsByKey) {
-      final candidates = other[key];
-      if (candidates == null || candidates.isEmpty) continue;
-      if (found != null || candidates.length > 1) {
-        ambiguous = true;
-        break;
+    final links = <String, ChannelLink>{};
+    for (final source in channels) {
+      if (alreadyLinked.contains(source.rawId)) continue;
+      final key = canonicalChannelKey(source.name);
+      if (key.isEmpty) continue;
+      Channel? cross;
+      var ambiguous = false;
+      for (final other in otherPlaylistsByKey) {
+        final candidates = other[key];
+        if (candidates == null || candidates.isEmpty) continue;
+        if (cross != null || candidates.length > 1) {
+          ambiguous = true;
+          break;
+        }
+        cross = candidates.first;
       }
-      found = candidates.first;
+      // An ambiguous match in another playlist only rules out *that* target;
+      // the provider's own backup copy is still unambiguous when there is
+      // one, and leaving it unlinked is exactly what this pass is for.
+      final target = cross != null && !ambiguous
+          ? cross
+          : backupCopyInPlaylist(
+              source, byNameCore[channelNameCore(source.name)] ?? const []);
+      if (target == null) continue;
+      links[source.rawId] =
+          (playlistId: target.playlistId, rawId: target.rawId);
     }
-    found ??= backupCopyInPlaylist(
-        source, byBackupBase[backupChannelBaseName(source.name)] ?? const []);
-    if (found != null && !ambiguous) {
-      links[source.rawId] = (playlistId: found.playlistId, rawId: found.rawId);
-    }
+    return links;
   }
-  return links;
-}
 
 /// Combines playlist sessions and dispatches catalogue, visibility and favorite
 /// changes. M3U playlists supply live channels; Xtream libraries load categories

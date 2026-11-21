@@ -70,18 +70,26 @@ bool channelNamesMatch(String a, String b) =>
     canonicalChannelKey(a).isNotEmpty &&
     canonicalChannelKey(a) == canonicalChannelKey(b);
 
-/// A provider's backup copy is usually the same name repeated with a
-/// trailing `*` ("ESPN *" beside "ESPN"). [canonicalChannelKey] drops that
-/// punctuation on purpose — a backup is the same channel to the guide and
-/// the matcher — so telling the copy from the original has to look at the
-/// raw name.
-bool isBackupChannelName(String name) => name.trim().endsWith('*');
+final RegExp _nameCoreCharacter = RegExp(r'[\p{L}\p{N}+]', unicode: true);
+final RegExp _nonNameCoreCharacter =
+    RegExp(r'[^\p{L}\p{N}+]', unicode: true);
 
-/// [name] folded into the key a backup pair shares: trimmed, upper-cased and
-/// stripped of any trailing `*` markers. Equal for "ESPN" and "ESPN *";
-/// different for a quality variant such as "ESPN HD", which is not a backup.
-String backupChannelBaseName(String name) =>
-    name.trim().toUpperCase().replaceFirst(RegExp(r'\s*\*+$'), '');
+/// The letters, digits and `+` of [name], upper-cased — what two copies of one
+/// channel share however the provider decorates a copy: "SPT | ESPN",
+/// "SPT|ESPN*" and "SPT | ESPN *" all reduce to `SPTESPN`. `+` is kept because
+/// it is part of a name ("ESPN+"), not decoration.
+String channelNameCore(String name) =>
+    name.toUpperCase().replaceAll(_nonNameCoreCharacter, '');
+
+/// True when [name] ends in decoration rather than a letter, digit or `+` —
+/// the provider's usual way of marking a duplicate feed ("ESPN*"). Only
+/// meaningful next to another name with the same [channelNameCore]; a quality
+/// variant ("ESPN HD") has a different core and is never mistaken for one.
+bool hasTrailingNameMarker(String name) {
+  final trimmed = name.trim();
+  if (trimmed.isEmpty) return false;
+  return !_nameCoreCharacter.hasMatch(String.fromCharCode(trimmed.runes.last));
+}
 
 /// [normalizedChannelTokens] collapsed into one comparable/hashable
 /// `String` (sorted, so token order in the original name never matters)
