@@ -114,6 +114,17 @@ void main() {
       expect(message, contains('open Receive again'));
     });
 
+    test('a socket that failed names the OS reason', () {
+      expect(
+          handshakeFailure(const SocketException('x',
+              osError: OSError('Connection reset by peer', 104))),
+          contains('Connection reset by peer'));
+      expect(
+          handshakeFailure(http.ClientException(
+              'Connection closed before full header was received')),
+          contains('Connection closed before full header'));
+    });
+
     test('a reply that is not a handshake carries the status code', () {
       expect(handshakeFailure(null, status: 409), contains('409'));
       expect(handshakeFailure(null), contains('no reply'));

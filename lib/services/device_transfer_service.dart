@@ -611,18 +611,24 @@ class TransferSender {
       // device is no longer waiting" right after they accepted.
       'poll': true,
     });
-    final http.Response response;
+    late Map<String, dynamic> json;
     try {
-      response = await _post(peer._endpoint('hello'), hello,
+      final response = await _post(peer._endpoint('hello'), hello,
           kTransferApprovalWindow + const Duration(seconds: 30));
+      json = response.statusCode == 200
+          ? _decode(response.body) ?? (throw StateError(
+              handshakeFailure(null, status: response.statusCode)))
+          : throw StateError(
+              handshakeFailure(null, status: response.statusCode));
     } on Exception catch (e) {
-      throw StateError(handshakeFailure(e));
+      // The request may have reached the other device even though its
+      // answer never came back - a reset two seconds in looks the same
+      // from here as a device that is gone. The approval lives on that
+      // device now, so ask it once before blaming the connection.
+      final late = await _statusOnce(peer, hello);
+      if (late == null) throw StateError(handshakeFailure(e));
+      json = late;
     }
-    final decoded = _decode(response.body);
-    if (response.statusCode != 200 || decoded == null) {
-      throw StateError(handshakeFailure(null, status: response.statusCode));
-    }
-    var json = decoded;
     if (json['pending'] == true) {
       final answer = await _awaitApproval(peer, hello);
       if (answer == null) {
@@ -645,6 +651,21 @@ class TransferSender {
       .post(url,
           headers: const {'Content-Type': 'application/json'}, body: body)
       .timeout(timeout);
+
+  /// One status check, for the case where the hello's answer never arrived.
+  Future<Map<String, dynamic>?> _statusOnce(
+      TransferPeer peer, String hello) async {
+    try {
+      final response = await _post(
+          peer._endpoint('status'), hello, const Duration(seconds: 5));
+      if (response.statusCode != 200) return null;
+      final json = _decode(response.body);
+      if (json == null) return null;
+      return json['pending'] == true || json['approved'] == true ? json : null;
+    } on Exception {
+      return null;
+    }
+  }
 
   /// Collect the answer the receiver is holding. Every poll is its own
   /// connection, so a lock-screen, a Wi-Fi blink or a dropped socket costs a
@@ -755,10 +776,27 @@ String handshakeFailure(Object? error, {int? status}) {
     return 'The other device did not answer in time. On it, open Receive again, then Search again.';
   }
   if (error is SocketException || error is http.ClientException) {
-    return 'That device is no longer waiting. On it, open Receive again, then Search again.';
+    final detail = _failureDetail(error);
+    return 'That device is no longer waiting. On it, open Receive again, '
+        'then Search again.${detail == null ? '' : '\n($detail)'}';
   }
   return 'The other device could not take the request '
       '(${status ?? 'no reply'}). Search again and pick it once more.';
+}
+
+/// The OS reason behind a dead connection, short enough for the error card.
+/// "Connection reset by peer" and "Connection refused" point at different
+/// faults, and one sentence for both left the field reports unreadable.
+String? _failureDetail(Object? error) {
+  if (error is SocketException) {
+    final os = error.osError?.message;
+    final text = os == null || os.isEmpty ? error.message : os;
+    return text.isEmpty ? null : text;
+  }
+  if (error is http.ClientException) {
+    return error.message.isEmpty ? null : error.message;
+  }
+  return null;
 }
 
 Map<String, dynamic>? _decode(Object? data) {

@@ -887,3 +887,23 @@ Both old directions still work: a hello without `poll` takes the original
 blocking path, and a reply without `pending` is read as a final answer, so an
 older build on either side transfers as before. The code, the X25519/AES-GCM
 keys and the single-use approval are unchanged.
+
+## A reset that arrived before the approval did
+
+The 0.2.93 report was a sender that failed seconds after the code was accepted,
+not minutes, so the approval was never the thing that timed out: the connection
+died while the request was in flight. Two gaps came out of that.
+
+The sender treated a dead hello as a device that had stopped listening, when it
+could equally be a reset after the request had been read. The approval now
+lives on the receiver, so after a socket failure the sender asks `/status` once
+before giving up: if the other device is holding the approval, the transfer
+continues and nothing is lost. Only a device that does not answer at all is
+reported as gone.
+
+The refusal also hid its cause. `handshakeFailure()` now appends the OS reason
+in one short line - "Connection reset by peer", "Connection refused",
+"Connection closed before full header was received" - because those point at
+different faults: a reset means the request landed and the answer died, a
+refusal means nothing was listening on that port. One sentence for both left
+the field reports unreadable.
