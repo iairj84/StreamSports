@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.97 — 21 November 2026
+
+- Settings > Your TV > Channel links: point a channel at the feed that should
+- replace it. The provider's own backup copy in the same playlist ("ESPN *"
+- beside "ESPN") is listed first, and another playlist's copy still works.
+- The player's one-press failover button is now reachable: set a link once and
+- "Switch to ..." appears beside the playback controls.
+- Channel links no longer require a second playlist.
+
 ## 0.2.96 — 21 November 2026
 
 - The channel actually airing a game now outranks a league category channel: a
