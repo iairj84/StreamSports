@@ -935,3 +935,29 @@ smaller change was the right one.
 Measured on a synthetic playlist (FS1 plus two "NCAAF" group feeds, Rutgers at
 Penn State): before, the order was NCAAF 01, NCAAF 02, FS1 (guide, 500); after,
 FS1 leads and the two category feeds follow, with the listing case unchanged.
+
+## The failover screen nobody could open
+
+The player has offered a one-press failover for a long time: `PlayerControls`
+resolves a stored channel link and shows "Switch to ..." beside the controls.
+The link itself was written into storage, carried by backups and device
+transfers, and read on playback. What was missing was any way to create one.
+`ChannelLinkingScreen` was written to do exactly that, its own doc comment said
+"embedded in EPG settings", and it was removed from that page - so for several
+releases nothing in the app constructed it. A restored backup could carry links;
+nobody could make a new one.
+
+It was also written for the wrong case. A link had to point at another *enabled
+playlist* (`enabledCount >= 2`, and the picker filtered the source playlist out),
+which is backwards for the common provider: the backup is a second copy of the
+same channel in the same list, "ESPN *" beside "ESPN". That is a different
+relationship from "the same service supplied by two subscriptions", and it is the
+one a viewer actually wants to reach for when a stream starts stuttering.
+
+So the screen now opens from Settings > Your TV > Channel links, requires only a
+channel to exist, and its picker lists the source's own playlist first with the
+rest following. Reciprocal links behave as before: linking ESPN to ESPN * also
+fills ESPN *'s link back when it had none, which is what makes the player offer
+the switch from either side. Auto-Pair still only pairs across playlists, because
+within one playlist a name match cannot tell a backup copy from a regional or
+quality variant; that stays a manual choice.

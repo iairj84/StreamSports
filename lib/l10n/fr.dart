@@ -499,6 +499,9 @@ const Map<String, String> kFr = {
   // ── Channel linking / EPG matching ───────────────────────────────────
   'Add and enable a second playlist first — a link connects a channel on one playlist to its equivalent on another.':
       "Ajoutez et activez d'abord une 2e liste — un lien relie une chaîne d'une liste à son équivalent dans une autre.",
+  'Channel links': "Liens de chaînes",
+  'Play a backup channel with one press':
+      "Lire une chaîne de secours en un geste",
   'Auto-Pair Channels': "Associer auto.",
   'Unpair Channels': "Dissocier",
   'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':

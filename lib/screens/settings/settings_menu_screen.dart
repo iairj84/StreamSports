@@ -21,6 +21,7 @@ import 'theme_screen.dart';
 import 'library_settings_screen.dart';
 import 'launcher_icon_screen.dart';
 import 'channel_names_screen.dart';
+import 'channel_linking_screen.dart';
 import 'backup_screen.dart';
 import 'settings_from_phone_screen.dart';
 
@@ -110,6 +111,14 @@ class SettingsMenuScreen extends StatelessWidget {
                           'Channel names',
                           'Rename channels; the new names survive updates',
                           const ChannelNamesScreen()),
+                      // A provider's own backup feed ("ESPN *") is the usual
+                      // failover target, so this sits beside renaming rather
+                      // than inside the guide settings.
+                      link(
+                          Icons.swap_horiz,
+                          'Channel links',
+                          'Play a backup channel with one press',
+                          const ChannelLinkingScreen()),
                     ]),
                     SettingsSection(title: tr('Movies & series'), children: [
                       link(

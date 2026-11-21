@@ -499,6 +499,9 @@ const Map<String, String> kEs = {
   // ── Channel linking / EPG matching ───────────────────────────────────
   'Add and enable a second playlist first — a link connects a channel on one playlist to its equivalent on another.':
       "Primero añade y activa una segunda lista: un enlace une un canal de una lista con su equivalente en otra.",
+  'Channel links': "Enlaces de canales",
+  'Play a backup channel with one press':
+      "Reproduce un canal de respaldo con una pulsación",
   'Auto-Pair Channels': "Emparejar auto.",
   'Unpair Channels': "Desemparejar",
   'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':

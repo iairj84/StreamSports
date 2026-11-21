@@ -9,8 +9,10 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
 
-/// Manual one-to-one channel links across playlists for playback failover. Embedded in EPG
-/// settings; choosing a target opens a separate picker.
+/// Manual one-to-one channel links for playback failover: a channel points at
+/// the feed that should replace it. The most common target is the provider's own
+/// backup copy in the same playlist ("ESPN" to "ESPN *"), but the same service on
+/// another playlist works too. Choosing a target opens a separate picker.
 class ChannelLinkingScreen extends StatefulWidget {
   const ChannelLinkingScreen({super.key});
 
@@ -98,16 +100,20 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
             : channels.where((c) => c.name.toLowerCase().contains(query)))
         .where((c) => reviewFilter == null || reviewFilter.contains(c.id))
         .toList();
-    final enabledCount = playlist.profiles.where((p) => p.enabled).length;
-    final canLink = enabledCount >= 2;
+    // One playlist is enough: a provider's own backup feed is the most common
+    // failover target, and an empty catalogue is the only state with nothing to
+    // link.
+    final canLink = channels.isNotEmpty;
 
-    return Column(
+    return SettingsScaffold(
+      title: tr('Channel links'),
+      body: Column(
       children: [
         if (!canLink)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Text(
-              tr('Add and enable a second playlist first — a link connects a channel on one playlist to its equivalent on another.'),
+              tr('No channels found.'),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -230,15 +236,15 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
                 ),
         ),
       ],
+      ),
     );
   }
 }
 
-/// Searches every *other* enabled playlist's live channels (never the
-/// source channel's own playlist — same-playlist failover is already the
-/// backup-servers mechanism, a link to another channel on the same
-/// playlist wouldn't mean anything) and pops the picked [Channel] back to
-/// [ChannelLinkingScreen].
+/// Searches the live channels a failover can land on and pops the picked
+/// [Channel] back to [ChannelLinkingScreen]. The source channel's own playlist
+/// comes first, because its backup copy ("ESPN *") is the usual target; other
+/// enabled playlists follow, for the same service supplied twice.
 class _PickLinkedChannelScreen extends StatefulWidget {
   const _PickLinkedChannelScreen({required this.source});
 
@@ -263,8 +269,15 @@ class _PickLinkedChannelScreenState extends State<_PickLinkedChannelScreen> {
     final playlist = context.watch<PlaylistManager>();
     final candidates = playlist
         .visibleChannels(category: 'tv')
-        .where((c) => c.playlistId != widget.source.playlistId)
-        .toList();
+        .where((c) => c.id != widget.source.id)
+        .toList()
+      ..sort((a, b) {
+        // The provider's own backup sits beside the channel being linked, so
+        // that playlist is listed before the rest.
+        final own = (a.playlistId == widget.source.playlistId ? 0 : 1)
+            .compareTo(b.playlistId == widget.source.playlistId ? 0 : 1);
+        return own != 0 ? own : a.name.compareTo(b.name);
+      });
     final query = _searchController.text.trim().toLowerCase();
     final filtered = query.isEmpty
         ? candidates
@@ -287,7 +300,7 @@ class _PickLinkedChannelScreenState extends State<_PickLinkedChannelScreen> {
                   readOnly: readOnly,
                   autofocus: true,
                   decoration: InputDecoration(
-                    labelText: tr('Search other playlists\' channels'),
+                    labelText: tr('Search channels'),
                     prefixIcon: const Icon(Icons.search),
                     border: const OutlineInputBorder(),
                   ),

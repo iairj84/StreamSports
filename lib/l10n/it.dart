@@ -498,6 +498,9 @@ const Map<String, String> kIt = {
   // ── Channel linking / EPG matching ───────────────────────────────────
   'Add and enable a second playlist first — a link connects a channel on one playlist to its equivalent on another.':
       "Prima aggiungi e attiva una seconda lista: un collegamento unisce un canale di una lista al suo equivalente in un'altra.",
+  'Channel links': "Collegamenti canali",
+  'Play a backup channel with one press':
+      "Riproduci un canale di riserva con un tocco",
   'Auto-Pair Channels': "Abbina auto.",
   'Unpair Channels': "Separa canali",
   'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':
