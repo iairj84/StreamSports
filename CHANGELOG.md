@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.100 — 21 November 2026
+
+- Automatic failover no longer has a half-hour cooldown that let two bad feeds
+- take turns: after one switch, both of its channels are left alone until
+- playback stops.
+- A channel being torn down, reloaded or reconnected can no longer trigger a
+- switch from its last buffering update; the stall count is dropped with the
+- stream it belonged to.
+
 ## 0.2.99 — 21 November 2026
 
 - Channel links can now fail over by themselves: a live channel that stalls
