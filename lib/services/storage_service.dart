@@ -472,6 +472,13 @@ class StorageService {
   Future<void> setHideMultiview(bool value) =>
       _prefs.setBool(AppConstants.keyHideMultiview, value);
 
+  /// Settings > Your TV > Channel links: fall over to a linked backup after
+  /// the channel stalls twice in ten minutes. Off by default.
+  bool getAutoFailoverBuffering() =>
+      _prefs.getBool(AppConstants.keyAutoFailoverBuffering) ?? false;
+  Future<void> setAutoFailoverBuffering(bool value) =>
+      _prefs.setBool(AppConstants.keyAutoFailoverBuffering, value);
+
   /// Settings > General: the "Hold > to resume" reminder pill (Android and
   /// Windows). Off hides only the pill; hold-Right still resumes.
   bool getShowResumePill() =>

@@ -970,3 +970,27 @@ exists; a quality variant still never gets chosen automatically, and an
 ambiguous second backup is left for the picker. A cross-playlist exact match
 still wins, since that is a real second subscription rather than a duplicate
 feed.
+
+## The player that kept spinning
+
+A live stream can look healthy to the native watchdog and still stall: every
+few minutes the decoder runs out of buffered data, refills and plays on. The
+one-press failover covers that only while somebody is looking at the controls.
+
+Playback now counts real stalls: one episode of `StreamPhase.buffering` that
+lasts at least three seconds, with at most two of them inside ten minutes. The
+one that trips it is the second - a single refill is normal on a live edge. On
+that second stall the channel's stored link is resolved and played.
+
+The switch is deliberately narrow: the fullscreen player only (a home preview
+that quietly changed channel would be a surprise, and there is nowhere to
+offer Undo), only a link that still resolves, and off unless it is turned on in
+Settings > Your TV > Channel links. Both sides cool down for 30 minutes after
+a switch, so a backup that is just as bad cannot bounce the viewer between two
+feeds; the snackbar's Undo is the way back. Multiview keeps its own
+controllers, so this path never touches it.
+
+The counting is a pure `BufferingFailoverWatcher` fed the health sampler's
+phase and seconds, which is what the tests exercise. The numbers are not tuned
+on real hardware yet: ten minutes and three seconds are the starting point,
+and a field report should decide whether they stay.

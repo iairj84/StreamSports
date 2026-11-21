@@ -504,6 +504,13 @@ const Map<String, String> kEs = {
       "Reproduce un canal de respaldo con una pulsación",
   'Auto-Pair Channels': "Emparejar auto.",
   'Unpair Channels': "Desemparejar",
+  'Switch automatically when it keeps buffering':
+      "Cambiar automáticamente si no deja de cargar",
+  'After two stalls of three seconds or more in ten minutes, play the linked channel.':
+      "Tras dos cortes de tres segundos o más en diez minutos, reproduce el canal enlazado.",
+  '{from} kept buffering — switched to {to}.':
+      "{from} no dejaba de cargar: se cambió a {to}.",
+  'Undo': "Deshacer",
   'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':
       "Revisando canales emparejados auto. ({reviewFilter}): escribe para buscar en todos",
   'Search your channels': "Buscar en tus canales",

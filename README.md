@@ -22,6 +22,7 @@ The same file installs on 32-bit and 64-bit ARM phones and TVs running Android 7
 - **Sports** across leagues, college conferences, Top 25 polls, motorsport and regional feeds — events, schedules, standings, team pages, replays and highlights, matched against your own channels.
 - **Movies and series** with category browsing, search, favorites and watch history.
 - **Multiview** for watching several live channels side by side.
+- **Channel failover**: link a channel to its provider's backup copy ("ESPN" to "ESPN *") or to the same service on another playlist. Switch to it in one press, or turn on the option in **Settings → Your TV → Channel links** and the player falls over by itself after the channel stalls twice in ten minutes, with Undo.
 - **Launcher artwork**: **Settings → Devices & app → Launcher icon** writes the designed artwork into the device's Pictures folder, ready to choose in Projectivy or another launcher.
 - **Per-playlist guide sources**, including custom XMLTV guides, with per-playlist user-agent settings.
 - **Device transfer** over the local network, with no account and no server in the middle.

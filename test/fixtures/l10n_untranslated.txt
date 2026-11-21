@@ -263,7 +263,6 @@ Try another day, or add leagues in Sports options.
 Turn off With channel to see all games.
 Turn off to stop using this playlist. Channels and settings stay saved.
 Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.
-Undo
 Undo stays available on this screen until you leave it or apply again.
 Up and down
 Up one level, and out of the player back to the guide.

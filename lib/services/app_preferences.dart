@@ -36,6 +36,10 @@ class AppPreferences extends ChangeNotifier {
   /// The Multiview row and the player's "Open in Multiview" hidden.
   late bool hideMultiview;
 
+  /// Live player falls over to the channel's linked backup after repeated
+  /// buffering (Settings > Your TV > Channel links). Off by default.
+  late bool autoFailoverBuffering;
+
   /// Fullscreen player zooms the picture to fill the screen (no black bars).
   late bool videoFill;
 
@@ -67,6 +71,7 @@ class AppPreferences extends ChangeNotifier {
     hideMovies = !AppConstants.onDemandEnabled || _storage.getHideMovies();
     hideShows = !AppConstants.onDemandEnabled || _storage.getHideShows();
     hideMultiview = _storage.getHideMultiview();
+    autoFailoverBuffering = _storage.getAutoFailoverBuffering();
     videoFill = _storage.getVideoFill();
     TimeFormat.use24h = _storage.getTime24h();
   }
@@ -150,6 +155,12 @@ class AppPreferences extends ChangeNotifier {
   void setHideMultiview(bool value) {
     hideMultiview = value;
     _storage.setHideMultiview(value);
+    notifyListeners();
+  }
+
+  void setAutoFailoverBuffering(bool value) {
+    autoFailoverBuffering = value;
+    _storage.setAutoFailoverBuffering(value);
     notifyListeners();
   }
 }

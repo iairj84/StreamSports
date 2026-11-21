@@ -15,6 +15,7 @@ import 'playlist_http_client.dart';
 
 import 'picture_in_picture_service.dart';
 import 'live_buffer.dart';
+import 'buffering_failover.dart';
 import 'playback_health.dart';
 import '../l10n/l10n.dart';
 
@@ -23,6 +24,7 @@ import '../l10n/l10n.dart';
 class PlaybackService extends ChangeNotifier {
   PlaybackService(this._storage, this._playlistManager) {
     pictureInPicture.addListener(notifyListeners);
+    health.addListener(_onHealthChanged);
     // Leaving the app with Home only opens a PiP window when the viewer asked
     // for it — see PictureInPictureService.autoEnterOnLeave.
     pictureInPicture.setAutoEnterOnLeave(
@@ -36,6 +38,20 @@ class PlaybackService extends ChangeNotifier {
 
   final pictureInPicture = PictureInPictureService();
   final health = PlaybackHealthMonitor();
+
+  /// Counts stalls on the live channel being watched — see
+  /// [BufferingFailoverWatcher].
+  final _failoverWatcher = BufferingFailoverWatcher();
+
+  /// Composite ids that were on either side of an automatic failover, mapped
+  /// to when it happened. A second switch for half an hour would just bounce
+  /// between the same two feeds, so neither side is picked again that soon.
+  final Map<String, DateTime> _autoFailoverAt = {};
+  int _autoFailoverSequence = 0;
+
+  /// Newest automatic failover, read once by the player screen for its Undo
+  /// snackbar and then cleared. Null when there is nothing to tell.
+  AutoFailoverNotice? autoFailoverNotice;
   int _request = 0;
   bool _disposed = false;
   Future<void>? _release;
@@ -51,6 +67,53 @@ class PlaybackService extends ChangeNotifier {
     if (_disposed) return;
     health.updateExternal(error, reconnectStatus);
     super.notifyListeners();
+  }
+
+  /// Watches the shared health sampler for a live channel that keeps
+  /// stalling, then plays its linked backup instead.
+  ///
+  /// Only the fullscreen player is watched: silently retuning a home-screen
+  /// preview would be a surprise, and there is nowhere there to offer Undo.
+  /// Multiview keeps its own controllers, so it never reaches this path.
+  void _onHealthChanged() {
+    if (_disposed) return;
+    final channel = currentChannel;
+    if (channel == null || !Channel.isLiveId(channel.rawId)) return;
+    if (!isFullscreenActive || !_storage.getAutoFailoverBuffering()) return;
+    final state = health.value;
+    _failoverWatcher.watch(channel.id);
+    if (!_failoverWatcher.observe(
+        phase: state.phase, seconds: state.seconds, now: DateTime.now())) {
+      return;
+    }
+    final now = DateTime.now();
+    _autoFailoverAt.removeWhere(
+        (_, at) => now.difference(at) > const Duration(minutes: 30));
+    final link = _playlistManager.channelLinkFor(channel);
+    final backup =
+        link == null ? null : _playlistManager.resolveChannelLink(link);
+    final target = autoFailoverTarget(channel,
+        backup: backup, recentSwitches: _autoFailoverAt, now: now);
+    if (target == null) return;
+    _failoverWatcher.reset();
+    _autoFailoverAt[channel.id] = now;
+    _autoFailoverAt[target.id] = now;
+    autoFailoverNotice = AutoFailoverNotice(
+        sequence: ++_autoFailoverSequence, from: channel, to: target);
+    unawaited(play(target));
+    notifyListeners();
+  }
+
+  /// Runs the Undo action on the snackbar that announced [notice]. The
+  /// notice itself is already cleared by the time the snackbar is on screen.
+  Future<void> undoAutoFailover(AutoFailoverNotice notice) async {
+    await play(notice.from);
+  }
+
+  /// The player screen calls this once it has shown [notice]'s snackbar, so
+  /// a stale notice cannot surface after the viewer has moved on.
+  void clearAutoFailoverNotice(AutoFailoverNotice notice) {
+    if (identical(autoFailoverNotice, notice)) autoFailoverNotice = null;
   }
 
   Future<void> _releaseController(VideoPlayerHdrController? c) {
@@ -415,6 +478,13 @@ class PlaybackService extends ChangeNotifier {
         currentChannel?.id == channel.id &&
         controller != null) {
       return;
+    }
+
+    // A manual tune ends whatever the previous stream's failover had to say;
+    // the failover's own play() keeps it, so the player can still offer Undo.
+    final failoverNotice = autoFailoverNotice;
+    if (failoverNotice != null && failoverNotice.to.id != channel.id) {
+      autoFailoverNotice = null;
     }
 
     // Remember what this replaces before teardown clears it, so D-pad Right can
@@ -819,6 +889,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> _teardown() async {
+    _failoverWatcher.reset();
     _positionSaveTimer?.cancel();
     _positionSaveTimer = null;
     // A final exact-position save before disposing — the periodic timer
@@ -854,9 +925,21 @@ class PlaybackService extends ChangeNotifier {
     pictureInPicture.removeListener(notifyListeners);
     pictureInPicture.dispose();
     unawaited(_teardown());
+    health.removeListener(_onHealthChanged);
     health.dispose();
     super.dispose();
   }
+}
+
+/// One automatic failover the player should tell the viewer about: the
+/// channel that kept stalling and the linked backup that replaced it.
+@immutable
+class AutoFailoverNotice {
+  const AutoFailoverNotice(
+      {required this.sequence, required this.from, required this.to});
+
+  final int sequence;
+  final Channel from, to;
 }
 
 /// True for the one failure class that's about this device rather than

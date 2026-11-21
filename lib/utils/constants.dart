@@ -239,6 +239,12 @@ class AppConstants {
   static const String keyHideArchive = 'vesper_hide_archive';
   static const String keyHideMultiview = 'vesper_hide_multiview';
 
+  /// Fall over to a channel's linked backup after repeated buffering. Off by
+  /// default — changing the stream under the viewer is only welcome if they
+  /// asked for it.
+  static const String keyAutoFailoverBuffering =
+      'vesper_auto_failover_buffering';
+
   /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and
   /// the user's own game -> channel picks (JSON, see `SportsChannelPicks`).
   static const String keySportsLeagues = 'vesper_sports_leagues';

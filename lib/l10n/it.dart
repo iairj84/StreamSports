@@ -503,6 +503,13 @@ const Map<String, String> kIt = {
       "Riproduci un canale di riserva con un tocco",
   'Auto-Pair Channels': "Abbina auto.",
   'Unpair Channels': "Separa canali",
+  'Switch automatically when it keeps buffering':
+      "Passa automaticamente se continua a caricare",
+  'After two stalls of three seconds or more in ten minutes, play the linked channel.':
+      "Dopo due interruzioni di tre secondi o più in dieci minuti, riproduci il canale collegato.",
+  '{from} kept buffering — switched to {to}.':
+      "{from} continuava a caricare: passato a {to}.",
+  'Undo': "Annulla",
   'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':
       "Revisione dei canali abbinati auto. ({reviewFilter}): scrivi per cercare in tutti",
   'Search your channels': "Cerca tra i tuoi canali",

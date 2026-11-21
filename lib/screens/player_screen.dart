@@ -338,6 +338,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// Refreshed on every build, same pattern as [_isTvLayout] — read from
   /// [_handleUp]/[_handleDown], which don't run during a build themselves.
   bool _hasLinkedChannel = false;
+
+  /// Sequence of the last automatic-failover snackbar this screen showed.
+  /// The notice is cleared as it is read, so this is what stops a rebuild
+  /// from showing the same switch twice.
+  int _shownAutoFailover = 0;
   bool get _hasSwitchButton =>
       _playback.health.value.phase == StreamPhase.failed &&
       (_hasLinkedChannel ||
@@ -386,6 +391,26 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _bottomVisible = true;
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
+  }
+
+  /// Announces an automatic buffering failover once, with Undo. Called from
+  /// build so a switch that happens while this screen is up is seen.
+  void _announceAutoFailover(PlaybackService playback) {
+    final notice = playback.autoFailoverNotice;
+    if (notice == null || notice.sequence == _shownAutoFailover) return;
+    _shownAutoFailover = notice.sequence;
+    playback.clearAutoFailoverNotice(notice);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('{from} kept buffering — switched to {to}.',
+            {'from': notice.from.name, 'to': notice.to.name})),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+            label: tr('Undo'),
+            onPressed: () => unawaited(playback.undoAutoFailover(notice))),
+      ));
+    });
   }
 
   void _onBarFocusChange() {
@@ -735,6 +760,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // popped/re-pushed — everything below reflects whatever's *actually*
     // playing, not just the episode this screen was originally opened for.
     final channel = playback.currentChannel ?? widget.channel;
+    _announceAutoFailover(playback);
     // See PlayerControls.linkedChannel's doc comment. Resolved fresh on
     // every build (not cached) — a link the user just set in Settings, or
     // a channel that's disappeared from a refreshed catalog, should show

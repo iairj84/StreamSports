@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/channel.dart';
+import '../../services/app_preferences.dart';
 import '../../services/playlist_manager.dart';
 import '../../widgets/auto_pair_flow.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_switch_list_tile.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
 
@@ -88,6 +90,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
+    final prefs = context.watch<AppPreferences>();
     // Every enabled playlist's live channels together, not scoped to one —
     // linking is inherently a relationship *between* playlists, so this
     // list needs to show all of them side by side (with which playlist
@@ -115,6 +118,17 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
             child: Text(
               tr('No channels found.'),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        if (canLink)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: TvSwitchListTile(
+              value: prefs.autoFailoverBuffering,
+              onChanged: prefs.setAutoFailoverBuffering,
+              title: Text(tr('Switch automatically when it keeps buffering')),
+              subtitle: Text(tr(
+                  'After two stalls of three seconds or more in ten minutes, play the linked channel.')),
             ),
           ),
         if (canLink)

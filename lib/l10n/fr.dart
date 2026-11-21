@@ -504,6 +504,13 @@ const Map<String, String> kFr = {
       "Lire une chaîne de secours en un geste",
   'Auto-Pair Channels': "Associer auto.",
   'Unpair Channels': "Dissocier",
+  'Switch automatically when it keeps buffering':
+      "Basculer automatiquement en cas de blocages répétés",
+  'After two stalls of three seconds or more in ten minutes, play the linked channel.':
+      "Après deux blocages de trois secondes ou plus en dix minutes, lire la chaîne liée.",
+  '{from} kept buffering — switched to {to}.':
+      "{from} n'a cessé de charger — passage à {to}.",
+  'Undo': "Annuler",
   'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':
       "Révision de {reviewFilter} chaîne{s} associée{s} auto. — tapez pour tout chercher",
   'Search your channels': "Rechercher vos chaînes",
