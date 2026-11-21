@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.89 — 20 November 2026
+
+- A live channel that stalls now waits for three seconds of video before it resumes, so one dropout is one short pause instead of a loop of micro-stutters.
+- Channel changes, seeking and a first start still begin at once, and a Buffering preset, a Live buffer reserve or Gradual mode keeps its own threshold.
+
 ## 0.2.88 — 20 November 2026
 
 - The Live Sports guide names the game in its block now: "Manhattan 31 / Miami 52", away first, the winning score in bold, then the clock and who has the ball - instead of "MAN 32-51 * 15:00 * 1st" over a repeated game title that ran past the block.
