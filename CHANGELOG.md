@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.93 — 21 November 2026
+
+- A transfer no longer fails after the other device accepted: the approval is kept on the receiving device and collected over short connections, so a locked phone or a dropped Wi-Fi socket no longer ends with "that device is no longer waiting".
+- Accepting on the TV and then picking the phone back up finishes the transfer instead of asking for a second attempt.
+- The six-digit code, the encryption and the one-use approval are unchanged, and a device still on the previous build transfers as before.
+
 ## 0.2.92 — 20 November 2026
 
 - Transfer to another device is usable as soon as the other device answers: the search used to run a fixed ten seconds, so a found device sat disabled behind a spinner.
