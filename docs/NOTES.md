@@ -865,3 +865,25 @@ it as `transferName()`, which never returns null - `unnamedDevice` is "Android
 device" - because a fallback that reads like the local device is the confusion
 being fixed. The constructor defaults use the same name, so no path can produce
 the old row.
+
+## A transfer approval outlived by its request
+
+Accepting the code on the receiving device could still end with "that device is
+no longer waiting" on the sender. The sender held one POST open for the whole
+two-minute approval window, so everything between acceptance and success was
+that single TCP connection surviving the walk to the other device: a phone that
+locked, a Wi-Fi power save, or a box that dropped the idle socket took the
+answer with it, and the sender reported the loss as a device that had stopped
+listening. The receiver had answered - its answer went nowhere.
+
+The approval now lives on the receiver. A hello that asks for it (`poll: true`)
+is answered at once with `pending` and the code, the sender asks `/status` every
+second on a fresh connection, and the receiver keeps the approval until it is
+used, declined, or the window closes. `_startApprovalClock` ends it by itself,
+because nothing waits on it any more. A dropped poll costs a second, never the
+transfer.
+
+Both old directions still work: a hello without `poll` takes the original
+blocking path, and a reply without `pending` is read as a final answer, so an
+older build on either side transfers as before. The code, the X25519/AES-GCM
+keys and the single-use approval are unchanged.

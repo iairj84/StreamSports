@@ -160,6 +160,7 @@ class TransferReceiver {
   List<int>? _derivedPeerKey;
   int _handshakeEpoch = 0;
   bool _closeAfterResponse = false;
+  Timer? _approvalClock;
 
   void _emit(ReceiverStatus status) {
     _current = status;
@@ -229,6 +230,8 @@ class TransferReceiver {
       // The approval is bound to the peer that asked for this handshake and
       // is recorded only once the viewer has actually accepted it.
       _approvedPeerKey = pending;
+      _pendingPeerKey = null;
+      _stopApprovalClock();
       approval.complete(true);
     }
   }
@@ -241,6 +244,7 @@ class TransferReceiver {
   }
 
   Future<void> stop() async {
+    _stopApprovalClock();
     final approval = _approval;
     if (approval != null && !approval.isCompleted) approval.complete(false);
     _approval = null;
@@ -252,6 +256,7 @@ class TransferReceiver {
   /// Drop every key derived for the previous hello, including an approval, and
   /// start again with a fresh ephemeral key pair.
   Future<void> _restartHandshake() async {
+    _stopApprovalClock();
     final epoch = ++_handshakeEpoch;
     final approval = _approval;
     _approval = null;
@@ -263,6 +268,25 @@ class TransferReceiver {
     final next = _cipher = TransferCipher(sessionId: _sessionId);
     final key = await next.ensureKeyPair();
     if (epoch == _handshakeEpoch) _publicKey = key;
+  }
+
+  void _stopApprovalClock() {
+    _approvalClock?.cancel();
+    _approvalClock = null;
+  }
+
+  /// In polling mode nothing sits on the request while the viewer decides, so
+  /// the window has to end by itself; the sender then reads "not pending".
+  void _startApprovalClock(int epoch) {
+    _stopApprovalClock();
+    _approvalClock = Timer(approvalWindow, () {
+      if (epoch != _handshakeEpoch) return;
+      final approval = _approval;
+      if (approval == null || approval.isCompleted) return;
+      unawaited(_restartHandshake().then((_) {
+        _emit(const ReceiverStatus(phase: TransferPhase.waiting));
+      }));
+    });
   }
 
   Future<void> _closeListener() async {
@@ -300,6 +324,8 @@ class TransferReceiver {
           await _hello(body, response);
         case 'bundle':
           await _receiveBundle(body, response);
+        case 'status':
+          await _approvalStatus(body, response);
         default:
           response.statusCode = HttpStatus.notFound;
       }
@@ -326,6 +352,7 @@ class TransferReceiver {
     final json = _decode(body);
     final name = (json?['name'] as String?)?.trim() ?? '';
     final key = json?['pk'];
+    final polling = json?['poll'] == true;
     if (json == null || key is! String || name.isEmpty) {
       response.statusCode = HttpStatus.badRequest;
       return;
@@ -361,6 +388,17 @@ class TransferReceiver {
       code: _code,
       peerName: name,
     ));
+    if (polling) {
+      _startApprovalClock(epoch);
+      response.headers.contentType = ContentType.json;
+      response.write(jsonEncode({
+        'approved': false,
+        'pending': true,
+        'code': _code ?? '',
+        'pk': base64Url.encode(_publicKey),
+      }));
+      return;
+    }
     final approved =
         await approval.future.timeout(approvalWindow, onTimeout: () => false);
     if (epoch != _handshakeEpoch) {
@@ -386,6 +424,42 @@ class TransferReceiver {
     response.write(jsonEncode({
       'approved': approved,
       'code': code,
+      'pk': base64Url.encode(_publicKey),
+    }));
+  }
+
+  /// Polled by a sender that asked for `poll: true`. The approval lives on the
+  /// receiver instead of on a request held open for the whole window, so a
+  /// phone that locks - or a connection that drops - while the viewer walks to
+  /// this device can still collect the answer.
+  Future<void> _approvalStatus(String body, HttpResponse response) async {
+    final json = _decode(body);
+    final key = json?['pk'];
+    if (key is! String) {
+      response.statusCode = HttpStatus.badRequest;
+      return;
+    }
+    final List<int> peerKey;
+    try {
+      peerKey = base64Url.decode(key);
+    } catch (_) {
+      response.statusCode = HttpStatus.badRequest;
+      return;
+    }
+    if (peerKey.length != 32) {
+      response.statusCode = HttpStatus.badRequest;
+      return;
+    }
+    final approvedKey = _approvedPeerKey;
+    final pendingKey = _pendingPeerKey;
+    final approved = approvedKey != null && listEquals(peerKey, approvedKey);
+    final pending =
+        !approved && pendingKey != null && listEquals(peerKey, pendingKey);
+    response.headers.contentType = ContentType.json;
+    response.write(jsonEncode({
+      'approved': approved,
+      'pending': pending,
+      'code': _code ?? '',
       'pk': base64Url.encode(_publicKey),
     }));
   }
@@ -454,6 +528,7 @@ class TransferReceiver {
   }
 
   void dispose() {
+    _stopApprovalClock();
     _udp?.close();
     _http?.close(force: true);
     if (!_status.isClosed) _status.close();
@@ -527,22 +602,33 @@ class TransferSender {
   Future<SenderHandshake> request(TransferPeer peer) async {
     final senderCipher = TransferCipher(sessionId: peer.id);
     final myKey = await senderCipher.ensureKeyPair();
+    final hello = jsonEncode({
+      'name': deviceName,
+      'pk': base64Url.encode(myKey),
+      // Ask the receiver to answer at once and keep the approval there. A
+      // request held open for two minutes dies when the phone locks while
+      // the viewer walks to the other device, which surfaced as "that
+      // device is no longer waiting" right after they accepted.
+      'poll': true,
+    });
     final http.Response response;
     try {
-      response = await http
-          .post(peer._endpoint('hello'),
-              headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode(
-                  {'name': deviceName, 'pk': base64Url.encode(myKey)}))
-          // More slack than the receiver's own approval window, so its answer
-          // always arrives before this gives up on it.
-          .timeout(kTransferApprovalWindow + const Duration(seconds: 30));
+      response = await _post(peer._endpoint('hello'), hello,
+          kTransferApprovalWindow + const Duration(seconds: 30));
     } on Exception catch (e) {
       throw StateError(handshakeFailure(e));
     }
-    final json = _decode(response.body);
-    if (response.statusCode != 200 || json == null) {
+    final decoded = _decode(response.body);
+    if (response.statusCode != 200 || decoded == null) {
       throw StateError(handshakeFailure(null, status: response.statusCode));
+    }
+    var json = decoded;
+    if (json['pending'] == true) {
+      final answer = await _awaitApproval(peer, hello);
+      if (answer == null) {
+        throw StateError(handshakeFailure(TimeoutException('approval')));
+      }
+      json = answer;
     }
     if (json['approved'] != true) {
       return SenderHandshake(
@@ -553,6 +639,34 @@ class TransferSender {
     final mine = transferCode(peer.publicKey, myKey, peer.id);
     return SenderHandshake(
         approved: code == mine, code: code, cipher: senderCipher);
+  }
+
+  Future<http.Response> _post(Uri url, String body, Duration timeout) => http
+      .post(url,
+          headers: const {'Content-Type': 'application/json'}, body: body)
+      .timeout(timeout);
+
+  /// Collect the answer the receiver is holding. Every poll is its own
+  /// connection, so a lock-screen, a Wi-Fi blink or a dropped socket costs a
+  /// second instead of the transfer.
+  Future<Map<String, dynamic>?> _awaitApproval(
+      TransferPeer peer, String hello) async {
+    final deadline = DateTime.now()
+        .add(kTransferApprovalWindow + const Duration(seconds: 30));
+    while (DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      try {
+        final response = await _post(
+            peer._endpoint('status'), hello, const Duration(seconds: 5));
+        if (response.statusCode != 200) return null;
+        final json = _decode(response.body);
+        if (json == null) return null;
+        if (json['approved'] == true || json['pending'] != true) return json;
+      } on Exception {
+        // Nothing to do: the next poll opens its own connection.
+      }
+    }
+    return null;
   }
 
   /// Send the chosen sections. The receiver applies them and reports back.

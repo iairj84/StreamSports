@@ -40,12 +40,23 @@ Uri _transferUri(TransferReceiver receiver, String action) =>
     Uri.parse('http://127.0.0.1:${receiver.port}/p/${receiver.token}/$action');
 
 Future<http.Response> _postHello(
-        TransferReceiver receiver, List<int> publicKey) =>
+        TransferReceiver receiver, List<int> publicKey, {bool poll = false}) =>
     http
         .post(_transferUri(receiver, 'hello'),
             headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode(
-                {'name': 'Phone', 'pk': base64Url.encode(publicKey)}))
+            body: jsonEncode({
+              'name': 'Phone',
+              'pk': base64Url.encode(publicKey),
+              if (poll) 'poll': true,
+            }))
+        .timeout(const Duration(seconds: 10));
+
+Future<http.Response> _postStatus(
+        TransferReceiver receiver, List<int> publicKey) =>
+    http
+        .post(_transferUri(receiver, 'status'),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({'pk': base64Url.encode(publicKey)}))
         .timeout(const Duration(seconds: 10));
 
 Future<http.Response> _postBundle(TransferReceiver receiver, String sealed) =>
@@ -465,6 +476,79 @@ void main() {
 
       expect(response.statusCode, HttpStatus.forbidden);
       expect(storage.rawPreferences(), before);
+    });
+  });
+
+  group('polling for an approval', () {
+    test('an approval survives the request that asked for it', () async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final storage = await _transferStorage();
+      final receiver = await _startReceiver(storage);
+      final cipher = TransferCipher(sessionId: receiver.sessionId);
+      final key = await cipher.ensureKeyPair();
+
+      // The hello comes back at once instead of being held open for the
+      // two minutes the viewer may spend walking to the TV.
+      final hello = await _postHello(receiver, key, poll: true);
+      expect(jsonDecode(hello.body)['pending'], isTrue);
+
+      await receiver.approve();
+      final status = jsonDecode((await _postStatus(receiver, key)).body)
+          as Map<String, dynamic>;
+      expect(status['approved'], isTrue);
+
+      // The approval is still one bundle's worth of permission.
+      await cipher.derive(receiver.publicKey);
+      final bundle = SettingsBundle.capture(storage,
+          sections: TransferSection.values.toSet());
+      final applied =
+          await _postBundle(receiver, await cipher.seal(bundle.encode()));
+      expect(applied.statusCode, HttpStatus.ok);
+    });
+
+    test('a polled approval reports a decline', () async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final storage = await _transferStorage();
+      final receiver = await _startReceiver(storage);
+      final cipher = TransferCipher(sessionId: receiver.sessionId);
+      final key = await cipher.ensureKeyPair();
+
+      final hello = await _postHello(receiver, key, poll: true);
+      expect(jsonDecode(hello.body)['pending'], isTrue);
+      await receiver.reject();
+
+      final status = jsonDecode((await _postStatus(receiver, key)).body)
+          as Map<String, dynamic>;
+      expect(status['approved'], isFalse);
+      expect(status['pending'], isFalse);
+      expect(status['code'], isEmpty);
+    });
+
+    test('a polled approval ends when the window does', () async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final storage = await _transferStorage();
+      final receiver = await _startReceiver(storage,
+          approvalWindow: const Duration(milliseconds: 300));
+      final cipher = TransferCipher(sessionId: receiver.sessionId);
+      final key = await cipher.ensureKeyPair();
+
+      final hello = await _postHello(receiver, key, poll: true);
+      expect(jsonDecode(hello.body)['pending'], isTrue);
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+
+      final status = jsonDecode((await _postStatus(receiver, key)).body)
+          as Map<String, dynamic>;
+      expect(status['approved'], isFalse);
+      expect(status['pending'], isFalse);
     });
   });
 
