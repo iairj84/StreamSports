@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.98 — 21 November 2026
+
+- Auto-Pair Channels now links a channel to its provider's own backup copy in
+- the same playlist ("ESPN" to "ESPN *"), not only to the same channel on
+- another playlist, so the player's one-press failover works for the common
+- duplication layout.
+- Only names that differ by the trailing backup marker are paired this way; a
+- quality variant such as "ESPN HD" and a second ambiguous backup are left for
+- the manual picker, and an exact match in another playlist still wins.
+
 ## 0.2.97 — 21 November 2026
 
 - Settings > Your TV > Channel links: point a channel at the feed that should
