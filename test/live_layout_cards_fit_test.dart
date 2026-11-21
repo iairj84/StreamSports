@@ -26,6 +26,21 @@ import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:nox_iptv/utils/tv_theme.dart';
 import 'live_layout_test_support.dart';
 
+/// The channel picker is built after the long-press has finished matching
+/// channels, which is real SQLite work. One settle was enough on a fast machine
+/// and not on a slow CI shard, where the picker was still closed when the test
+/// read it: wait for it here, and let the assertion say what never arrived.
+Future<void> waitForChannelPicker(WidgetTester tester) async {
+  final picker = find.byType(SportsChannelList);
+  for (var i = 0; i < 100 && picker.evaluate().isEmpty; i++) {
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  expect(picker, findsOneWidget);
+  await settleSports(tester);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(SportsChannelMatcher.disposeShared);
@@ -349,7 +364,7 @@ void main() {
           await settleSports(tester);
           await tester.longPress(
               find.byKey(const ValueKey('card-tennis.atp:tennis-demo')));
-          await settleSports(tester);
+          await waitForChannelPicker(tester);
           final initialPicker =
               tester.widget<SportsChannelList>(find.byType(SportsChannelList));
           final options = initialPicker.rows;
@@ -367,7 +382,7 @@ void main() {
                   'explicitly choosing even the first suggestion is remembered');
           await tester.longPress(
               find.byKey(const ValueKey('card-tennis.atp:tennis-demo')));
-          await settleSports(tester);
+          await waitForChannelPicker(tester);
           final reopened =
               tester.widget<SportsChannelList>(find.byType(SportsChannelList));
           expect(reopened.rows.first.channel.id, chosenId);
