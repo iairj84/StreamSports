@@ -743,3 +743,32 @@ Live Sports no longer passes a label status. `selectionStatus` was doing two
 jobs - the Multiview picker's "In use" tag, and "these rows are games" - so
 dropping the score needed a separate `liveSports` flag rather than a callback
 that always returned null.
+
+## A stall waits 3 s before the main player resumes, but never a channel change
+
+The main player started, and resumed after a stall, at media3's 500 ms. That
+keeps channel changes fast, but live TS arrives at real-time speed: after a
+stall the buffer is empty and refills at 1x, so 500 ms of media runs out again
+at the provider's next gap and every hiccup becomes a stutter loop instead of
+one clean pause. Multiview already waited 4 s for the same reason.
+
+The floor lives in `LiveBufferLoadControl`, not in the DefaultLoadControl
+thresholds. Raising `bufferForPlaybackAfterRebufferMs` there would also apply
+to a viewer who chose "Small (1.5 s)", because the delegate keeps its own
+larger threshold after the reserve is met - a settings screen would be
+advertising a number the player ignores.
+
+So the wrapper now tells apart three things it used to collapse: Off, Gradual
+and a chosen reserve. It keeps the raw setting (negative is Gradual) instead
+of storing both as zero, and the constructor records whether a Buffering
+preset is set, since a preset already brings its own resume threshold and the
+floor must not add to it. The floor applies only when all three hold: Live
+buffer Off, no preset, and media3's rebuffering flag, which is false on the
+first start and after a seek, so channel changes and scrubbing stay at 500 ms.
+The byte-budget escape hatch is untouched, so a RAM-capped device still starts
+when the delegate's budget says it must instead of waiting for media it can
+never hold.
+
+The trade is deliberate: a real stall shows Buffering for up to about 3 s on a
+link that delivers at 1x, rather than flickering through repeated short
+rebuffers.

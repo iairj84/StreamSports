@@ -104,7 +104,11 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           }
           builder.setLoadControl(
               liveLoadControl[0] =
-                  new LiveBufferLoadControl(loadControlBuilder.build()));
+                  new LiveBufferLoadControl(
+                      loadControlBuilder.build(),
+                      // The delegate's 500 ms resume is this build's tuning only while the
+                      // viewer leaves Buffering on Automatic; a preset brings its own.
+                      /* autoRebufferFloor= */ options.bufferForPlaybackAfterRebufferMs == null));
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
               new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
           // Compatible TV codecs can send frames directly to the display. On the

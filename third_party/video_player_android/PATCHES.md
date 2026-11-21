@@ -41,12 +41,22 @@ into the player and platform view:
 Commit `422fe8b` ("Import the live load control's MediaPeriodId from its
 enclosing class"). One-line import fix in `LiveBufferLoadControl.java`.
 
+### 4. A stall floor for the main player's live reserve (BUF-001)
+LiveBufferLoadControl keeps the raw Live buffer value (negative is Gradual, 0
+is Off) instead of collapsing both to zero, records whether a Buffering preset
+is set, and holds a stall for 3 s when the viewer has chosen nothing:
+
+- `android/src/main/java/io/flutter/plugins/videoplayer/LiveBufferLoadControl.java`
+- `android/src/main/java/io/flutter/plugins/videoplayer/platformview/PlatformViewVideoPlayer.java`
+- `android/src/main/java/io/flutter/plugins/videoplayer/VideoPlayer.java`
+- `android/src/test/java/io/flutter/plugins/videoplayer/LiveBufferLoadControlTest.java` (new)
+
 ## Upgrading the fork
 
 1. Download the pristine upstream tag for the new version and diff it
    against `e839d1c:third_party/video_player_android` to confirm the
    baseline moved cleanly.
-2. Re-apply the three patches above in order (or cherry-pick the commits
+2. Re-apply the four patches above in order (or cherry-pick the commits
    onto the new tree and resolve conflicts).
 3. Regenerate the pigeon outputs if `pigeons/messages.dart` changed
    (`lib/src/messages.g.dart`, `Messages.kt`), update the version in this

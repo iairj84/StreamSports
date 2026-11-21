@@ -537,11 +537,13 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   /**
    * Settings > Playback > Live buffer. A negative value selects Gradual: no reserve, normal fast
-   * start, then {@link #cushionTick} earns the cushion by playing at 96 % speed.
+   * start, then {@link #cushionTick} earns the cushion by playing at 96 % speed. The raw value is
+   * passed through because Off (0) and Gradual (-1) differ in the load control: Off holds a stall
+   * for its floor, Gradual resumes at once.
    */
   void setLiveBuffer(long ms) {
     if (liveBufferLoadControl != null) {
-      liveBufferLoadControl.setLiveReserveMs(Math.max(0, ms));
+      liveBufferLoadControl.setLiveReserveMs(ms);
     }
     liveGradual = ms < 0;
     resetCushion();
