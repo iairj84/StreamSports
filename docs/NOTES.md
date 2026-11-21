@@ -907,3 +907,36 @@ in one short line - "Connection reset by peer", "Connection refused",
 different faults: a reset means the request landed and the answer died, a
 refusal means nothing was listening on that port. One sentence for both left
 the field reports unreadable.
+
+## The league category beat the channel that was actually airing the game
+
+A Saturday board of college football games all named one channel: the provider's
+"NCAAF 01", while the scoreboard said each game was on a real network. The
+channel the scoreboard listed was found, too - it just lost. Two orderings did
+that, and neither was the score anyone could tune into.
+
+The evidence rank put a channel's own category above a guide programme. A group
+named "NCAAF" matched every college football game at once and scored 340, while
+the FS1 slot that read "Rutgers at Penn State" scored 500 but sat one rank
+lower. The category is a guess about a whole league; the guide listing is proof
+about one game. Guide now ranks above category, and the category still ranks
+above the generic league/sport fallback.
+
+The second defect was the merge. A game's evidence is collected per channel and
+the old rule kept whichever hit had the larger score, carrying its reason along.
+A channel that was both a listed broadcaster (250, rank 2) and a guide airing
+(500, rank 4) came out of that merge as the weaker kind, so the scoreboard's
+listing was thrown away exactly when the guide agreed with it. The merge now
+compares the kind of evidence first and the score second, and keeps the
+programme found on the way for display.
+
+The picker also offered the league label before the broadcaster in its search
+chips, so "NCAAF" was the term staring back at a viewer who needed "FS1". The
+broadcasters are now first, because they are the only suggested term that names
+one feed rather than every feed in a league.
+
+Measured before the change on a synthetic playlist (FS1 plus two "NCAAF" group
+feeds, Rutgers at Penn State): with the FS1 guide slot present the order was
+NCAAF 01, NCAAF 02, FS1 (guide, 500); with the scoreboard listing also present
+FS1 still came out as a guide hit rather than a broadcaster. After it, FS1 leads
+as the guide airing, and as the listed broadcaster when the scoreboard names it.
