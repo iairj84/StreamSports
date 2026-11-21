@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.96 — 21 November 2026
+
+- The channel actually airing a game now outranks a league category channel: a
+- guide listing naming the fixture ranks above a group that merely matches the
+- league, which is what showed "NCAAF 01" for every college football game on the
+- board.
+- The channel picker offers the game's broadcasters before the league label in
+- its search suggestions.
+
 ## 0.2.95 — 21 November 2026
 
 - The channel actually airing a game now outranks a league category channel: a
