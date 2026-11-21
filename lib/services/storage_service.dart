@@ -63,6 +63,11 @@ class StorageService {
     );
   }
 
+  /// Whether a channel was ever stored, which is how a deliberate Stable
+  /// choice is told apart from the untouched default.
+  bool hasUpdateChannelChoice() =>
+      _prefs.containsKey(AppConstants.keyUpdateChannel);
+
   String getMultiviewLayout() =>
       _prefs.getString('multiview_layout') ?? 'automatic';
   Future<void> setMultiviewLayout(String layout) async {

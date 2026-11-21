@@ -163,8 +163,14 @@ class AppUpdateService extends ChangeNotifier {
     notifyListeners();
     try {
       await load();
-      final release = await _latestRelease();
       final build = int.tryParse(_info?.buildNumber ?? '') ?? 0;
+      var release = await _latestRelease();
+      if (_isUnchosenEarlyInstall(release, build)) {
+        // The build is ahead of the stable mirror, so it came from
+        // `beta-latest`; follow the feed it came from. See [shouldAdoptEarly].
+        await _storage.setUpdateChannel(AppConstants.updateChannelEarly);
+        release = await _latestRelease();
+      }
       available = release != null &&
               release.isNewerThan(
                   currentVersion: currentVersion, currentBuild: build)
@@ -201,6 +207,36 @@ class AppUpdateService extends ChangeNotifier {
     if (_storage.getSkippedUpdateVersion() == release.tag) return null;
     return release;
   }
+
+  /// The whole adoption rule, pure so a test can pin it without a feed: the
+  /// running build is ahead of the stable mirror, no channel was ever chosen,
+  /// and this install is still on the default.
+  ///
+  /// Build numbers are the only ordering (see [AppRelease.isNewerThan]) and
+  /// promotion never raises the number, so stable is never older than a
+  /// stable install — only a build published to `beta-latest` can be ahead of
+  /// it. Without this, a tester who installed `StreamSports-early.apk` kept
+  /// the default stable channel, whose newest build is the last promotion and
+  /// therefore behind theirs: the startup prompt asks for something newer and
+  /// never fires.
+  static bool shouldAdoptEarly({
+    required int currentBuild,
+    required int stableBuild,
+    required bool choseChannel,
+    required bool followsEarly,
+  }) =>
+      !followsEarly &&
+      !choseChannel &&
+      stableBuild > 0 &&
+      currentBuild > stableBuild;
+
+  bool _isUnchosenEarlyInstall(AppRelease? stableRelease, int currentBuild) =>
+      shouldAdoptEarly(
+        currentBuild: currentBuild,
+        stableBuild: stableRelease?.buildNumber ?? 0,
+        choseChannel: _storage.hasUpdateChannelChoice(),
+        followsEarly: includeEarly,
+      );
 
   Future<Map<String, dynamic>? > _rollingRelease() async {
     final response = await http

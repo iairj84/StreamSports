@@ -565,6 +565,31 @@ rows keep their radio affordance without the group's key handling.
 `test/app_update_channel_test.dart` walks Down out of the section with
 arrow keys so a regression traps the test instead of the viewer.
 
+## A beta install was never offered the next beta
+
+The channel defaults to Stable, and nothing recorded that an install came
+from `beta-latest`: both channels download the same bytes, and promotion
+republishes those bytes unchanged, so the APK cannot carry the answer. A
+tester who installed `StreamSports-early.apk` therefore followed the stable
+feed, whose newest build is the last promotion — behind the build that
+tester runs. The startup prompt only offers something
+*newer* than the installed build, so it never fired, and the only way to
+get the next beta was opening App updates and switching to Early builds by
+hand.
+
+The fix adopts Early on the first check whose stable mirror is behind the
+running build. That reaches exactly that population: stable is never older
+than a stable install, so nobody who never opted in can be offered a beta,
+which is what the channel default exists to guarantee. The adoption is
+written to storage as a real choice, so it survives the promotion that
+lifts the stable build to the tester's number (a detection remembered only
+for the moment would flip back to Stable exactly then), and it never runs
+once a channel was chosen, so a tester who picked Stable keeps it. Two
+alternatives were rejected: a build-time flag (the promoted bytes are the
+same file, so every stable viewer would inherit it) and always checking
+both feeds and offering whichever is newer (that prompts non-testers for
+betas).
+
 ## Update offers name their channel
 
 The roadmap required that a user can tell from the prompt whether a build is
