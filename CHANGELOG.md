@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.91 — 20 November 2026
+
+- The update prompt now reaches testers running an early build: an install whose build is newer than the stable mirror is recognised as an early build and follows Early builds on its own, instead of being compared against a stable feed that is always behind it.
+- A channel you pick yourself is never changed, and a viewer who never opted in is still never offered a beta.
+
 ## 0.2.90 — 20 November 2026
 
 - A favorite college team now counts in every view of its competition: a team saved from the ACC or Big Ten list shows in the full College Football list, and a team saved there shows in the conference list. Before, two favorites could show as one depending on which leagues you had selected.
