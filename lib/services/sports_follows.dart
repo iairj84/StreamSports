@@ -87,15 +87,34 @@ class SportsFollows {
   bool isFollowed(String leagueId, String teamId) =>
       _index.contains(FollowedTeam(leagueId, teamId));
 
+  /// Whether [teamId] is followed for the competition [leagueId] belongs to.
+  ///
+  /// A team is followed for its competition, not for the view it was added
+  /// from: "ACC Football" and "College Football" are the same teams on one
+  /// scoreboard, and a row arrives labelled with whichever of them the viewer
+  /// shows. Without this, the same two favorites show or vanish as the shown
+  /// leagues change. Exact ids are checked first; conference and poll picks
+  /// then fall back to their full list.
+  bool _followsTeam(String leagueId, String teamId) {
+    if (isFollowed(leagueId, teamId)) return true;
+    for (final team in _teams) {
+      if (team.teamId == teamId &&
+          sameSportsCompetition(team.leagueId, leagueId)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Membership is league-scoped; never infer entries from similar names.
   bool involves(SportsGame g) {
     if (isEmpty) return false;
     final cached = _involvement[g];
     if (cached?.$1 == _revision) return cached!.$2;
-    final result = isFollowed(g.league.id, g.home.id) ||
-        isFollowed(g.league.id, g.away.id) ||
+    final result = _followsTeam(g.league.id, g.home.id) ||
+        _followsTeam(g.league.id, g.away.id) ||
         (g.event?.participantIds.any((id) {
-              if (!isFollowed(g.league.id, id)) return false;
+              if (!_followsTeam(g.league.id, id)) return false;
               if (g.league.kind != SportsKind.racing) return true;
               final saved = _names[FollowedTeam(g.league.id, id).key];
               final supplied = g.event!.participantNames[id];

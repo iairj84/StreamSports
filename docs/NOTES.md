@@ -772,3 +772,27 @@ never hold.
 The trade is deliberate: a real stall shows Buffering for up to about 3 s on a
 link that delivers at 1x, rather than flickering through repeated short
 rebuffers.
+
+## A followed team belongs to its competition, not to the league view
+
+Favorites are stored as `leagueId|teamId`, and matching a game was exact: the
+game's league id had to equal the stored one. College football breaks that,
+because one competition is browsable through several ids - the full College
+Football list, and each conference pick ("ACC Football", "Big Ten Football")
+that narrows it by ESPN group - and the same game is labelled with whichever of
+them the viewer shows. A team saved from the ACC table then vanished from the
+College Football list, and one saved from the College Football list vanished
+from the ACC list. Two favorites could show as one, alternating with the
+leagues that were shown.
+
+`SportsLeague.parentLeagueId` already records that a pick narrows a full list
+(the league manager uses it so a pick and its parent are never shown together).
+Favorites use the same relation through `sameSportsCompetition`: an exact id
+still wins, otherwise a conference or poll pick and its full list count as one
+competition and the team id decides. Nothing widens past that relation, so the
+same numeric team id in another sport stays unfollowed - ESPN reuses ids across
+sports.
+
+The team picker's tick marks stay exact on purpose. They report whether this
+league's own entry exists, and its toggle writes that entry; widening the tick
+would let a tick unfollow a different id and appear stuck.

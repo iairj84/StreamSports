@@ -539,6 +539,16 @@ bool matchesSportsLeague(SportsLeague league, String? filter) =>
     (filter == 'nfl' && league.id == kNflRedZoneLeague.id) ||
     (filter == 'rugby.live' && league.espnPath.startsWith('rugby/'));
 
+/// True when two league ids name one competition through different picks: a
+/// college conference or poll view and the full list it narrows. A followed
+/// team belongs to the competition, not to the view it was added from.
+bool sameSportsCompetition(String a, String b) {
+  if (a == b) return true;
+  final first = sportsLeagueById(a), second = sportsLeagueById(b);
+  if (first == null || second == null) return false;
+  return first.parentLeagueId == b || second.parentLeagueId == a;
+}
+
 /// NFL RedZone is a channel, not a competition: it gets a card of its own on
 /// the NFL's day rather than a place in the scoreboard, and it is never
 /// offered in the League manager.
