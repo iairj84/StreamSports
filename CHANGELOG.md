@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.94 — 21 November 2026
+
+- A transfer whose answer is lost no longer ends at "that device is no longer waiting": after a dropped connection the sender asks the receiving device for the approval it is already holding, and carries on.
+- A failed connection now names the OS reason in one short line, so a report says whether the other device is gone or its answer was lost on the way.
+
 ## 0.2.93 — 21 November 2026
 
 - A transfer no longer fails after the other device accepted: the approval is kept on the receiving device and collected over short connections, so a locked phone or a dropped Wi-Fi socket no longer ends with "that device is no longer waiting".
