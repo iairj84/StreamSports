@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.90 — 20 November 2026
+
+- A favorite college team now counts in every view of its competition: a team saved from the ACC or Big Ten list shows in the full College Football list, and a team saved there shows in the conference list. Before, two favorites could show as one depending on which leagues you had selected.
+- The same rule covers Top 25 views and college basketball, and a team id that happens to repeat in another sport is still not treated as your team.
+
 ## 0.2.89 — 20 November 2026
 
 - A live channel that stalls now waits for three seconds of video before it resumes, so one dropout is one short pause instead of a loop of micro-stutters.
