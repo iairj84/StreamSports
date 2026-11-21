@@ -22,6 +22,85 @@ import 'stalker_portal_service.dart';
 import 'storage_service.dart';
 import 'channel_names.dart';
 
+/// The one channel in [candidates] that [source] should fail over to:
+/// the other side of a provider backup pair, i.e. a name that differs only
+/// by the trailing `*` marker. Null when there is none or more than one,
+/// the same "leave it for the manual picker" rule the cross-playlist match
+/// uses.
+Channel? backupCopyInPlaylist(Channel source, List<Channel> candidates) {
+  final sourceBase = backupChannelBaseName(source.name);
+  if (sourceBase.isEmpty) return null;
+  final sourceIsBackup = isBackupChannelName(source.name);
+  Channel? found;
+  for (final candidate in candidates) {
+    if (candidate.playlistId == source.playlistId &&
+        candidate.rawId == source.rawId) {
+      continue;
+    }
+    if (backupChannelBaseName(candidate.name) != sourceBase) continue;
+    if (isBackupChannelName(candidate.name) == sourceIsBackup) continue;
+    if (found != null) return null;
+    found = candidate;
+  }
+  return found;
+}
+
+/// The links one Auto-Pair pass would add for the channels of a single
+/// playlist — the pure rule behind [PlaylistManager.autoPairChannelLinks],
+/// kept separate so it can be tested without loaded sessions.
+///
+/// A channel is first matched by [canonicalChannelKey] against every other
+/// playlist. It must be found in exactly one of them, exactly once — that
+/// unambiguous exact match is what makes cross-playlist pairing safe, and
+/// anything else is left to the manual picker. Failing that, a channel is
+/// paired with the provider's own backup copy in its own playlist: the same
+/// name with a trailing `*` ("ESPN *" beside "ESPN").
+///
+/// Same-playlist matching cannot use [canonicalChannelKey] on its own,
+/// because it deliberately drops punctuation and quality tokens — "ESPN",
+/// "ESPN *" and "ESPN HD" all collapse to the same key. Requiring the raw
+/// names to differ only by that trailing marker, and requiring exactly one
+/// counterpart, keeps a regional or quality variant from ever being chosen
+/// automatically.
+Map<String, ChannelLink> planAutoPairLinks({
+  required List<Channel> channels,
+  required Set<String> alreadyLinked,
+  required List<Map<String, List<Channel>>> otherPlaylistsByKey,
+}) {
+  // Bucketed once per playlist rather than per source, so a catalog with
+  // thousands of channels is still a linear pass plus one lookup each.
+  final byBackupBase = <String, List<Channel>>{};
+  for (final channel in channels) {
+    final base = backupChannelBaseName(channel.name);
+    if (base.isEmpty) continue;
+    (byBackupBase[base] ??= []).add(channel);
+  }
+
+  final links = <String, ChannelLink>{};
+  for (final source in channels) {
+    if (alreadyLinked.contains(source.rawId)) continue;
+    final key = canonicalChannelKey(source.name);
+    if (key.isEmpty) continue;
+    Channel? found;
+    var ambiguous = false;
+    for (final other in otherPlaylistsByKey) {
+      final candidates = other[key];
+      if (candidates == null || candidates.isEmpty) continue;
+      if (found != null || candidates.length > 1) {
+        ambiguous = true;
+        break;
+      }
+      found = candidates.first;
+    }
+    found ??= backupCopyInPlaylist(
+        source, byBackupBase[backupChannelBaseName(source.name)] ?? const []);
+    if (found != null && !ambiguous) {
+      links[source.rawId] = (playlistId: found.playlistId, rawId: found.rawId);
+    }
+  }
+  return links;
+}
+
 /// Combines playlist sessions and dispatches catalogue, visibility and favorite
 /// changes. M3U playlists supply live channels; Xtream libraries load categories
 /// and titles on demand. Existing viewer storage namespaces remain compatible.
@@ -832,15 +911,12 @@ class PlaylistManager extends ChangeNotifier {
     return map;
   }
 
-  /// "Auto-Pair Channels" for cross-playlist links — see
-  /// `ChannelLinkingScreen`'s own doc comment and
-  /// [channelNamesMatch]'s doc comment for why this only ever assigns an
-  /// *unambiguous* exact match (found in exactly one other playlist,
-  /// never more) and leaves everything else for the manual picker.
-  /// Skips any channel that already has a link — running this again only
-  /// fills in gaps, it never revisits a previous pairing (auto or
-  /// manual). Returns every channel's composite `id` this pass actually
-  /// linked, so the caller can offer to review just those.
+  /// "Auto-Pair Channels" for channel links — see
+  /// `ChannelLinkingScreen`'s own doc comment and [planAutoPairLinks] for
+  /// the actual rule. Skips any channel that already has a link — running
+  /// this again only fills in gaps, it never revisits a previous pairing
+  /// (auto or manual). Returns every channel's composite `id` this pass
+  /// actually linked, so the caller can offer to review just those.
   Future<Set<String>> autoPairChannelLinks() async {
     final sessions = _enabledSessionsSorted;
     // Match only visible channels, keeping work bounded to entries that the result-review UI
@@ -855,30 +931,19 @@ class PlaylistManager extends ChangeNotifier {
 
     final paired = <String>{};
     for (final session in sessions) {
+      final channels = visibleBySession[session]!;
       // Accumulate links in memory and persist once through setChannelLinksBulk, avoiding a
       // full growing-map write per match.
-      final newLinks = <String, ChannelLink>{};
-      for (final source in visibleBySession[session]!) {
-        if (session.channelLinks.containsKey(source.rawId)) continue;
-        final key = canonicalChannelKey(source.name);
-        if (key.isEmpty) continue;
-        Channel? found;
-        var ambiguous = false;
-        for (final other in sessions) {
-          if (identical(other, session)) continue;
-          final candidates = byKeyPerSession[other]?[key];
-          if (candidates == null || candidates.isEmpty) continue;
-          if (found != null || candidates.length > 1) {
-            ambiguous = true;
-            break;
-          }
-          found = candidates.first;
-        }
-        if (found != null && !ambiguous) {
-          newLinks[source.rawId] =
-              (playlistId: found.playlistId, rawId: found.rawId);
-          paired.add(source.id);
-        }
+      final newLinks = planAutoPairLinks(
+        channels: channels,
+        alreadyLinked: session.channelLinks.keys.toSet(),
+        otherPlaylistsByKey: [
+          for (final other in sessions)
+            if (!identical(other, session)) byKeyPerSession[other]!,
+        ],
+      );
+      for (final channel in channels) {
+        if (newLinks.containsKey(channel.rawId)) paired.add(channel.id);
       }
       await session.setChannelLinksBulk(newLinks);
     }

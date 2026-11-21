@@ -70,6 +70,19 @@ bool channelNamesMatch(String a, String b) =>
     canonicalChannelKey(a).isNotEmpty &&
     canonicalChannelKey(a) == canonicalChannelKey(b);
 
+/// A provider's backup copy is usually the same name repeated with a
+/// trailing `*` ("ESPN *" beside "ESPN"). [canonicalChannelKey] drops that
+/// punctuation on purpose — a backup is the same channel to the guide and
+/// the matcher — so telling the copy from the original has to look at the
+/// raw name.
+bool isBackupChannelName(String name) => name.trim().endsWith('*');
+
+/// [name] folded into the key a backup pair shares: trimmed, upper-cased and
+/// stripped of any trailing `*` markers. Equal for "ESPN" and "ESPN *";
+/// different for a quality variant such as "ESPN HD", which is not a backup.
+String backupChannelBaseName(String name) =>
+    name.trim().toUpperCase().replaceFirst(RegExp(r'\s*\*+$'), '');
+
 /// [normalizedChannelTokens] collapsed into one comparable/hashable
 /// `String` (sorted, so token order in the original name never matters)
 /// — lets a bulk "auto-pair everything" operation bucket hundreds or

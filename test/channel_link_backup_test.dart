@@ -52,13 +52,14 @@ class _Playlist extends PlaylistManager {
   }
 }
 
-Channel _channel(String rawId, String name) => Channel(
-    id: 'fixture::$rawId',
-    rawId: rawId,
-    playlistId: 'fixture',
-    name: name,
-    group: 'Sports',
-    url: 'https://example.invalid/never-opened');
+Channel _channel(String rawId, String name, {String playlistId = 'fixture'}) =>
+    Channel(
+        id: '$playlistId::$rawId',
+        rawId: rawId,
+        playlistId: playlistId,
+        name: name,
+        group: 'Sports',
+        url: 'https://example.invalid/never-opened');
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -129,5 +130,76 @@ void main() {
     playlist.links['espn'] = (playlistId: 'fixture', rawId: 'espn_star');
     await open(tester);
     expect(find.text('Provider — Linked to Provider: ESPN *'), findsOneWidget);
+  });
+
+  group('auto-pair', () {
+    Map<String, ChannelLink> plan(
+            List<Channel> channels, {
+            Set<String> alreadyLinked = const {},
+            List<Map<String, List<Channel>>> otherPlaylistsByKey = const [],
+          }) =>
+        planAutoPairLinks(
+            channels: channels,
+            alreadyLinked: alreadyLinked,
+            otherPlaylistsByKey: otherPlaylistsByKey);
+
+    test('pairs a channel with its own playlist backup copy', () {
+      final links = plan([
+        _channel('espn', 'ESPN'),
+        _channel('espn_star', 'ESPN *'),
+        _channel('espn2', 'ESPN2'),
+      ]);
+
+      expect(links['espn'], (playlistId: 'fixture', rawId: 'espn_star'));
+      expect(links['espn_star'], (playlistId: 'fixture', rawId: 'espn'));
+      expect(links.containsKey('espn2'), isFalse);
+    });
+
+    test('a quality variant is never taken for a backup', () {
+      final links = plan([
+        _channel('espn', 'ESPN'),
+        _channel('espn_hd', 'ESPN HD'),
+        _channel('espn2', 'ESPN2'),
+      ]);
+
+      expect(links, isEmpty);
+    });
+
+    test('two backup copies leave the primary for the picker', () {
+      final links = plan([
+        _channel('espn', 'ESPN'),
+        _channel('espn_star', 'ESPN *'),
+        _channel('espn_star2', 'ESPN *'),
+      ]);
+
+      // Either backup could be the target, so the primary is not guessed;
+      // each copy still knows the one feed it can fall back to.
+      expect(links.containsKey('espn'), isFalse);
+      expect(links['espn_star'], (playlistId: 'fixture', rawId: 'espn'));
+      expect(links['espn_star2'], (playlistId: 'fixture', rawId: 'espn'));
+    });
+
+    test('a match in another playlist still takes priority', () {
+      final links = plan(
+        [_channel('espn', 'ESPN'), _channel('espn_star', 'ESPN *')],
+        otherPlaylistsByKey: [
+          {
+            'ESPN': [_channel('espn', 'ESPN', playlistId: 'other')],
+          }
+        ],
+      );
+
+      expect(links['espn'], (playlistId: 'other', rawId: 'espn'));
+      expect(links['espn_star'], (playlistId: 'other', rawId: 'espn'));
+    });
+
+    test('a channel that already has a link is left alone', () {
+      final links = plan(
+        [_channel('espn', 'ESPN'), _channel('espn_star', 'ESPN *')],
+        alreadyLinked: {'espn'},
+      );
+
+      expect(links.containsKey('espn'), isFalse);
+    });
   });
 }

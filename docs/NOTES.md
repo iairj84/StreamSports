@@ -958,6 +958,15 @@ So the screen now opens from Settings > Your TV > Channel links, requires only a
 channel to exist, and its picker lists the source's own playlist first with the
 rest following. Reciprocal links behave as before: linking ESPN to ESPN * also
 fills ESPN *'s link back when it had none, which is what makes the player offer
-the switch from either side. Auto-Pair still only pairs across playlists, because
-within one playlist a name match cannot tell a backup copy from a regional or
-quality variant; that stays a manual choice.
+the switch from either side.
+
+Auto-Pair first paired only across playlists: within one playlist a name match
+cannot tell a backup copy from a regional or quality variant, because
+`canonicalChannelKey` drops punctuation and quality tokens, so "ESPN", "ESPN *"
+and "ESPN HD" all reduce to the same key. That left the common provider layout
+entirely manual. The rule now also pairs inside one playlist, but only when the
+raw names differ by a trailing `*` marker alone and exactly one counterpart
+exists; a quality variant still never gets chosen automatically, and an
+ambiguous second backup is left for the picker. A cross-playlist exact match
+still wins, since that is a real second subscription rather than a duplicate
+feed.
