@@ -83,42 +83,23 @@ void main() {
     final backup = _channel('espn_star', 'ESPN *');
 
     test('returns the resolved backup', () {
-      expect(
-          autoFailoverTarget(channel,
-              backup: backup,
-              recentSwitches: const {},
-              now: start),
-          backup);
+      expect(autoFailoverTarget(channel, backup: backup), backup);
     });
 
     test('nothing to switch to leaves the channel alone', () {
-      expect(
-          autoFailoverTarget(channel,
-              backup: null, recentSwitches: const {}, now: start),
-          isNull);
-      expect(
-          autoFailoverTarget(channel,
-              backup: channel, recentSwitches: const {}, now: start),
-          isNull);
+      expect(autoFailoverTarget(channel, backup: null), isNull);
+      expect(autoFailoverTarget(channel, backup: channel), isNull);
     });
 
-    test('either side of a recent switch is not switched again', () {
-      final recent = {
-        channel.id: start,
-        backup.id: start,
-      };
+    test('either side of the last switch is never switched again', () {
       expect(
           autoFailoverTarget(channel,
-              backup: backup,
-              recentSwitches: recent,
-              now: start.add(const Duration(minutes: 29))),
+              backup: backup, lastFromId: channel.id, lastToId: backup.id),
           isNull);
       expect(
-          autoFailoverTarget(channel,
-              backup: backup,
-              recentSwitches: recent,
-              now: start.add(const Duration(minutes: 31))),
-          backup);
+          autoFailoverTarget(backup,
+              backup: channel, lastFromId: channel.id, lastToId: backup.id),
+          isNull);
     });
   });
 

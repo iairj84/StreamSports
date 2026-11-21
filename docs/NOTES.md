@@ -985,10 +985,22 @@ that second stall the channel's stored link is resolved and played.
 The switch is deliberately narrow: the fullscreen player only (a home preview
 that quietly changed channel would be a surprise, and there is nowhere to
 offer Undo), only a link that still resolves, and off unless it is turned on in
-Settings > Your TV > Channel links. Both sides cool down for 30 minutes after
-a switch, so a backup that is just as bad cannot bounce the viewer between two
-feeds; the snackbar's Undo is the way back. Multiview keeps its own
-controllers, so this path never touches it.
+Settings > Your TV > Channel links. Multiview keeps its own controllers, so
+this path never touches it.
+
+Two rules keep it from acting at the wrong moment. A null controller is the
+teardown window - the old stream is being released and the next one is not
+attached yet - so no switch can run on the last health update of a closing
+stream, and the stall count is dropped as soon as the controller goes away.
+Once a switch has happened, both of its channels are barred from another
+automatic switch until playback stops. A 30-minute cooldown was tried first
+and rejected: with reciprocal links, two equally bad feeds would simply take
+turns every half hour. The snackbar's Undo plays the original back, and that
+return is barred too, so it cannot immediately fail over again.
+
+The player registers a callback on the service for as long as it is up, so
+there is no stored notice, sequence number or build-time side effect to get
+out of step with a rebuild.
 
 The counting is a pure `BufferingFailoverWatcher` fed the health sampler's
 phase and seconds, which is what the tests exercise. The numbers are not tuned

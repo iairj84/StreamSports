@@ -24,8 +24,6 @@ class BufferingFailoverWatcher {
   bool _inStall = false;
   final List<DateTime> _stalls = [];
 
-  String? get channelId => _channelId;
-
   /// Start counting for [channelId]. A different channel starts over, so a
   /// count never carries across a zap.
   void watch(String channelId) {
@@ -61,23 +59,17 @@ class BufferingFailoverWatcher {
   }
 }
 
-/// The backup [channel] should fall over to right now: [backup], unless it
-/// does not resolve to a different channel or either side switched within
-/// [cooldown] (switching again that soon would just bounce between the same
-/// two feeds).
+/// The channel [channel] should fall over to: its resolved [backup], unless
+/// there is none, it is the channel itself, or the channel is one of the two
+/// sides of the last automatic switch. That last rule is what stops two
+/// struggling feeds from bouncing a viewer back and forth.
 Channel? autoFailoverTarget(
   Channel channel, {
   required Channel? backup,
-  required Map<String, DateTime> recentSwitches,
-  required DateTime now,
-  Duration cooldown = const Duration(minutes: 30),
+  String? lastFromId,
+  String? lastToId,
 }) {
   if (backup == null || backup.id == channel.id) return null;
-  bool cooling(String id) {
-    final at = recentSwitches[id];
-    return at != null && now.difference(at) <= cooldown;
-  }
-
-  if (cooling(channel.id) || cooling(backup.id)) return null;
+  if (channel.id == lastFromId || channel.id == lastToId) return null;
   return backup;
 }
