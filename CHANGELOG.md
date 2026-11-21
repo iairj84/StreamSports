@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.99 — 21 November 2026
+
+- Channel links can now fail over by themselves: a live channel that stalls
+- twice (three seconds or more each) in ten minutes switches to its linked
+- backup, with an Undo snackbar naming both channels.
+- Off by default. Turn it on in Settings > Your TV > Channel links, beside the
+- links it acts on.
+- The switch only runs in the fullscreen player, never bounces between two
+- feeds within 30 minutes, and leaves Multiview alone.
+
 ## 0.2.98 — 21 November 2026
 
 - Auto-Pair Channels now links a channel to its provider's own backup copy in
