@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.95 — 21 November 2026
+
+- The channel actually airing a game now outranks a league category channel: a
+- guide listing naming the fixture ranks above a group that merely matches the
+- league, which is what showed "NCAAF 01" for every college football game on the
+- board.
+- A listed broadcaster keeps its rank when the guide agrees with it, instead of
+- being demoted to a plain guide hit by its higher score.
+- The channel picker offers the game's broadcasters before the league label in
+- its search suggestions.
+
 ## 0.2.94 — 21 November 2026
 
 - A transfer whose answer is lost no longer ends at "that device is no longer waiting": after a dropped connection the sender asks the receiving device for the approval it is already holding, and carries on.
