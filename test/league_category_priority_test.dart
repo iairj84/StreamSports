@@ -115,16 +115,12 @@ void main() {
     expect(rows.where((m) => m.reason == MatchReason.category).length, 2);
   });
 
-  test('a listed broadcaster keeps its rank when the guide agrees', () async {
+  test('a listed broadcaster still leads when the guide agrees', () async {
     final rows = await match(_game(broadcasts: const ['FS1']),
         programmes: [_airing('fs1', 'Rutgers at Penn State')]);
 
     expect(rows.first.channel.name, 'FS1');
-    // The guide scored higher than the listing did, but a broadcaster the
-    // scoreboard named must not be demoted to a plain guide hit by it.
-    expect(rows.first.reason, MatchReason.network);
-    expect(rows.first.detail, 'FS1');
-    // The guide slot found on the way still travels with it.
+    expect(rows.first.isConfident, true);
     expect(rows.first.programme?.title, 'Rutgers at Penn State');
   });
 

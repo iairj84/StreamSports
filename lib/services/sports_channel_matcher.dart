@@ -139,26 +139,6 @@ class ChannelMatch {
       };
 }
 
-/// The strongest evidence a channel produced: the kind of evidence first, its
-/// score second. A listed broadcaster that also airs the fixture in the guide
-/// stays a broadcaster instead of being demoted by its larger guide score, and
-/// the programme found on the way still travels with it for display.
-ChannelMatch _strongestEvidence(ChannelMatch? existing, ChannelMatch next) {
-  if (existing == null) return next;
-  final nextWins = next.evidenceRank != existing.evidenceRank
-      ? next.evidenceRank < existing.evidenceRank
-      : next.score > existing.score;
-  final winner = nextWins ? next : existing;
-  final loser = nextWins ? existing : next;
-  if (winner.detail != null && winner.programme != null) return winner;
-  return ChannelMatch(winner.channel, winner.reason, winner.score,
-      detail: winner.detail ?? loser.detail,
-      programme: winner.programme ?? loser.programme,
-      supportingBroadcasts: winner.supportingBroadcasts.isNotEmpty
-          ? winner.supportingBroadcasts
-          : loser.supportingBroadcasts);
-}
-
 class ChannelSearchResult {
   const ChannelSearchResult(this.channel,
       {this.match, this.programme, this.programmeSearchHit = false});
@@ -2696,8 +2676,11 @@ class SportsChannelMatcher {
         if (_excluded.contains(index)) return;
         channelEvidence(index);
         final c = _channels[index];
-        found[c.id] = _strongestEvidence(found[c.id],
-            ChannelMatch(c, reason, score, detail: detail, programme: programme));
+        final existing = found[c.id];
+        if (existing == null || existing.score < score) {
+          found[c.id] = ChannelMatch(c, reason, score,
+              detail: detail, programme: programme);
+        }
       }
 
       final rejectedKeys = picks is SportsMatchRejections
@@ -2784,10 +2767,10 @@ class SportsChannelMatcher {
         void addCommon(int i, MatchReason reason, int score,
             [String? detail, EpgProgram? programme]) {
           final channel = _channels[i];
-          common[channel.id] = _strongestEvidence(
-              common[channel.id],
-              ChannelMatch(channel, reason, score,
-                  detail: detail, programme: programme));
+          if (score > (common[channel.id]?.score ?? -1)) {
+            common[channel.id] = ChannelMatch(channel, reason, score,
+                detail: detail, programme: programme);
+          }
         }
 
         for (final i in candidates(context.all)) {
