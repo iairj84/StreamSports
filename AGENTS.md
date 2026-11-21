@@ -51,6 +51,18 @@ python3 tools/cut_release.py --notes-file release-notes.txt  # bump, changelog, 
   that passes the serial run clean, versus about 22 minutes for one serial
   `flutter test --concurrency=1` run. Run the full suite locally only when
   CI cannot cover the change.
+- After anything that publishes - a release cut, a promotion, a `main`
+  fast-forward - open the CI run for that exact commit SHA and read every
+  job (analyze and all four shards) before the work is called done. Report
+  the result in the delivery message; a red run is the agent's to find, not
+  the user's to notice. `tools/publish_beta_mirror.py` exposes
+  `github_token`, `call` and `API` for `actions/runs?head_sha=<sha>` and
+  `actions/runs/<id>/jobs`.
+- When a job fails, fetch that job's log, name the test file and the
+  assertion, then run that test file serially here. If it passes, rerun the
+  failed jobs once with `POST actions/runs/<id>/rerun-failed-jobs` and treat
+  a green rerun as one of the flakes above; a second failure is real and is
+  fixed before the release is reported as delivered.
 - Poll background jobs about every 60 seconds; longer sleeps just add idle
   time after the job already finished.
 - Release in as few passes as possible: build the APK, review the
