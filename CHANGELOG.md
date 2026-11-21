@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.101 — 21 November 2026
+
+- Auto-Pair now matches a channel to its provider's "*" copy on the name's
+- letters, digits and "+" instead of an exact trailing asterisk, so spacing or
+- a different star character in the provider's names no longer leaves the pair
+- unlinked ("SPT | ESPN" beside "SPT | ESPN*" links).
+- An ambiguous match in another playlist no longer blocks linking to that
+- playlist's own backup.
+
 ## 0.2.100 — 21 November 2026
 
 - Automatic failover no longer has a half-hour cooldown that let two bad feeds
