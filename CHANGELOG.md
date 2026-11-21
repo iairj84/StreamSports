@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.92 — 20 November 2026
+
+- Transfer to another device is usable as soon as the other device answers: the search used to run a fixed ten seconds, so a found device sat disabled behind a spinner.
+- The other device is listed by its own name - its Android device name, or its model - instead of every row reading "This device", in the list and in the code prompt.
+- Starting a transfer on a device that already ran one no longer leaves a hidden listener behind, which is what made a second attempt fail after a first one worked.
+- A failure now says what happened - the other device stopped waiting, did not answer in time, or rejected the request with a status code - instead of one sentence for all three.
+- The sender waits longer for the other device to answer, so its decline or code mismatch is shown instead of a timeout.
+
 ## 0.2.91 — 20 November 2026
 
 - The update prompt now reaches testers running an early build: an install whose build is newer than the stable mirror is recognised as an early build and follows Early builds on its own, instead of being compared against a stable feed that is always behind it.
