@@ -393,6 +393,25 @@ class MainActivity : FlutterActivity() {
                     packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
                         packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
                 result.success(isTvUiMode || hasLeanback)
+            } else if (call.method == "deviceName") {
+                // The name the other device lists this one as. Android TV keeps
+                // a viewer-chosen name; phones and boxes usually only have a
+                // model, which still beats a row reading "This device". An
+                // "unknown" maker or model is empty, not a name.
+                val chosen = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                    Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
+                } else null
+                fun known(value: String) = value.trim().takeUnless {
+                    it.isEmpty() || it.equals("unknown", true)
+                }.orEmpty()
+                val maker = known(Build.MANUFACTURER.orEmpty())
+                val model = known(Build.MODEL.orEmpty())
+                val fallback = when {
+                    model.isEmpty() -> maker
+                    maker.isEmpty() || model.contains(maker, true) -> model
+                    else -> "$maker $model"
+                }.replaceFirstChar { it.uppercase() }
+                result.success(chosen?.trim()?.takeIf { it.isNotEmpty() } ?: fallback.takeIf { it.isNotEmpty() })
             } else {
                 result.notImplemented()
             }

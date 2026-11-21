@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
+import '../../services/device_memory_service.dart';
 import '../../services/device_transfer_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/settings_bundle.dart';
@@ -51,6 +52,21 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
     super.dispose();
   }
 
+  /// Leave nothing of the other role running. Two receivers on one device both
+  /// try to claim the discovery port; the second loses it silently while the
+  /// first keeps advertising a session this screen no longer drives, so the
+  /// other device finds a row whose owner is gone.
+  Future<void> _stopListening() async {
+    _statusSub?.cancel();
+    _statusSub = null;
+    await _receiver?.stop();
+    _receiver = null;
+    _peerSub?.cancel();
+    _peerSub = null;
+    _sender?.dispose();
+    _sender = null;
+  }
+
   Future<void> _startReceiver() async {
     setState(() {
       _role = _Role.receive;
@@ -60,8 +76,9 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       _error = null;
       _result = null;
     });
+    await _stopListening();
     final receiver = _receiver = TransferReceiver(_storage,
-        deviceName: 'This device');
+        deviceName: await DeviceTypeService.transferName());
     _statusSub = receiver.status.listen((status) {
       if (mounted) setState(() => _status = status);
       if (status.phase == TransferPhase.done && !_reloaded) {
@@ -87,7 +104,11 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       _result = null;
       _peers = const [];
     });
-    final sender = _sender = TransferSender(_storage, deviceName: 'This device');
+    // Search again replaces the previous search: one sender owns the socket
+    // and the list, or two of them take turns rewriting what is on screen.
+    await _stopListening();
+    final sender = _sender = TransferSender(_storage,
+        deviceName: await DeviceTypeService.transferName());
     _peerSub = sender.devices.listen((peers) {
       if (mounted) setState(() => _peers = peers);
     });
@@ -125,8 +146,14 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
       }
       setState(() => _handshake = handshake);
     } catch (e) {
+      // Show what happened, not one sentence for every failure: a receiver
+      // that left its screen and one that is still deciding look identical
+      // otherwise, to the viewer and to whoever they report it to.
+      debugPrint('Transfer: handshake with ${peer.address} failed: $e');
       if (mounted) {
-        setState(() => _error = 'The other device did not answer. Try again.');
+        setState(() => _error = e is StateError
+            ? e.message
+            : 'The other device did not answer. Try again.');
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -183,12 +210,7 @@ class _DeviceTransferScreenState extends State<DeviceTransferScreen> {
   }
 
   Future<void> _reset() async {
-    _statusSub?.cancel();
-    await _receiver?.stop();
-    _receiver = null;
-    _sender?.dispose();
-    _sender = null;
-    _peerSub?.cancel();
+    await _stopListening();
     if (!mounted) return;
     setState(() {
       _role = _Role.choose;

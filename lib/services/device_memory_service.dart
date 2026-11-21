@@ -61,6 +61,27 @@ class DeviceTypeService {
       return false;
     }
   }
+
+  /// What another device lists this one as. [unnamedDevice] is the last
+  /// resort: a row that reads like the device in your hand is the confusion
+  /// this avoids, so no caller has to invent a name of its own.
+  static const String unnamedDevice = 'Android device';
+
+  /// Android's own device name when it has one, else manufacturer and model,
+  /// trimmed and capped to one list row. Never null, so nothing downstream has
+  /// to decide what to show.
+  static Future<String> transferName() async {
+    try {
+      final name = (await _channel
+              .invokeMethod<String>('deviceName')
+              .timeout(const Duration(seconds: 2)))
+          ?.trim();
+      if (name == null || name.isEmpty) return unnamedDevice;
+      return name.length > 40 ? name.substring(0, 40) : name;
+    } catch (_) {
+      return unnamedDevice;
+    }
+  }
 }
 
 /// Live channel logos are small; poster-sized caches compete with the decoder.

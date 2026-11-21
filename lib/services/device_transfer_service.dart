@@ -126,7 +126,7 @@ class TransferCipher {
 /// waits for local approval, then replaces this device's configuration.
 class TransferReceiver {
   TransferReceiver(this._storage,
-      {this.deviceName = 'This device',
+      {this.deviceName = 'Android device',
       this.approvalWindow = kTransferApprovalWindow});
 
   final StorageService _storage;
@@ -463,7 +463,7 @@ class TransferReceiver {
 /// The sending side: find receivers, confirm the code, then send this device's
 /// configuration. Nothing is written on this device.
 class TransferSender {
-  TransferSender(this._storage, {this.deviceName = 'This device'});
+  TransferSender(this._storage, {this.deviceName = 'Android device'});
 
   final StorageService _storage;
   final String deviceName;
@@ -474,12 +474,16 @@ class TransferSender {
   RawDatagramSocket? _udp;
   final _found = <String, TransferPeer>{};
 
+  /// Ask the network for receivers. Returns as soon as one answers, or after
+  /// [window] when none does. The socket stays open either way, so a device
+  /// that answers later still reaches [devices] without another search.
   Future<void> discover({Duration window = const Duration(seconds: 8)}) async {
     _found.clear();
     final socket = _udp ??= await RawDatagramSocket.bind(
         InternetAddress.anyIPv4, 0,
         reuseAddress: true);
     socket.broadcastEnabled = true;
+    final firstOffer = Completer<void>();
     socket.listen((event) {
       if (event != RawSocketEvent.read) return;
       final datagram = socket.receive();
@@ -502,29 +506,43 @@ class TransferSender {
       );
       _found[peer.id] = peer;
       if (!_devices.isClosed) _devices.add(_found.values.toList());
+      if (!firstOffer.isCompleted) firstOffer.complete();
     });
     final probe = utf8.encode(jsonEncode({'m': kTransferMarker, 't': 'probe'}));
-    socket.send(
+    void sendProbe() => socket.send(
         probe, InternetAddress('255.255.255.255'), kTransferDiscoveryPort);
-    await Future<void>.delayed(window);
-    socket.send(
-        probe, InternetAddress('255.255.255.255'), kTransferDiscoveryPort);
-    await Future<void>.delayed(const Duration(seconds: 2));
+    sendProbe();
+    // A dropped broadcast is the usual reason a receiver stays unseen; one
+    // repeat covers it.
+    final retry = Timer(const Duration(seconds: 3), sendProbe);
+    await firstOffer.future.timeout(window, onTimeout: () {});
+    retry.cancel();
   }
 
   /// Ask the receiver to accept a transfer. Returns its code when it does.
+  ///
+  /// Every failure names itself. One sentence for a refused connection, a
+  /// silent receiver and a rejected request alike left nothing to act on, and
+  /// nothing to report from the field.
   Future<SenderHandshake> request(TransferPeer peer) async {
     final senderCipher = TransferCipher(sessionId: peer.id);
     final myKey = await senderCipher.ensureKeyPair();
-    final response = await http
-        .post(peer._endpoint('hello'),
-            headers: const {'Content-Type': 'application/json'},
-            body:
-                jsonEncode({'name': deviceName, 'pk': base64Url.encode(myKey)}))
-        .timeout(kTransferApprovalWindow + const Duration(seconds: 10));
+    final http.Response response;
+    try {
+      response = await http
+          .post(peer._endpoint('hello'),
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode(
+                  {'name': deviceName, 'pk': base64Url.encode(myKey)}))
+          // More slack than the receiver's own approval window, so its answer
+          // always arrives before this gives up on it.
+          .timeout(kTransferApprovalWindow + const Duration(seconds: 30));
+    } on Exception catch (e) {
+      throw StateError(handshakeFailure(e));
+    }
     final json = _decode(response.body);
     if (response.statusCode != 200 || json == null) {
-      throw StateError('The other device did not answer.');
+      throw StateError(handshakeFailure(null, status: response.statusCode));
     }
     if (json['approved'] != true) {
       return SenderHandshake(
@@ -613,6 +631,20 @@ Future<String?> _readLimited(HttpRequest request, int max) async {
   } catch (_) {
     return null;
   }
+}
+
+/// Why a handshake failed, in words the viewer can act on. Refused, timed out
+/// and rejected used to share one sentence, which left nothing to report and
+/// nothing to change on the other device.
+String handshakeFailure(Object? error, {int? status}) {
+  if (error is TimeoutException) {
+    return 'The other device did not answer in time. On it, open Receive again, then Search again.';
+  }
+  if (error is SocketException || error is http.ClientException) {
+    return 'That device is no longer waiting. On it, open Receive again, then Search again.';
+  }
+  return 'The other device could not take the request '
+      '(${status ?? 'no reply'}). Search again and pick it once more.';
 }
 
 Map<String, dynamic>? _decode(Object? data) {

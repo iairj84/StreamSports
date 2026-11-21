@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:nox_iptv/services/device_memory_service.dart';
 import 'package:nox_iptv/services/device_transfer_service.dart';
 import 'package:nox_iptv/services/settings_bundle.dart';
 import 'package:nox_iptv/services/storage_service.dart';
@@ -54,6 +57,57 @@ Future<http.Response> _postBundle(TransferReceiver receiver, String sealed) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('naming this device in a transfer', () {
+    const channel = MethodChannel('com.nox.nox_iptv/device_type');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    tearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    test('uses the name Android reports, trimmed', () async {
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'deviceName');
+        return '  Living room TV  ';
+      });
+      expect(await DeviceTypeService.transferName(), 'Living room TV');
+    });
+
+    test('a box that cannot name itself is never called "This device"',
+        () async {
+      messenger.setMockMethodCallHandler(channel, (call) async => null);
+      expect(await DeviceTypeService.transferName(),
+          DeviceTypeService.unnamedDevice);
+      messenger.setMockMethodCallHandler(channel, (call) async => '   ');
+      expect(await DeviceTypeService.transferName(),
+          DeviceTypeService.unnamedDevice);
+      expect(DeviceTypeService.unnamedDevice, isNot('This device'));
+    });
+
+    test('a long name is cut to fit one row', () async {
+      messenger.setMockMethodCallHandler(channel, (call) async => 'x' * 80);
+      expect((await DeviceTypeService.transferName()).length, 40);
+    });
+  });
+
+  group('a failed handshake names its cause', () {
+    test('a receiver that stopped listening is not a timeout', () {
+      expect(handshakeFailure(const SocketException('refused')),
+          contains('no longer waiting'));
+      expect(handshakeFailure(http.ClientException('closed')),
+          contains('no longer waiting'));
+    });
+
+    test('a silent receiver reads as a timeout, and says what to do', () {
+      final message = handshakeFailure(TimeoutException('silent'));
+      expect(message, contains('did not answer in time'));
+      expect(message, contains('open Receive again'));
+    });
+
+    test('a reply that is not a handshake carries the status code', () {
+      expect(handshakeFailure(null, status: 409), contains('409'));
+      expect(handshakeFailure(null), contains('no reply'));
+    });
+  });
 
   group('what a transfer carries', () {
     test('sports picks and lists travel for every viewer', () {

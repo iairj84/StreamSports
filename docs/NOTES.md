@@ -821,3 +821,47 @@ sports.
 The team picker's tick marks stay exact on purpose. They report whether this
 league's own entry exists, and its toggle writes that entry; widening the tick
 would let a tick unfollow a different id and appear stuck.
+
+
+## The device transfer said "did not answer" for three different failures
+
+Four faults sat behind that one red box on the sending screen.
+
+The search was a fixed ten seconds: probe, wait 8 s, probe again, wait 2 s. A
+receiver normally answers in one or two, so its row appeared at once and then
+stayed disabled behind a spinner (`enabled: !_busy`) for the rest of the window.
+`discover()` now returns on the first offer; the socket keeps listening
+afterwards, so a device that answers later still reaches the live list without
+another search. The repeat probe stays, one at 3 s while nothing has answered,
+because a dropped broadcast is the reason a receiver goes unseen at all.
+
+Starting Receive twice, or switching roles, left the previous receiver holding
+the discovery port. The new receiver lost the bind inside `_openDiscovery`'s
+catch and kept only its HTTP server, while the old one went on advertising a
+session the screen no longer drove - so a tap was refused, or the approval woke
+a session nobody was watching. `_stopListening()` now tears down whichever role
+was running before either starts, and one sender owns the list after Search
+again.
+
+The sender's timeout sat ten seconds past the receiver's approval window, too
+little slack for a cheap box to write its answer, so a decline could arrive
+after the sender had given up and been reported as silence. It is thirty seconds
+now, which lets the receiver's own answer win.
+
+Every handshake failure shared one sentence. `handshakeFailure()` separates a
+refused connection ("that device is no longer waiting"), a silent receiver ("did
+not answer in time") and a rejected request, with its status code. A refusal is
+the tell for a receiver whose screen is gone, silence the tell for a suspended
+one; neither is timing, which is why the first reports could not be reproduced.
+
+## A transfer list where both devices were "This device"
+
+The receiver advertised the hardcoded name `'This device'`, so the sender's list
+showed a row that read like the phone in your hand. Both roles now ask a
+`deviceName` method on the existing device channel: Android's own device name
+(what Android TV's Device name setting writes), else manufacturer and model,
+with an "unknown" maker or model treated as empty. `DeviceTypeService` exposes
+it as `transferName()`, which never returns null - `unnamedDevice` is "Android
+device" - because a fallback that reads like the local device is the confusion
+being fixed. The constructor defaults use the same name, so no path can produce
+the old row.
