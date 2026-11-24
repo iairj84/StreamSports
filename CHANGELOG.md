@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.102 — 24 November 2026
+
+- Rebuilt and republished from the restored development machine to verify the release pipeline end to end; no app changes.
+
 ## 0.2.101 — 21 November 2026
 
 - Auto-Pair now matches a channel to its provider's "*" copy on the name's
