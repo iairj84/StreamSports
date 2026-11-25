@@ -581,6 +581,48 @@ seeded — `trueBlack` already bypasses HCT — so the phone page's CSS carries
 the same values, and scarlet doubles as that page's error tone rather than a
 third red being invented for it.
 
+## Five team palettes: lift the accent, don't repaint the team
+
+`red_october` (Phillies), `philly_special` (Eagles), `orange_friday`
+(Giants), `happy_valley` (Penn State) and `death_valley` (Clemson) are
+true-black palettes like Lime black and Gold Rush: pure black surface, flat
+containers, and one accent that has to work as a focus ring, a focused label
+and a section tick at ten feet. Each team's own colour was measured against
+black and moved only as far as that job needs:
+
+- Phillies `#E81828` is 4.57:1 on black — passing, but with no headroom for a
+  1.5px border, so it lifts to `#EE2E3C` (5.1:1).
+- Eagles Kelly green `#00843D` is 4.36:1 and fails outright; `#009A44`
+  (5.7:1) keeps the hue instead of drifting toward Lime black's lime.
+- Giants orange `#FD5A1E` already reads (6.7:1) and is untouched, with the
+  team's own cream as the second accent rather than a second orange.
+- Penn State's `#041E42` blue is 1.3:1 on black — a navy that disappears
+  into it — so it lifts to `#4489D6` (5.8:1), the brightest accent in the
+  set, which is what it takes to carry a focus ring. White sits beside it.
+- Clemson's purple carries focus, not its orange: the official `#522D80`
+  is 2.05:1 on black, so it lifts to `#9A67D8` (5.3:1), and orange
+  `#F56600` (6.8:1) drops to the second accent. This was a correction: with
+  orange first, Death Valley and Orange Friday were two orange focus rings
+  in the same list, and the purple is the half of the pairing that no other
+  palette owns.
+- White is the second accent on both Philadelphia palettes because that is
+  the teams' own second colour, not a substitute for a missing third hue.
+
+The ink on a focused primary fill is now chosen from the accent's luminance
+(`tv_theme.dart`) rather than one warm near-black borrowed from gold: the
+light accents (Gold Rush, Lime black) keep it, and the team reds, greens,
+blues and oranges get a neutral near-black instead, landing between 4.5:1
+and 7:1 on their own fill. `assets/pair/pair.html` carries the matching CSS
+blocks and select entries, so the phone page offers and previews all five
+team palettes too.
+
+Neighbours were the one real trade-off in shipping all five: Orange Friday is
+deliberately more saturated than Ember's amber/coral, Happy Valley's royal
+blue is brighter and bluer than the three blues that already shipped (Dark
+grey, OLED black, Light), and Death Valley's purple sits closer to
+Midnight's indigo secondary — but Midnight's focus accent is cyan, so the
+rows still differ. Each reads as its own row in a list of thirteen.
+
 ## Stadium Night is a look, not a palette
 
 Direction B first shipped as a colour palette and read as "different colours,

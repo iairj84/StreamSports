@@ -124,6 +124,55 @@
     --select:#E3B448; --select-ink:#1A1203;
     --err:#E03A45;
   }
+  /* The five team palettes: the same true black as Gold Rush, with each
+     team's accent lifted just far enough to carry focus on black. White is the
+     Phillies' and Eagles' real second colour, so no third hue is invented for
+     either of them. */
+  body[data-palette="red_october"] {
+    --surface:#000; --tint:rgba(238,46,60,.07);
+    --panel:#0F0707; --field:#1A0D0E;
+    --ink:#fff; --muted:rgba(255,255,255,.62);
+    --hairline:rgba(255,255,255,.08); --field-line:rgba(255,255,255,.13);
+    --track:rgba(255,255,255,.24);
+    --accent:#EE2E3C; --accent-ink:#10141A;
+    --select:#EE2E3C; --select-ink:#10141A;
+  }
+  body[data-palette="philly_special"] {
+    --surface:#000; --tint:rgba(0,154,68,.08);
+    --panel:#070F0A; --field:#0D1A12;
+    --ink:#fff; --muted:rgba(255,255,255,.62);
+    --hairline:rgba(255,255,255,.08); --field-line:rgba(255,255,255,.13);
+    --track:rgba(255,255,255,.24);
+    --accent:#009A44; --accent-ink:#10141A;
+    --select:#009A44; --select-ink:#10141A;
+  }
+  body[data-palette="death_valley"] {
+    --surface:#000; --tint:rgba(154,103,216,.08);
+    --panel:#0B0913; --field:#151020;
+    --ink:#fff; --muted:rgba(255,255,255,.62);
+    --hairline:rgba(255,255,255,.08); --field-line:rgba(255,255,255,.13);
+    --track:rgba(255,255,255,.24);
+    --accent:#9A67D8; --accent-ink:#10141A;
+    --select:#9A67D8; --select-ink:#10141A;
+  }
+  body[data-palette="orange_friday"] {
+    --surface:#000; --tint:rgba(253,90,30,.07);
+    --panel:#100A06; --field:#1A1009;
+    --ink:#fff; --muted:rgba(255,255,255,.62);
+    --hairline:rgba(255,255,255,.08); --field-line:rgba(255,255,255,.13);
+    --track:rgba(255,255,255,.24);
+    --accent:#FD5A1E; --accent-ink:#10141A;
+    --select:#FD5A1E; --select-ink:#10141A;
+  }
+  body[data-palette="happy_valley"] {
+    --surface:#000; --tint:rgba(68,137,214,.08);
+    --panel:#0A0F16; --field:#101823;
+    --ink:#fff; --muted:rgba(255,255,255,.62);
+    --hairline:rgba(255,255,255,.08); --field-line:rgba(255,255,255,.13);
+    --track:rgba(255,255,255,.24);
+    --accent:#4489D6; --accent-ink:#10141A;
+    --select:#4489D6; --select-ink:#10141A;
+  }
   /* Modern and Stadium Night are the app's rounded surfaces; only the pill
      look changes the type treatment and selection, as SurfaceTokens does. */
   body[data-surface="modern"] {
@@ -355,7 +404,9 @@
 // back to the shipped defaults so a stale link can never leave a blank page.
 (function () {
   "use strict";
-  var palettes = ["classic_tv", "oled", "light", "midnight", "ember", "forest", "stadium_night", "gold_rush"];
+  var palettes = ["classic_tv", "oled", "light", "midnight", "ember", "forest",
+    "stadium_night", "gold_rush", "red_october", "orange_friday",
+    "philly_special", "death_valley", "happy_valley"];
   var surfaces = ["classic", "modern", "stadium"];
   var query = {}, raw = (location.search || "").replace(/^\?/, "").split("&");
   raw.forEach(function (pair) {
@@ -497,6 +548,11 @@
                 <option value="forest">Forest</option>
                 <option value="stadium_night">Lime black</option>
                 <option value="gold_rush">Gold Rush</option>
+                <option value="red_october">Red October</option>
+                <option value="orange_friday">Orange Friday</option>
+                <option value="philly_special">Philly Special</option>
+                <option value="death_valley">Death Valley</option>
+                <option value="happy_valley">Happy Valley</option>
               </select>
             </div>
           </div>
@@ -552,6 +608,11 @@
               <option value="forest">Forest</option>
               <option value="stadium_night">Lime black</option>
               <option value="gold_rush">Gold Rush</option>
+              <option value="red_october">Red October</option>
+              <option value="orange_friday">Orange Friday</option>
+              <option value="philly_special">Philly Special</option>
+              <option value="death_valley">Death Valley</option>
+              <option value="happy_valley">Happy Valley</option>
             </select>
           </div>
         </div>

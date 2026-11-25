@@ -248,7 +248,13 @@ ColorScheme buildPaletteColorScheme(
   if (palette.trueBlack) {
     // Use explicit palette colours and a transparent surface tint so seeded HCT tones cannot
     // alter saturated accents or elevated surfaces.
-    const onFocus = Color(0xFF1A1203);
+    // The ink sits on a focused fill painted in `primary`, so it follows that
+    // accent's luminance: the warm near-black Gold Rush and Lime black were
+    // tuned on stays for light accents, and the team reds, greens, blues and
+    // oranges take a neutral near-black instead (4.5:1-7:1 on their fill).
+    final onFocus = palette.primary.computeLuminance() > 0.2
+        ? const Color(0xFF10141A)
+        : Colors.white;
     final base = isDark ? const ColorScheme.dark() : const ColorScheme.light();
     return base.copyWith(
       primary: palette.primary,
@@ -267,7 +273,7 @@ ColorScheme buildPaletteColorScheme(
       // `tertiary` is this app's dedicated icon/symbol-glyph accent (kept
       // separate from `primary`, which drives the focus border/gradient/
       // text) — matches `primary` here, same as every palette below,
-      // since gold has no highlight substitute to diverge from.
+      // since these palettes have no highlight substitute to diverge from.
       tertiary: palette.primary,
       surface: isDark ? Colors.black : Colors.white,
       surfaceTint: Colors.transparent,

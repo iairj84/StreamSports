@@ -422,6 +422,61 @@ class AppConstants {
       description: 'True black surfaces · 49ers gold focus and scarlet accents',
       trueBlack: true,
     ),
+    // Five team palettes on the same true-black surface as Lime black and
+    // Gold Rush. The accent carries the focus ring, the focused label and the
+    // selection, so each team's own colour was measured against black and
+    // lifted only as far as a 1.5px border and ten-foot text need: Phillies
+    // #E81828 is 4.57:1 (no headroom, lifted to #EE2E3C at 5.1:1), Eagles
+    // Kelly green #00843D is 4.36:1 and fails (lifted to #009A44 at 5.7:1),
+    // Giants orange #FD5A1E already reads (6.7:1) and is untouched, Clemson's
+    // purple #522D80 is 2.05:1 (lifted to #9A67D8 at 5.3:1), and Penn State's
+    // navy #041E42 is 1.3:1 (lifted to #4489D6 at 5.8:1). White is the
+    // Philadelphia pair's second accent because it is the teams' actual
+    // second colour, not a stand-in for a missing hue.
+    CyberpunkPalette(
+      id: 'red_october',
+      label: 'Red October',
+      primary: Color(0xFFEE2E3C),
+      secondary: Color(0xFFF4F6F8),
+      description: 'True black surfaces · Phillies red focus, white accents',
+      trueBlack: true,
+    ),
+    CyberpunkPalette(
+      id: 'orange_friday',
+      label: 'Orange Friday',
+      primary: Color(0xFFFD5A1E),
+      // The Giants' own cream, not a second orange.
+      secondary: Color(0xFFF4E8DE),
+      description: 'True black surfaces · Giants orange focus, cream accents',
+      trueBlack: true,
+    ),
+    CyberpunkPalette(
+      id: 'philly_special',
+      label: 'Philly Special',
+      primary: Color(0xFF009A44),
+      secondary: Color(0xFFF1F5F2),
+      description: 'True black surfaces · Kelly green focus, white accents',
+      trueBlack: true,
+    ),
+    CyberpunkPalette(
+      id: 'death_valley',
+      label: 'Death Valley',
+      // Purple carries focus, not the orange: it is the half of Clemson's
+      // pairing no other palette owns, and a second orange focus ring would
+      // have read as Orange Friday. #522D80 lifts to 5.3:1 for the ring.
+      primary: Color(0xFF9A67D8),
+      secondary: Color(0xFFF56600),
+      description: 'True black surfaces · Clemson purple and orange accents',
+      trueBlack: true,
+    ),
+    CyberpunkPalette(
+      id: 'happy_valley',
+      label: 'Happy Valley',
+      primary: Color(0xFF4489D6),
+      secondary: Color(0xFFF2F7FF),
+      description: 'True black surfaces · Penn State blue focus, white accents',
+      trueBlack: true,
+    ),
   ];
 
   // On-disk cache file names (under the OS temp/cache directory — safe to

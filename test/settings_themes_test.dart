@@ -50,6 +50,22 @@ void main() {
       await loader.load();
     }
   });
+  test('team palettes keep their stored ids on a true-black surface', () {
+    const teams = {
+      'red_october': 'Red October',
+      'orange_friday': 'Orange Friday',
+      'philly_special': 'Philly Special',
+      'death_valley': 'Death Valley',
+      'happy_valley': 'Happy Valley',
+    };
+    for (final entry in teams.entries) {
+      final palette = AppConstants.cyberpunkPalettes
+          .firstWhere((p) => p.id == entry.key);
+      expect(palette.label, entry.value);
+      expect(palette.trueBlack, isTrue);
+      expect(buildAppTheme(palette).colorScheme.surface, Colors.black);
+    }
+  });
   for (final palette in AppConstants.cyberpunkPalettes) {
     final scheme = buildAppTheme(palette).colorScheme;
     double contrast(Color a, Color b) {
