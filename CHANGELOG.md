@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.103 — 25 November 2026
+
+- Add five true-black team palettes: Red October (Phillies), Orange Friday (Giants), Philly Special (Eagles), Death Valley (Clemson) and Happy Valley (Penn State).
+- Each team accent is lifted only as far as a 4.5:1 focus ring on black needs, so the reds, greens, oranges and purple stay legible at TV distance.
+- Theme choice is stored by id; the phone pairing page offers the same five palettes with matching colours.
+- A test now locks the stored palette ids, so a future rename cannot silently reset a viewer to Dark grey.
+
 ## 0.2.102 — 24 November 2026
 
 - Rebuilt and republished from the restored development machine to verify the release pipeline end to end; no app changes.
