@@ -53,6 +53,86 @@ anyway. So the version bump adds about 59s only to a release with no Dart change
 and "build first, stamp the version afterwards" would trade that for an APK
 stamped with the previous version.
 
+## The 15 W laptop is faster at everything except the bumped release compile
+
+Measured 24-25 November 2026, when development moved from the 8-core Windows
+desktop those numbers above come from to an i7-1255U laptop: 2 P-cores plus 8
+E-cores (12 threads), 1.7 GHz base, 32 GB DDR4-3200, NVMe, Windows 11, real-time
+Defender on and no full scan during the runs. Same Flutter 3.47.7, same commands
+(`flutter build apk --release --target-platform android-arm,android-arm64`),
+nothing else running during a timed build.
+
+- Warm gate (`tools/preflight.py`, no test files): 17s and 14s, against 17-19s.
+  Inside it the analyzer took 13-17s against 17-18s, the source audit 3s
+  against 7-9s and the tools' tests 6-7s against 10-11s.
+- `flutter analyze` alone, warm cache: 36s. The old machine's 88s was measured
+  with the test step holding its cores, so only the gate numbers compare
+  cleanly.
+- Release build with nothing changed: 43s, against 127s.
+- Release build with only the version bumped: 198s and 199s on repeat, against
+  186s. The first attempts that day measured 218s and 221s, and two verbose
+  runs 225s and 238s.
+- Git's own work is noise either way: `git add` 127ms, `write-tree` 133ms,
+  `commit-tree` 215ms, `git status` 135ms on this checkout.
+
+Everything that parallelizes is 2-3x faster here: the source audit, the tools'
+tests, the warm Gradle rebuild. The loss is in the one step that does not
+parallelize, the Dart frontend compile, and the extra time in the first readings
+was in that step rather than spread across the machine.
+
+Run on its own, the exact `frontend_server_aot.dart.snapshot` command from the
+build log took 43.8s on all cores, 45.2s pinned to the 8 E-cores, 26.7s pinned
+to the 2 P-cores and 45.2s beside eight busy CPU-bound processes. The old
+machine ran the same step in 39.1s inside its build, so single-core speed is
+within about 15% and is not where 30s went. Writing the dill into the worktree
+instead of the temp directory changed nothing (42.6s against 44.1s), and so did
+the eight burners: this compile does not lose much to CPU contention.
+
+Inside `flutter build` the step measured 87.5s, 84.1s and 46.0s across the
+three verbose builds, with the whole build at 238s, 225s and 198s in the same
+order. Those two slow readings are not explained, and the cause is unknown.
+Every mechanism that was cheap to test was tried against them:
+
+- Cold page cache: 12 GB of touched memory evicted the file cache, and the
+  next compile of the same command took 43.6s, then 43.5s. Reading the SDK
+  cold is not it.
+- Thermal state: two minutes of load on all twelve threads put the next
+  compile at 63.7s, but five minutes of the same load put it at 42.7s, and 51.7s
+  a minute and a half later. Heat does not track the slowdown, so it is not the
+  explanation either.
+- Priority, power throttling and affinity: normal priority class, no
+  power-throttling state and the full 12-core mask, read from the running
+  process with GetProcessInformation during the 46.0s build.
+- Power and background work: on AC throughout, Balanced plan, one power-source
+  event at 12:53 and none since; the machine had booted the previous afternoon,
+  so no post-boot maintenance window; no Defender scan, Windows Update or
+  indexing events between 19:45 and 20:20, when the slow builds ran, and no
+  System events at all in that window.
+- CPU competition: eight CPU-bound processes alongside the standalone compile
+  changed nothing (45.2s). A four-worker limit on Gradle also changed nothing,
+  though that run's GRADLE_OPTS probably never reached the already-running
+  daemon, so that one is untested rather than ruled out.
+
+The step is noisier than one reading suggests. Leaving aside the two
+core-pinning runs (26.7s on the P-cores, 45.2s on the E-cores), eleven runs of
+the same command span 42.6s to 63.7s, and only the 63.7s one followed any load;
+the other ten sit between 42.6s and 51.7s. A 20% spread is ordinary here, and
+the in-build 84-87.5s sits outside it with nothing tried reproducing it.
+
+So the honest statement is that the cause of those two readings is unknown,
+and the machine settles at 198-199s per bumped build, which is the number to
+plan with. If it comes back, capture the frontend process's CPU time against
+its wall time and a WPR or xperf trace of the step before concluding anything,
+rather than re-measuring once and naming the first difference found.
+
+That makes the bumped build about 7% slower here, not 18%: 199s against 186s,
+while the warm rebuild it replaced 127s of is 3x faster at 43s. A cut's own
+timing is therefore roughly unchanged, and the everyday loop is much quicker.
+For the next comparison, run the bumped build twice and trust the second run,
+record the verbose log's `kernel_snapshot_program: Complete` offset (that is
+the step to watch) alongside the plain wall time, and keep the analyzer's own
+timing out of a busy gate run, where it reads 126s instead of 36s standalone.
+
 ## The release gate runs its four checks at once
 
 Non-build time in a cut was mostly waiting. Measured in the 0.2.83 release run
